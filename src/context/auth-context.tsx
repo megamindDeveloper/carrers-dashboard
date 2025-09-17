@@ -2,16 +2,14 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-
-interface User {
-  email: string;
-}
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut, User } from 'firebase/auth';
+import { auth } from '@/app/utils/firebase/firebaseConfig';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, pass: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,37 +20,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    // Mock checking for a logged-in user, e.g., from localStorage
-    try {
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      }
-    } catch (error) {
-      console.error("Failed to parse user from localStorage", error)
-    }
-    setLoading(false);
+    // Listen for Firebase auth state changes
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const login = async (email: string, pass: string) => {
-    // Mock login
-    return new Promise<void>((resolve, reject) => {
-      setTimeout(() => {
-        if (email === 'admin@example.com' && pass === 'password') {
-          const userData = { email };
-          setUser(userData);
-          localStorage.setItem('user', JSON.stringify(userData));
-          resolve();
-        } else {
-          reject(new Error('Invalid email or password'));
-        }
-      }, 1000);
-    });
+    await signInWithEmailAndPassword(auth, email, pass);
+    // Firebase automatically updates `user` through onAuthStateChanged
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await signOut(auth);
     setUser(null);
-    localStorage.removeItem('user');
     router.push('/login');
   };
 
