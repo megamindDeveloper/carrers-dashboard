@@ -1,0 +1,336 @@
+'use client';
+
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+  SheetFooter,
+  SheetClose,
+} from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
+import { parseResumeAction } from '@/app/actions';
+import type { Candidate } from '@/lib/types';
+import { Loader2, PlusCircle } from 'lucide-react';
+
+interface AddCandidateSheetProps {
+  onCandidateAdd: (candidate: Omit<Candidate, 'id' | 'avatar'>) => void;
+}
+
+const candidateSchema = z.object({
+  fullName: z.string().min(1, 'Full name is required'),
+  email: z.string().email('Invalid email address'),
+  contactNumber: z.string().min(1, 'Contact number is required'),
+  location: z.string().min(1, 'Location is required'),
+  address: z.string().min(1, 'Address is required'),
+  education: z.string().min(1, 'Education is required'),
+  workExperience: z.string().min(1, 'Work experience is required'),
+  position: z.string().min(1, 'Position is required'),
+  portfolio: z.string().url('Invalid URL'),
+  resumeUrl: z.string().min(1, 'Resume is required'),
+});
+
+export function AddCandidateSheet({ onCandidateAdd }: AddCandidateSheetProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isParsing, setIsParsing] = useState(false);
+  const { toast } = useToast();
+
+  const form = useForm<z.infer<typeof candidateSchema>>({
+    resolver: zodResolver(candidateSchema),
+    defaultValues: {
+      fullName: '',
+      email: '',
+      contactNumber: '',
+      location: '',
+      address: '',
+      education: '',
+      workExperience: '',
+      position: '',
+      portfolio: '',
+      resumeUrl: '',
+    },
+  });
+
+  const handleFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsParsing(true);
+    toast({
+      title: 'Parsing Resume...',
+      description: 'The AI is extracting information from the resume.',
+    });
+
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = async () => {
+        const resumeDataUri = reader.result as string;
+        form.setValue('resumeUrl', resumeDataUri);
+
+        const result = await parseResumeAction({ resumeDataUri });
+
+        if (result.success && result.data) {
+          form.reset({
+            ...form.getValues(),
+            ...result.data,
+            contactNumber: result.data.phone,
+            resumeUrl: resumeDataUri,
+          });
+          toast({
+            title: 'Resume Parsed Successfully!',
+            description: 'The form has been pre-filled with the extracted data.',
+          });
+        } else {
+          throw new Error(result.error);
+        }
+      };
+      reader.onerror = error => {
+        throw error;
+      };
+    } catch (error) {
+      console.error(error);
+      toast({
+        variant: 'destructive',
+        title: 'Uh oh! Something went wrong.',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'There was a problem parsing the resume.',
+      });
+    } finally {
+      setIsParsing(false);
+    }
+  };
+
+  const onSubmit = (data: z.infer<typeof candidateSchema>) => {
+    onCandidateAdd(data);
+    form.reset();
+    setIsOpen(false);
+    toast({
+      title: 'Candidate Added!',
+      description: `${data.fullName} has been added to the list.`,
+    });
+  };
+
+  return (
+    <Sheet open={isOpen} onOpenChange={setIsOpen}>
+      <SheetTrigger asChild>
+        <Button>
+          <PlusCircle className="mr-2" />
+          Add Candidate
+        </Button>
+      </SheetTrigger>
+      <SheetContent className="sm:max-w-2xl">
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="flex h-full flex-col"
+          >
+            <SheetHeader>
+              <SheetTitle>Add New Candidate</SheetTitle>
+              <SheetDescription>
+                Upload a resume to auto-fill the form, or enter details
+                manually.
+              </SheetDescription>
+            </SheetHeader>
+            <div className="flex-1 overflow-y-auto p-1 pr-6">
+              <div className="space-y-4 py-4">
+                <FormItem>
+                  <FormLabel>Resume (PDF, DOC, DOCX)</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Input
+                        type="file"
+                        accept=".pdf,.doc,.docx"
+                        onChange={handleFileChange}
+                        disabled={isParsing}
+                        className="pr-12"
+                      />
+                      {isParsing && (
+                        <Loader2 className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 animate-spin text-muted-foreground" />
+                      )}
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="fullName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Full Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="John Doe" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email ID</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="john.doe@example.com"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="contactNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Contact Number</FormLabel>
+                        <FormControl>
+                          <Input placeholder="+1234567890" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="location"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Location (City)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., San Francisco" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={form.control}
+                  name="address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Address</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="123 Main St, Anytown, USA"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="education"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Education</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="B.S. in Computer Science, University of Example, 2024"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="workExperience"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Work / Internship Experience</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Describe previous roles and responsibilities..."
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="position"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Position Applying For</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Graphic Designer Intern"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="portfolio"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Portfolio / Work Samples</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="https://yourportfolio.com"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+            <SheetFooter className="pt-4">
+              <SheetClose asChild>
+                <Button type="button" variant="outline">
+                  Cancel
+                </Button>
+              </SheetClose>
+              <Button type="submit" disabled={isParsing}>
+                {isParsing ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : null}
+                Save Candidate
+              </Button>
+            </SheetFooter>
+          </form>
+        </Form>
+      </SheetContent>
+    </Sheet>
+  );
+}
