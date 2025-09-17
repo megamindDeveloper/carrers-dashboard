@@ -1,11 +1,17 @@
+'use client';
+
 import { AddCandidateSheet } from './add-candidate-sheet';
 import type { Candidate } from '@/lib/types';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/context/auth-context';
+import { LogOut } from 'lucide-react';
 
 interface HeaderProps {
   onCandidateAdd: (candidate: Omit<Candidate, 'id' | 'avatar' | 'status'>) => void;
 }
 
 export function Header({ onCandidateAdd }: HeaderProps) {
+  const { logout } = useAuth();
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-card px-4 sm:px-6">
       <div className="flex items-center gap-2">
@@ -25,8 +31,11 @@ export function Header({ onCandidateAdd }: HeaderProps) {
         </svg>
         <h1 className="text-xl font-bold tracking-tight">MegaMind Careers</h1>
       </div>
-      <div className="ml-auto">
+      <div className="ml-auto flex items-center gap-4">
         <AddCandidateSheet onCandidateAdd={onCandidateAdd} />
+        <Button variant="outline" size="icon" onClick={logout} aria-label="Log out">
+          <LogOut className="h-4 w-4" />
+        </Button>
       </div>
     </header>
   );
