@@ -31,7 +31,7 @@ import type { Candidate } from '@/lib/types';
 import { Loader2, PlusCircle } from 'lucide-react';
 
 interface AddCandidateSheetProps {
-  onCandidateAdd: (candidate: Omit<Candidate, 'id' | 'avatar'>) => void;
+  onCandidateAdd: (candidate: Omit<Candidate, 'id' | 'avatar' | 'status'>) => void;
 }
 
 const candidateSchema = z.object({

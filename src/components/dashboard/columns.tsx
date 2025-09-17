@@ -1,7 +1,8 @@
 'use client';
 
 import type { ColumnDef } from '@tanstack/react-table';
-import type { Candidate } from '@/lib/types';
+import type { Candidate, CandidateStatus } from '@/lib/types';
+import { CANDIDATE_STATUSES } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -10,6 +11,11 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from '@/components/ui/dropdown-menu';
 import {
   ArrowUpDown,
@@ -33,10 +39,12 @@ const downloadJSON = (data: Candidate) => {
 
 type GetColumnsProps = {
   setViewingResume: (url: string) => void;
+  onStatusChange: (candidateId: string, status: CandidateStatus) => void;
 };
 
 export const getColumns = ({
   setViewingResume,
+  onStatusChange,
 }: GetColumnsProps): ColumnDef<Candidate>[] => [
   {
     accessorKey: 'fullName',
@@ -77,6 +85,30 @@ export const getColumns = ({
     header: 'Position',
     cell: ({ row }) => {
       return <Badge variant="secondary">{row.original.position}</Badge>;
+    },
+  },
+  {
+    accessorKey: 'status',
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Status
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      );
+    },
+    cell: ({ row }) => {
+      const { status } = row.original;
+      let variant: 'default' | 'secondary' | 'destructive' = 'secondary';
+      if (['Shortlisted', 'First Round', 'Second Round', 'Final Round'].includes(status)) {
+        variant = 'default';
+      } else if (status === 'Rejected') {
+        variant = 'destructive';
+      }
+      return <Badge variant={variant}>{status}</Badge>;
     },
   },
   {
@@ -122,6 +154,26 @@ export const getColumns = ({
               <FileText className="mr-2 h-4 w-4" />
               View Resume
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <span>Change Status</span>
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuRadioGroup
+                  value={candidate.status}
+                  onValueChange={value =>
+                    onStatusChange(candidate.id, value as CandidateStatus)
+                  }
+                >
+                  {CANDIDATE_STATUSES.map(status => (
+                    <DropdownMenuRadioItem key={status} value={status}>
+                      {status}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => downloadJSON(candidate)}>
               <Download className="mr-2 h-4 w-4" />

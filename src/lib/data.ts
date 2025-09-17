@@ -16,6 +16,7 @@ export const initialCandidates: Candidate[] = [
     resumeUrl:
       'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
     avatar: 'https://i.pravatar.cc/150?u=john.doe@example.com',
+    status: 'Shortlisted',
   },
   {
     id: 'CAND-002',
@@ -31,6 +32,7 @@ export const initialCandidates: Candidate[] = [
     resumeUrl:
       'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
     avatar: 'https://i.pravatar.cc/150?u=jane.smith@example.com',
+    status: 'First Round',
   },
   {
     id: 'CAND-003',
@@ -46,6 +48,7 @@ export const initialCandidates: Candidate[] = [
     resumeUrl:
       'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
     avatar: 'https://i.pravatar.cc/150?u=michael.johnson@example.com',
+    status: 'Applied',
   },
   {
     id: 'CAND-004',
@@ -61,5 +64,6 @@ export const initialCandidates: Candidate[] = [
     resumeUrl:
       'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
     avatar: 'https://i.pravatar.cc/150?u=emily.davis@example.com',
+    status: 'Final Round',
   },
 ];

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import type { Candidate } from '@/lib/types';
+import type { Candidate, CandidateStatus } from '@/lib/types';
 import { DataTable } from './data-table';
 import { getColumns } from './columns';
 import { ViewResumeModal } from './view-resume-modal';
@@ -9,14 +9,15 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 
 interface CandidateTableProps {
   data: Candidate[];
+  onStatusChange: (candidateId: string, status: CandidateStatus) => void;
 }
 
-export function CandidateTable({ data }: CandidateTableProps) {
+export function CandidateTable({ data, onStatusChange }: CandidateTableProps) {
   const [viewingResume, setViewingResume] = useState<string | null>(null);
 
   const columns = useMemo(
-    () => getColumns({ setViewingResume }),
-    [setViewingResume]
+    () => getColumns({ setViewingResume, onStatusChange }),
+    [setViewingResume, onStatusChange]
   );
 
   return (

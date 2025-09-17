@@ -2,7 +2,7 @@ import { AddCandidateSheet } from './add-candidate-sheet';
 import type { Candidate } from '@/lib/types';
 
 interface HeaderProps {
-  onCandidateAdd: (candidate: Omit<Candidate, 'id' | 'avatar'>) => void;
+  onCandidateAdd: (candidate: Omit<Candidate, 'id' | 'avatar' | 'status'>) => void;
 }
 
 export function Header({ onCandidateAdd }: HeaderProps) {
