@@ -110,6 +110,7 @@ export const getColumns = ({
       }
       return <Badge variant={variant}>{status}</Badge>;
     },
+    filterFn: 'myCustomFilter',
   },
   {
     accessorKey: 'contactNumber',

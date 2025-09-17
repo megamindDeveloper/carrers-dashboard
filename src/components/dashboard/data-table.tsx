@@ -54,6 +54,14 @@ export function DataTable<TData, TValue>({
         pageSize: 10,
       },
     },
+    filterFns: {
+      myCustomFilter: (row, columnId, filterValue) => {
+        if (filterValue === 'all') {
+          return true;
+        }
+        return row.getValue(columnId) === filterValue;
+      },
+    },
   });
 
   return (
