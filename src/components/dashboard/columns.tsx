@@ -33,7 +33,7 @@ const downloadJSON = (data: Candidate) => {
   )}`;
   const link = document.createElement('a');
   link.href = jsonString;
-  link.download = `${data.fullName.replace(/\s/g, '_')}_data.json`;
+  link.download = `${(data.fullName ?? 'candidate').replace(/\s/g, '_')}_data.json`;
   link.click();
 };
 
@@ -48,32 +48,31 @@ export const getColumns = ({
 }: GetColumnsProps): ColumnDef<Candidate>[] => [
   {
     accessorKey: 'fullName',
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        >
-          Full Name
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+      >
+        Full Name
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
     cell: ({ row }) => {
       const candidate = row.original;
-      const nameParts = candidate.fullName.split(' ');
+      const name = candidate.fullName ?? 'Unnamed Candidate';
+      const nameParts = name.split(' ');
       const initials =
         (nameParts[0]?.[0] ?? '') + (nameParts[nameParts.length - 1]?.[0] ?? '');
       return (
         <div className="flex items-center gap-3">
-          <Avatar>
-            <AvatarImage src={candidate.avatar} alt={candidate.fullName} />
-            <AvatarFallback>{initials}</AvatarFallback>
-          </Avatar>
+          {/* <Avatar>
+            <AvatarImage src={candidate.avatar ?? ''} alt={name} />
+            <AvatarFallback>{initials || '?'}</AvatarFallback>
+          </Avatar> */}
           <div className="flex flex-col">
-            <span className="font-medium">{candidate.fullName}</span>
+            <span className="font-medium">{name}</span>
             <span className="text-sm text-muted-foreground">
-              {candidate.email}
+              {candidate.email ?? 'No email'}
             </span>
           </div>
         </div>
@@ -83,58 +82,79 @@ export const getColumns = ({
   {
     accessorKey: 'position',
     header: 'Position',
-    cell: ({ row }) => {
-      return <Badge variant="secondary">{row.original.position}</Badge>;
-    },
+    cell: ({ row }) => (
+      <Badge variant="secondary">{row.original.position ?? 'N/A'}</Badge>
+    ),
   },
   {
     accessorKey: 'status',
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        >
-          Status
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+      >
+        Status
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
     cell: ({ row }) => {
       const { status } = row.original;
+      const safeStatus = status ?? 'Unknown';
       let variant: 'default' | 'secondary' | 'destructive' = 'secondary';
-      if (['Shortlisted', 'First Round', 'Second Round', 'Final Round'].includes(status)) {
+      if (['Shortlisted', 'First Round', 'Second Round', 'Final Round'].includes(safeStatus)) {
         variant = 'default';
-      } else if (status === 'Rejected') {
+      } else if (safeStatus === 'Rejected') {
         variant = 'destructive';
       }
-      return <Badge variant={variant}>{status}</Badge>;
+      return <Badge variant={variant}>{safeStatus}</Badge>;
     },
     filterFn: 'myCustomFilter',
   },
   {
     accessorKey: 'contactNumber',
     header: 'Contact',
+    cell: ({ row }) => row.original.contactNumber ?? 'N/A',
   },
   {
     accessorKey: 'location',
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+      >
+        Location
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
+    cell: ({ row }) => row.original.location ?? 'N/A',
+  },
+
+  // 🆕 Resume Link Column
+  {
+    accessorKey: 'resumeUrl',
+    header: 'Resume',
+    cell: ({ row }) => {
+      const resumeUrl = row.original.resumeUrl;
+      return resumeUrl ? (
+        <a
+          href={resumeUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:underline flex items-center gap-1"
         >
-          Location
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
+          <FileText className="h-4 w-4" />
+          Resume
+        </a>
+      ) : (
+        <span className="text-muted-foreground text-sm">No Resume</span>
       );
     },
   },
+
   {
     id: 'actions',
     cell: ({ row }) => {
       const candidate = row.original;
-
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -145,16 +165,20 @@ export const getColumns = ({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => window.open(candidate.portfolio, '_blank')}
-            >
-              <ExternalLink className="mr-2 h-4 w-4" />
-              View Portfolio
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setViewingResume(candidate.resumeUrl)}>
-              <FileText className="mr-2 h-4 w-4" />
-              View Resume
-            </DropdownMenuItem>
+            {candidate.portfolio && (
+              <DropdownMenuItem
+                onClick={() => window.open(candidate.portfolio!, '_blank')}
+              >
+                <ExternalLink className="mr-2 h-4 w-4" />
+                View Portfolio
+              </DropdownMenuItem>
+            )}
+            {candidate.resumeUrl && (
+              <DropdownMenuItem onClick={() => window.open(candidate.resumeUrl!, '_blank')}>
+                <FileText className="mr-2 h-4 w-4" />
+                View Resume
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
@@ -162,12 +186,12 @@ export const getColumns = ({
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent>
                 <DropdownMenuRadioGroup
-                  value={candidate.status}
-                  onValueChange={value =>
+                  value={candidate.status ?? ''}
+                  onValueChange={(value) =>
                     onStatusChange(candidate.id, value as CandidateStatus)
                   }
                 >
-                  {CANDIDATE_STATUSES.map(status => (
+                  {CANDIDATE_STATUSES.map((status) => (
                     <DropdownMenuRadioItem key={status} value={status}>
                       {status}
                     </DropdownMenuRadioItem>
