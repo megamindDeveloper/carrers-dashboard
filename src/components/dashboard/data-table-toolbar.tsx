@@ -23,6 +23,16 @@ export function DataTableToolbar<TData>({
           }
           className="h-8 w-[150px] lg:w-[250px]"
         />
+        <Input
+          placeholder="Filter by position..."
+          value={
+            (table.getColumn('position')?.getFilterValue() as string) ?? ''
+          }
+          onChange={event =>
+            table.getColumn('position')?.setFilterValue(event.target.value)
+          }
+          className="h-8 w-[150px] lg:w-[250px]"
+        />
       </div>
     </div>
   );
