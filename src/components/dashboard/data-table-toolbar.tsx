@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { X } from 'lucide-react';
 
 interface DataTableToolbarProps<TData> {
   table: Table<TData>;
@@ -47,7 +48,7 @@ export function DataTableToolbar<TData>({
         <Select
           value={(table.getColumn('status')?.getFilterValue() as string) ?? ''}
           onValueChange={value =>
-            table.getColumn('status')?.setFilterValue(value)
+            table.getColumn('status')?.setFilterValue(value === 'all' ? null : value)
           }
         >
           <SelectTrigger className="h-8 w-[150px] lg:w-[180px]">
@@ -69,6 +70,7 @@ export function DataTableToolbar<TData>({
             className="h-8 px-2 lg:px-3"
           >
             Reset
+            <X className="ml-2 h-4 w-4" />
           </Button>
         )}
       </div>

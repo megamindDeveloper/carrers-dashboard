@@ -57,6 +57,21 @@ export function CandidateDetailsModal({
     }
     onClose();
   };
+  
+  const getFormattedDate = (date: any) => {
+    if (!date) return 'N/A';
+    try {
+      // Firestore Timestamps can be converted to JS Date with toDate()
+      if (date.toDate) {
+        return format(date.toDate(), 'MMM d, yyyy');
+      }
+      // Or if it's already a string or a Date object
+      return format(new Date(date), 'MMM d, yyyy');
+    } catch (e) {
+      return 'Invalid Date';
+    }
+  };
+
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -72,7 +87,7 @@ export function CandidateDetailsModal({
             <div><Label>Email</Label><p className="text-sm">{candidate.email}</p></div>
             <div><Label>Contact</Label><p className="text-sm">{candidate.contactNumber}</p></div>
             <div><Label>Location</Label><p className="text-sm">{candidate.location}</p></div>
-            <div><Label>Applied On</Label><p className="text-sm">{format(new Date(candidate.submittedAt), 'MMM d, yyyy')}</p></div>
+            <div><Label>Applied On</Label><p className="text-sm">{getFormattedDate(candidate.submittedAt)}</p></div>
           </div>
           <div><Label>Address</Label><p className="text-sm">{candidate.address}</p></div>
           <div><Label>Education</Label><p className="text-sm">{candidate.education}</p></div>

@@ -105,8 +105,7 @@ export const getColumns = ({
       const { submittedAt } = row.original;
       if (!submittedAt) return 'N/A';
       try {
-        const date = new Date(submittedAt);
-        // isNaN check for invalid dates
+        const date = (submittedAt as any).toDate ? (submittedAt as any).toDate() : new Date(submittedAt);
         if (isNaN(date.getTime())) {
           return 'Invalid Date';
         }
