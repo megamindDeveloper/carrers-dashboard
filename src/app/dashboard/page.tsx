@@ -56,10 +56,10 @@ export default function DashboardPage() {
 
   const totalApplications = candidates.length;
   const internApplications = candidates.filter(
-    c => c.type === 'Intern'
+    c => c.type === 'intern'
   ).length;
   const fullTimeApplications = candidates.filter(
-    c => c.type === 'Full-time'
+    c => c.type === 'emp'
   ).length;
 
   return (

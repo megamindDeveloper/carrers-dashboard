@@ -83,10 +83,12 @@ export const getColumns = ({
     cell: ({ row }) => {
       const { type } = row.original;
       let variant: 'default' | 'secondary' = 'secondary';
-      if (type === 'Full-time') {
+      let label = 'Intern';
+      if (type === 'emp') {
         variant = 'default';
+        label = 'Full-time';
       }
-      return <Badge variant={variant}>{type}</Badge>;
+      return <Badge variant={variant}>{label}</Badge>;
     }
   },
   {

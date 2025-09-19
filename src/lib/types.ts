@@ -10,7 +10,7 @@ export const CANDIDATE_STATUSES = [
 ] as const;
 
 export type CandidateStatus = (typeof CANDIDATE_STATUSES)[number];
-export type CandidateType = 'Intern' | 'Full-time';
+export type CandidateType = 'intern' | 'emp';
 
 export type Candidate = {
   id: string;

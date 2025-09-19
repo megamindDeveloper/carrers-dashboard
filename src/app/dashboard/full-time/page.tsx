@@ -33,7 +33,7 @@ export default function FullTimeCandidatesPage() {
         <CandidateTable
           title="Full-time Candidates"
           description="A list of all full-time applicants."
-          filterType="Full-time"
+          filterType="emp"
         />
       </main>
     </div>

@@ -33,7 +33,7 @@ export default function InternCandidatesPage() {
         <CandidateTable
           title="Intern Candidates"
           description="A list of all intern applicants."
-          filterType="Intern"
+          filterType="intern"
         />
       </main>
     </div>
