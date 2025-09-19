@@ -26,6 +26,7 @@ import {
   Download,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
 
 const downloadJSON = (data: Candidate) => {
   const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
@@ -90,6 +91,27 @@ export const getColumns = ({
       }
       return <Badge variant={variant}>{label}</Badge>;
     }
+  },
+    {
+    accessorKey: 'appliedDate',
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+      >
+        Applied Date
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
+    cell: ({ row }) => {
+      const { appliedDate } = row.original;
+      if (!appliedDate) return 'N/A';
+      try {
+        return format(new Date(appliedDate), 'MMM d, yyyy');
+      } catch (e) {
+        return 'Invalid Date';
+      }
+    },
   },
   {
     accessorKey: 'status',

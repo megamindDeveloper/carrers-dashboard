@@ -152,6 +152,7 @@ export function AddCandidateSheet({}: AddCandidateSheetProps) {
         avatar: `https://i.pravatar.cc/150?u=${data.email}`,
         status: 'Applied',
         type: candidateType,
+        appliedDate: new Date().toISOString(),
       };
 
       await addDoc(collection(db, 'applications'), newCandidate);
