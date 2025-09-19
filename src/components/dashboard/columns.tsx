@@ -83,6 +83,23 @@ export const getColumns = ({
     ),
   },
   {
+    accessorKey: 'experience',
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+      >
+        Experience
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
+    cell: ({ row }) => {
+      const candidate = row.original;
+      const experience = candidate.experience || candidate.workExperience;
+      return <div className="truncate max-w-[200px]">{experience || 'N/A'}</div>
+    },
+  },
+  {
     accessorKey: 'type',
     header: 'Type',
     cell: ({ row }) => {
@@ -111,7 +128,7 @@ export const getColumns = ({
       const { submittedAt } = row.original;
       if (!submittedAt) return 'N/A';
       try {
-        const date = (submittedAt as any).toDate ? (submittedAt as any).toDate() : new Date(submittedAt);
+        const date = submittedAt.toDate ? submittedAt.toDate() : new Date(submittedAt);
         if (isNaN(date.getTime())) {
           return 'Invalid Date';
         }

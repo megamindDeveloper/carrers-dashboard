@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { Table } from '@tanstack/react-table';
@@ -42,6 +43,16 @@ export function DataTableToolbar<TData>({
           }
           onChange={event =>
             table.getColumn('position')?.setFilterValue(event.target.value)
+          }
+          className="h-8 w-[150px] lg:w-[250px]"
+        />
+         <Input
+          placeholder="Filter by experience..."
+          value={
+            (table.getColumn('experience')?.getFilterValue() as string) ?? ''
+          }
+          onChange={event =>
+            table.getColumn('experience')?.setFilterValue(event.target.value)
           }
           className="h-8 w-[150px] lg:w-[250px]"
         />
