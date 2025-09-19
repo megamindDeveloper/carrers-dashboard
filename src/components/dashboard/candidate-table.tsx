@@ -1,6 +1,7 @@
+
 'use client';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import type { Candidate, CandidateStatus, ApplicationType } from '@/lib/types';
+import type { Candidate, CandidateStatus, CandidateType } from '@/lib/types';
 import { DataTable } from './data-table';
 import { getColumns } from './columns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -11,7 +12,7 @@ import { AddCandidateSheet } from './add-candidate-sheet';
 interface CandidateTableProps {
   title: string;
   description: string;
-  filterType?: ApplicationType;
+  filterType?: CandidateType;
 }
 
 export function CandidateTable({ title, description, filterType }: CandidateTableProps) {
@@ -29,7 +30,7 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
         }));
 
         if (filterType) {
-          candidates = candidates.filter(c => c.applicationType === filterType);
+          candidates = candidates.filter(c => c.type === filterType);
         }
 
         setData(candidates);

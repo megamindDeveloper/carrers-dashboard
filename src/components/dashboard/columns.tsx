@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { ColumnDef } from '@tanstack/react-table';
@@ -77,15 +78,15 @@ export const getColumns = ({
     ),
   },
   {
-    accessorKey: 'applicationType',
+    accessorKey: 'type',
     header: 'Type',
     cell: ({ row }) => {
-      const { applicationType } = row.original;
+      const { type } = row.original;
       let variant: 'default' | 'secondary' = 'secondary';
-      if (applicationType === 'Full-time') {
+      if (type === 'Full-time') {
         variant = 'default';
       }
-      return <Badge variant={variant}>{applicationType}</Badge>;
+      return <Badge variant={variant}>{type}</Badge>;
     }
   },
   {

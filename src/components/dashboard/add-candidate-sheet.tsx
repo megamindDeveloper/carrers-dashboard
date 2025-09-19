@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -27,7 +28,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { parseResumeAction } from '@/app/actions';
-import type { Candidate, ApplicationType } from '@/lib/types';
+import type { Candidate, CandidateType } from '@/lib/types';
 import { Loader2, PlusCircle } from 'lucide-react';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '@/app/utils/firebase/firebaseConfig';
@@ -133,11 +134,11 @@ export function AddCandidateSheet({}: AddCandidateSheetProps) {
       const uploadResult = await uploadString(storageRef, data.resumeDataUri, 'data_url');
       const resumeUrl = await getDownloadURL(uploadResult.ref);
 
-      const applicationType: ApplicationType = data.position.toLowerCase().includes('intern')
+      const candidateType: CandidateType = data.position.toLowerCase().includes('intern')
         ? 'Intern'
         : 'Full-time';
 
-      const newCandidate: Omit<Candidate, 'id' | 'applicationType'> & { applicationType: ApplicationType } = {
+      const newCandidate: Omit<Candidate, 'id' | 'type'> & { type: CandidateType } = {
         fullName: data.fullName,
         email: data.email,
         contactNumber: data.contactNumber,
@@ -150,7 +151,7 @@ export function AddCandidateSheet({}: AddCandidateSheetProps) {
         resumeUrl: resumeUrl,
         avatar: `https://i.pravatar.cc/150?u=${data.email}`,
         status: 'Applied',
-        applicationType: applicationType,
+        type: candidateType,
       };
 
       await addDoc(collection(db, 'applications'), newCandidate);

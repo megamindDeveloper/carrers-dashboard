@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -55,10 +56,10 @@ export default function DashboardPage() {
 
   const totalApplications = candidates.length;
   const internApplications = candidates.filter(
-    c => c.applicationType === 'Intern'
+    c => c.type === 'Intern'
   ).length;
   const fullTimeApplications = candidates.filter(
-    c => c.applicationType === 'Full-time'
+    c => c.type === 'Full-time'
   ).length;
 
   return (
