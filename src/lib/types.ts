@@ -27,5 +27,5 @@ export type Candidate = {
   avatar: string;
   status: CandidateStatus;
   type: CandidateType;
-  appliedDate: string;
+  submittedAt: string;
 };

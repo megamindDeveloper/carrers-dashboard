@@ -45,6 +45,17 @@ type GetColumnsProps = {
 export const getColumns = ({
   onStatusChange,
 }: GetColumnsProps): ColumnDef<Candidate>[] => [
+ {
+    id: 'slNo',
+    header: 'Sl. No.',
+    cell: ({ row, table }) => {
+      const { page } = table.getState().pagination;
+      const { pageSize } = table.getState().pagination;
+      const index = (page.index * pageSize) + row.index + 1;
+      return <span>{index}</span>;
+    },
+    
+  },
   {
     accessorKey: 'fullName',
     header: ({ column }) => (
@@ -93,7 +104,7 @@ export const getColumns = ({
     }
   },
     {
-    accessorKey: 'appliedDate',
+    accessorKey: 'submittedAt',
     header: ({ column }) => (
       <Button
         variant="ghost"
@@ -104,10 +115,10 @@ export const getColumns = ({
       </Button>
     ),
     cell: ({ row }) => {
-      const { appliedDate } = row.original;
-      if (!appliedDate) return 'N/A';
+      const { submittedAt } = row.original;
+      if (!submittedAt) return 'N/A';
       try {
-        return format(new Date(appliedDate), 'MMM d, yyyy');
+        return format(new Date(submittedAt), 'MMM d, yyyy');
       } catch (e) {
         return 'Invalid Date';
       }
