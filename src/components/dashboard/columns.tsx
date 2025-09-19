@@ -49,9 +49,8 @@ export const getColumns = ({
     id: 'slNo',
     header: 'Sl. No.',
     cell: ({ row, table }) => {
-      const { page } = table.getState().pagination;
-      const { pageSize } = table.getState().pagination;
-      const index = (page.index * pageSize) + row.index + 1;
+      const { pageIndex, pageSize } = table.getState().pagination;
+      const index = (pageIndex * pageSize) + row.index + 1;
       return <span>{index}</span>;
     },
     
