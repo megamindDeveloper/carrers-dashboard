@@ -24,7 +24,6 @@ import {
   ExternalLink,
   Download,
 } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 
 const downloadJSON = (data: Candidate) => {
@@ -38,12 +37,10 @@ const downloadJSON = (data: Candidate) => {
 };
 
 type GetColumnsProps = {
-  setViewingResume: (url: string) => void;
   onStatusChange: (candidateId: string, status: CandidateStatus) => void;
 };
 
 export const getColumns = ({
-  setViewingResume,
   onStatusChange,
 }: GetColumnsProps): ColumnDef<Candidate>[] => [
   {
@@ -60,15 +57,8 @@ export const getColumns = ({
     cell: ({ row }) => {
       const candidate = row.original;
       const name = candidate.fullName ?? 'Unnamed Candidate';
-      const nameParts = name.split(' ');
-      const initials =
-        (nameParts[0]?.[0] ?? '') + (nameParts[nameParts.length - 1]?.[0] ?? '');
       return (
         <div className="flex items-center gap-3">
-          {/* <Avatar>
-            <AvatarImage src={candidate.avatar ?? ''} alt={name} />
-            <AvatarFallback>{initials || '?'}</AvatarFallback>
-          </Avatar> */}
           <div className="flex flex-col">
             <span className="font-medium">{name}</span>
             <span className="text-sm text-muted-foreground">
@@ -85,6 +75,18 @@ export const getColumns = ({
     cell: ({ row }) => (
       <Badge variant="secondary">{row.original.position ?? 'N/A'}</Badge>
     ),
+  },
+  {
+    accessorKey: 'applicationType',
+    header: 'Type',
+    cell: ({ row }) => {
+      const { applicationType } = row.original;
+      let variant: 'default' | 'secondary' = 'secondary';
+      if (applicationType === 'Full-time') {
+        variant = 'default';
+      }
+      return <Badge variant={variant}>{applicationType}</Badge>;
+    }
   },
   {
     accessorKey: 'status',
@@ -110,47 +112,6 @@ export const getColumns = ({
     },
     filterFn: 'myCustomFilter',
   },
-  {
-    accessorKey: 'contactNumber',
-    header: 'Contact',
-    cell: ({ row }) => row.original.contactNumber ?? 'N/A',
-  },
-  {
-    accessorKey: 'location',
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-      >
-        Location
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
-    ),
-    cell: ({ row }) => row.original.location ?? 'N/A',
-  },
-
-  // 🆕 Resume Link Column
-  {
-    accessorKey: 'resumeUrl',
-    header: 'Resume',
-    cell: ({ row }) => {
-      const resumeUrl = row.original.resumeUrl;
-      return resumeUrl ? (
-        <a
-          href={resumeUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-600 hover:underline flex items-center gap-1"
-        >
-          <FileText className="h-4 w-4" />
-          Resume
-        </a>
-      ) : (
-        <span className="text-muted-foreground text-sm">No Resume</span>
-      );
-    },
-  },
-
   {
     id: 'actions',
     cell: ({ row }) => {
