@@ -3,8 +3,9 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuth } from '@/context/auth-context';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Briefcase, Users, GraduationCap } from 'lucide-react';
 import { onSnapshot, collection } from 'firebase/firestore';
 import { db } from '@/app/utils/firebase/firebaseConfig';
 import type { Candidate } from '@/lib/types';
@@ -71,6 +72,9 @@ export default function DashboardPage() {
       </div>
     );
   }
+
+  const fullTimeCount = candidates.filter(c => c.type === 'emp').length;
+  const internCount = candidates.filter(c => c.type === 'intern').length;
 
   const getPositionSummary = (type: 'emp' | 'intern'): PositionSummary[] => {
     const positionCounts = candidates
@@ -140,7 +144,57 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between space-y-2">
           <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
         </div>
-        <div className="grid gap-8 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <Link href="/dashboard/all">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Total Applications
+                </CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{candidates.length}</div>
+                <p className="text-xs text-muted-foreground">
+                  View all candidates
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/dashboard/full-time">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Full-time Applications
+                </CardTitle>
+                <Briefcase className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{fullTimeCount}</div>
+                 <p className="text-xs text-muted-foreground">
+                  View full-time candidates
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/dashboard/intern">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Intern Applications
+                </CardTitle>
+                <GraduationCap className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{internCount}</div>
+                 <p className="text-xs text-muted-foreground">
+                  View intern candidates
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+        <div className="grid gap-8 pt-4 md:grid-cols-2">
           <SummaryTable title="Full-time Positions" data={fullTimeSummary} />
           <SummaryTable title="Internship Positions" data={internSummary} />
         </div>
