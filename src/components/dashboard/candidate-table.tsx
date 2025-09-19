@@ -9,6 +9,7 @@ import { collection, onSnapshot, updateDoc, doc } from 'firebase/firestore';
 import { db } from '@/app/utils/firebase/firebaseConfig';
 import { AddCandidateSheet } from './add-candidate-sheet';
 import { useToast } from '@/hooks/use-toast';
+import { CandidateDetailsModal } from './candidate-details-modal';
 
 interface CandidateTableProps {
   title: string;
@@ -19,6 +20,7 @@ interface CandidateTableProps {
 export function CandidateTable({ title, description, filterType }: CandidateTableProps) {
   const [data, setData] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -45,19 +47,36 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
     );
     return () => unsub();
   }, [filterType]);
+  
+  const handleRowClick = (candidate: Candidate) => {
+    setSelectedCandidate(candidate);
+  };
+
+  const handleCloseModal = () => {
+    setSelectedCandidate(null);
+  };
 
   const handleStatusChange = useCallback(
-    async (candidateId: string, status: CandidateStatus) => {
+    async (candidateId: string, status: CandidateStatus, reason?: string) => {
       const originalData = [...data];
       const candidateToUpdate = originalData.find(c => c.id === candidateId);
 
       if (!candidateToUpdate) return;
+      
+      const updateData: { status: CandidateStatus, rejectionReason?: string } = { status };
+      if (status === 'Rejected' && reason) {
+        updateData.rejectionReason = reason;
+      }
 
       // Optimistically update UI
-      setData(prev => prev.map(c => (c.id === candidateId ? { ...c, status } : c)));
+      setData(prev => prev.map(c => (c.id === candidateId ? { ...c, ...updateData } : c)));
+      if (selectedCandidate && selectedCandidate.id === candidateId) {
+          setSelectedCandidate(prev => prev ? {...prev, ...updateData} : null);
+      }
+
 
       try {
-        await updateDoc(doc(db, 'applications', candidateId), { status });
+        await updateDoc(doc(db, 'applications', candidateId), updateData);
         toast({
           title: "Status Updated",
           description: `${candidateToUpdate.fullName}'s status is now ${status}.`,
@@ -76,11 +95,30 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
           toast({
             title: "Email Sent",
             description: `An email has been sent to ${candidateToUpdate.fullName}.`,
+
+          });
+        } else if (status === 'Rejected') {
+           await fetch('/api/rejected', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              fullName: candidateToUpdate.fullName,
+              email: candidateToUpdate.email,
+              position: candidateToUpdate.position,
+              reason: reason || 'Not provided',
+            }),
+          });
+           toast({
+            title: "Rejection Email Sent",
+            description: `An email has been sent to ${candidateToUpdate.fullName}.`,
           });
         }
       } catch (err) {
         // Revert UI on error
         setData(originalData);
+        if (selectedCandidate && selectedCandidate.id === candidateId) {
+          setSelectedCandidate(candidateToUpdate);
+        }
         toast({
           variant: "destructive",
           title: "Update Failed",
@@ -89,7 +127,7 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
         console.error('Failed to update status', err);
       }
     },
-    [data, toast]
+    [data, toast, selectedCandidate]
   );
 
   const columns = useMemo(
@@ -110,9 +148,15 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
           <AddCandidateSheet />
         </CardHeader>
         <CardContent>
-          <DataTable columns={columns} data={data} />
+          <DataTable columns={columns} data={data} onRowClick={handleRowClick} />
         </CardContent>
       </Card>
+      <CandidateDetailsModal
+        isOpen={!!selectedCandidate}
+        onClose={handleCloseModal}
+        candidate={selectedCandidate}
+        onStatusChange={handleStatusChange}
+      />
     </>
   );
 }

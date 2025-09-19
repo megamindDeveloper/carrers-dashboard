@@ -23,15 +23,18 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { DataTableToolbar } from './data-table-toolbar';
+import type { Candidate } from '@/lib/types';
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  onRowClick: (row: TData) => void;
 }
 
-export function DataTable<TData, TValue>({
+export function DataTable<TData extends {id: string}, TValue>({
   columns,
   data,
+  onRowClick
 }: DataTableProps<TData, TValue>) {
 
     console.log('DataTable received rowssss:', data?.length);
@@ -95,6 +98,8 @@ export function DataTable<TData, TValue>({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && 'selected'}
+                  onClick={() => onRowClick(row.original)}
+                  className="cursor-pointer"
                 >
                   {row.getVisibleCells().map(cell => (
                     <TableCell key={cell.id}>

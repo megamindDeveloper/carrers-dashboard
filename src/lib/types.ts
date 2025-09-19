@@ -29,4 +29,5 @@ export type Candidate = {
   status: CandidateStatus;
   type: CandidateType;
   submittedAt: string;
+  rejectionReason?: string;
 };
