@@ -33,7 +33,7 @@ export function Header({ onCandidateAdd }: HeaderProps) {
         </svg> */}
         {/* <h1 className="text-xl font-bold tracking-tight">MegaMind Careers</h1> */}
            
-           <Image height={50} width={200} src={mmLogo} />
+           <Image height={50} width={200} src={mmLogo} alt="MegaMind Careers Logo" />
          
       </div>
       <div className="ml-auto flex items-center gap-4">
