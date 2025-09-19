@@ -8,6 +8,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { collection, onSnapshot, updateDoc, doc } from 'firebase/firestore';
 import { db } from '@/app/utils/firebase/firebaseConfig';
 import { AddCandidateSheet } from './add-candidate-sheet';
+import { useToast } from '@/hooks/use-toast';
 
 interface CandidateTableProps {
   title: string;
@@ -18,6 +19,7 @@ interface CandidateTableProps {
 export function CandidateTable({ title, description, filterType }: CandidateTableProps) {
   const [data, setData] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     const colRef = collection(db, 'applications');
@@ -46,14 +48,48 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
 
   const handleStatusChange = useCallback(
     async (candidateId: string, status: CandidateStatus) => {
+      const originalData = [...data];
+      const candidateToUpdate = originalData.find(c => c.id === candidateId);
+
+      if (!candidateToUpdate) return;
+
+      // Optimistically update UI
       setData(prev => prev.map(c => (c.id === candidateId ? { ...c, status } : c)));
+
       try {
         await updateDoc(doc(db, 'applications', candidateId), { status });
+        toast({
+          title: "Status Updated",
+          description: `${candidateToUpdate.fullName}'s status is now ${status}.`,
+        });
+
+        if (status === 'Shortlisted') {
+          await fetch('/api/shortlisted', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              fullName: candidateToUpdate.fullName,
+              email: candidateToUpdate.email,
+              position: candidateToUpdate.position,
+            }),
+          });
+          toast({
+            title: "Email Sent",
+            description: `An email has been sent to ${candidateToUpdate.fullName}.`,
+          });
+        }
       } catch (err) {
+        // Revert UI on error
+        setData(originalData);
+        toast({
+          variant: "destructive",
+          title: "Update Failed",
+          description: "Failed to update candidate status. Please try again.",
+        });
         console.error('Failed to update status', err);
       }
     },
-    []
+    [data, toast]
   );
 
   const columns = useMemo(
