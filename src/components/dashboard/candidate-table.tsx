@@ -10,6 +10,8 @@ import { db } from '@/app/utils/firebase/firebaseConfig';
 import { AddCandidateSheet } from './add-candidate-sheet';
 import { useToast } from '@/hooks/use-toast';
 import { CandidateDetailsModal } from './candidate-details-modal';
+import { Button } from '../ui/button';
+import { Download } from 'lucide-react';
 
 interface CandidateTableProps {
   title: string;
@@ -54,6 +56,64 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
 
   const handleCloseModal = () => {
     setSelectedCandidate(null);
+  };
+  
+  const handleExport = () => {
+    if (data.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "No data to export",
+        description: "There are no candidates in the current view.",
+      });
+      return;
+    }
+  
+    const headers = [
+      'ID', 'Full Name', 'Email', 'Contact Number', 'WhatsApp Number',
+      'Address', 'City', 'State', 'Pincode', 'Education', 'Experience',
+      'Position', 'Portfolio', 'Resume URL', 'Status', 'Type',
+      'Submitted At'
+    ];
+  
+    const csvContent = [
+      headers.join(','),
+      ...data.map(c => [
+        c.id,
+        `"${c.fullName.replace(/"/g, '""')}"`,
+        c.email,
+        c.contactNumber,
+        c.whatsappNumber,
+        `"${(c.address || '').replace(/"/g, '""')}"`,
+        `"${(c.city || '').trim().replace(/"/g, '""')}"`,
+        `"${(c.state || '').trim().replace(/"/g, '""')}"`,
+        c.pincode,
+        `"${(c.education || '').replace(/"/g, '""')}"`,
+        `"${(c.experience || '').replace(/"/g, '""')}"`,
+        `"${c.position.replace(/"/g, '""')}"`,
+        c.portfolio,
+        c.resumeUrl,
+        c.status,
+        c.type,
+        c.submittedAt?.toDate ? c.submittedAt.toDate().toISOString() : ''
+      ].join(','))
+    ].join('\n');
+  
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.href) {
+      URL.revokeObjectURL(link.href);
+    }
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.setAttribute('download', `candidates_${filterType || 'all'}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  
+    toast({
+      title: "Export Successful",
+      description: "Candidate data has been downloaded as a CSV file.",
+    });
   };
 
   const handleStatusChange = useCallback(
@@ -145,7 +205,13 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
             <CardTitle>{title}</CardTitle>
             <CardDescription>{description}</CardDescription>
           </div>
-          <AddCandidateSheet />
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleExport}>
+              <Download className="mr-2 h-4 w-4" />
+              Export to CSV
+            </Button>
+            <AddCandidateSheet />
+          </div>
         </CardHeader>
         <CardContent>
           <DataTable columns={columns} data={data} onRowClick={handleRowClick} />
