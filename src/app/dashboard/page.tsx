@@ -1,10 +1,9 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth-context';
-import { Loader2, Briefcase, Users, UserGraduate } from 'lucide-react';
+import { Loader2, Briefcase, Users, GraduationCap } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { onSnapshot, collection } from 'firebase/firestore';
 import { db } from '@/app/utils/firebase/firebaseConfig';
@@ -89,7 +88,7 @@ export default function DashboardPage() {
                 <CardTitle className="text-sm font-medium">
                   Intern Applications
                 </CardTitle>
-                <UserGraduate className="h-4 w-4 text-muted-foreground" />
+                <GraduationCap className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{internApplications}</div>
