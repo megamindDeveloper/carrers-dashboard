@@ -137,7 +137,7 @@ export function AddCandidateSheet({}: AddCandidateSheetProps) {
         ? 'Intern'
         : 'Full-time';
 
-      const newCandidate: Omit<Candidate, 'id'> = {
+      const newCandidate: Omit<Candidate, 'id' | 'applicationType'> & { applicationType: ApplicationType } = {
         fullName: data.fullName,
         email: data.email,
         contactNumber: data.contactNumber,
