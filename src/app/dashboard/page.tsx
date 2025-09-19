@@ -4,13 +4,31 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth-context';
-import { Loader2, Briefcase, Users, GraduationCap } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Loader2 } from 'lucide-react';
 import { onSnapshot, collection } from 'firebase/firestore';
 import { db } from '@/app/utils/firebase/firebaseConfig';
 import type { Candidate } from '@/lib/types';
-import Link from 'next/link';
 import { Header } from '@/components/dashboard/header';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+
+type PositionSummary = {
+  position: string;
+  count: number;
+};
 
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
@@ -54,13 +72,66 @@ export default function DashboardPage() {
     );
   }
 
-  const totalApplications = candidates.length;
-  const internApplications = candidates.filter(
-    c => c.type === 'intern'
-  ).length;
-  const fullTimeApplications = candidates.filter(
-    c => c.type === 'emp'
-  ).length;
+  const getPositionSummary = (type: 'emp' | 'intern'): PositionSummary[] => {
+    const positionCounts = candidates
+      .filter(c => c.type === type)
+      .reduce<Record<string, number>>((acc, candidate) => {
+        acc[candidate.position] = (acc[candidate.position] || 0) + 1;
+        return acc;
+      }, {});
+
+    return Object.entries(positionCounts)
+      .map(([position, count]) => ({ position, count }))
+      .sort((a, b) => b.count - a.count);
+  };
+
+  const fullTimeSummary = getPositionSummary('emp');
+  const internSummary = getPositionSummary('intern');
+
+  const SummaryTable = ({
+    title,
+    data,
+  }: {
+    title: string;
+    data: PositionSummary[];
+  }) => (
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>
+          Unique positions and application counts.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[50px]">Sl.No</TableHead>
+              <TableHead>Position</TableHead>
+              <TableHead className="text-right">Total Applications</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data.length > 0 ? (
+              data.map((item, index) => (
+                <TableRow key={item.position}>
+                  <TableCell>{index + 1}</TableCell>
+                  <TableCell className="font-medium">{item.position}</TableCell>
+                  <TableCell className="text-right">{item.count}</TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={3} className="text-center">
+                  No applications found.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="flex min-h-screen w-full flex-col">
@@ -69,46 +140,9 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between space-y-2">
           <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <Link href="/dashboard/all">
-            <Card className="hover:bg-muted/50 transition-colors">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Total Applications
-                </CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{totalApplications}</div>
-              </CardContent>
-            </Card>
-          </Link>
-          <Link href="/dashboard/intern">
-            <Card className="hover:bg-muted/50 transition-colors">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Intern Applications
-                </CardTitle>
-                <GraduationCap className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{internApplications}</div>
-              </CardContent>
-            </Card>
-          </Link>
-          <Link href="/dashboard/full-time">
-            <Card className="hover:bg-muted/50 transition-colors">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Full-time Applications
-                </CardTitle>
-                <Briefcase className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{fullTimeApplications}</div>
-              </CardContent>
-            </Card>
-          </Link>
+        <div className="grid gap-8 md:grid-cols-2">
+          <SummaryTable title="Full-time Positions" data={fullTimeSummary} />
+          <SummaryTable title="Internship Positions" data={internSummary} />
         </div>
       </main>
     </div>
