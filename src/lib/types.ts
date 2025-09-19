@@ -4,6 +4,7 @@ export const CANDIDATE_STATUSES = [
   'Shortlisted',
   'First Round',
   'Second Round',
+  'Third Round',
   'Final Round',
   'Hired',
   'Rejected',

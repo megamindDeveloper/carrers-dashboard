@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { ColumnDef } from '@tanstack/react-table';
@@ -23,20 +22,9 @@ import {
   MoreHorizontal,
   FileText,
   ExternalLink,
-  Download,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-
-const downloadJSON = (data: Candidate) => {
-  const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
-    JSON.stringify(data, null, 2)
-  )}`;
-  const link = document.createElement('a');
-  link.href = jsonString;
-  link.download = `${(data.fullName ?? 'candidate').replace(/\s/g, '_')}_data.json`;
-  link.click();
-};
 
 type GetColumnsProps = {
   onStatusChange: (candidateId: string, status: CandidateStatus) => void;
@@ -117,7 +105,12 @@ export const getColumns = ({
       const { submittedAt } = row.original;
       if (!submittedAt) return 'N/A';
       try {
-        return format(new Date(submittedAt), 'MMM d, yyyy');
+        const date = new Date(submittedAt);
+        // isNaN check for invalid dates
+        if (isNaN(date.getTime())) {
+          return 'Invalid Date';
+        }
+        return format(date, 'MMM d, yyyy');
       } catch (e) {
         return 'Invalid Date';
       }
@@ -138,7 +131,7 @@ export const getColumns = ({
       const { status } = row.original;
       const safeStatus = status ?? 'Unknown';
       let variant: 'default' | 'secondary' | 'destructive' = 'secondary';
-      if (['Shortlisted', 'First Round', 'Second Round', 'Final Round'].includes(safeStatus)) {
+      if (['Shortlisted', 'First Round', 'Second Round', 'Third Round', 'Final Round'].includes(safeStatus)) {
         variant = 'default';
       } else if (safeStatus === 'Rejected') {
         variant = 'destructive';
@@ -195,11 +188,6 @@ export const getColumns = ({
                 </DropdownMenuRadioGroup>
               </DropdownMenuSubContent>
             </DropdownMenuSub>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => downloadJSON(candidate)}>
-              <Download className="mr-2 h-4 w-4" />
-              Download Data
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );
