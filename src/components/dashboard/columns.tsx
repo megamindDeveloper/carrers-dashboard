@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { ColumnDef } from '@tanstack/react-table';
@@ -27,7 +28,12 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 
 type GetColumnsProps = {
-  onStatusChange: (candidateId: string, status: CandidateStatus) => void;
+  onStatusChange: (candidateId: string, status: CandidateStatus, reason?: string) => void;
+};
+
+const toTitleCase = (str: string) => {
+    if (!str) return '';
+    return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
 };
 
 export const getColumns = ({
@@ -128,7 +134,7 @@ export const getColumns = ({
     ),
     cell: ({ row }) => {
       const { status } = row.original;
-      const safeStatus = status ?? 'Unknown';
+      const safeStatus = toTitleCase(status as string) ?? 'Unknown';
       let variant: 'default' | 'secondary' | 'destructive' = 'secondary';
       if (['Shortlisted', 'First Round', 'Second Round', 'Third Round', 'Final Round'].includes(safeStatus)) {
         variant = 'default';
@@ -137,7 +143,10 @@ export const getColumns = ({
       }
       return <Badge variant={variant}>{safeStatus}</Badge>;
     },
-    filterFn: 'myCustomFilter',
+    filterFn: (row, columnId, filterValue) => {
+        const status = row.getValue(columnId) as string;
+        return toTitleCase(status) === filterValue;
+    }
   },
   {
     id: 'actions',
@@ -174,7 +183,7 @@ export const getColumns = ({
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent>
                 <DropdownMenuRadioGroup
-                  value={candidate.status ?? ''}
+                  value={toTitleCase(candidate.status as string)}
                   onValueChange={(value) =>
                     onStatusChange(candidate.id, value as CandidateStatus)
                   }

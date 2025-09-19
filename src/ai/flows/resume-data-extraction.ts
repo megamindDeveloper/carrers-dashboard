@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -24,10 +25,10 @@ const ExtractResumeDataOutputSchema = z.object({
   fullName: z.string().describe('The full name of the candidate.'),
   email: z.string().email().describe('The email address of the candidate.'),
   phone: z.string().describe('The phone number of the candidate.'),
-  location: z.string().describe('The location of the candidate.'),
-  address: z.string().describe('The address of the candidate.'),
+  location: z.string().describe('The location of the candidate, including city and state.'),
+  address: z.string().describe('The full mailing address of the candidate.'),
   education: z.string().describe('The education details of the candidate.'),
-  workExperience: z.string().describe('The work experience of the candidate.'),
+  experience: z.string().describe('The work or internship experience of the candidate.'),
 });
 export type ExtractResumeDataOutput = z.infer<typeof ExtractResumeDataOutputSchema>;
 
@@ -47,10 +48,10 @@ const resumeDataExtractionPrompt = ai.definePrompt({
   - Full Name
   - Email Address
   - Phone Number
-  - Location
+  - Location (City, State)
   - Address
   - Education
-  - Work Experience
+  - Experience (Work and/or Internship)
 
   Resume: {{media url=resumeDataUri}}
 

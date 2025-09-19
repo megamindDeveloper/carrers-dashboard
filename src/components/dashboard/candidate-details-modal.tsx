@@ -33,18 +33,22 @@ interface CandidateDetailsModalProps {
   onStatusChange: (candidateId: string, status: CandidateStatus, reason?: string) => void;
 }
 
+const toTitleCase = (str: string) => {
+    return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
+};
+
 export function CandidateDetailsModal({
   isOpen,
   onClose,
   candidate,
   onStatusChange,
 }: CandidateDetailsModalProps) {
-  const [selectedStatus, setSelectedStatus] = useState<CandidateStatus | undefined>(candidate?.status);
-  const [rejectionReason, setRejectionReason] = useState(candidate?.rejectionReason || '');
+  const [selectedStatus, setSelectedStatus] = useState<CandidateStatus | undefined>(undefined);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   useEffect(() => {
     if (candidate) {
-      setSelectedStatus(candidate.status);
+      setSelectedStatus(candidate.status ? toTitleCase(candidate.status as string) as CandidateStatus : undefined);
       setRejectionReason(candidate.rejectionReason || '');
     }
   }, [candidate]);
@@ -72,6 +76,8 @@ export function CandidateDetailsModal({
     }
   };
 
+  const displayLocation = candidate.city && candidate.state ? `${candidate.city}, ${candidate.state}` : candidate.location;
+
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -86,12 +92,13 @@ export function CandidateDetailsModal({
           <div className="grid grid-cols-2 gap-4">
             <div><Label>Email</Label><p className="text-sm">{candidate.email}</p></div>
             <div><Label>Contact</Label><p className="text-sm">{candidate.contactNumber}</p></div>
-            <div><Label>Location</Label><p className="text-sm">{candidate.location}</p></div>
+            <div><Label>WhatsApp</Label><p className="text-sm">{candidate.whatsappNumber}</p></div>
+            <div><Label>Location</Label><p className="text-sm">{displayLocation}</p></div>
             <div><Label>Applied On</Label><p className="text-sm">{getFormattedDate(candidate.submittedAt)}</p></div>
           </div>
-          <div><Label>Address</Label><p className="text-sm">{candidate.address}</p></div>
-          <div><Label>Education</Label><p className="text-sm">{candidate.education}</p></div>
-          <div><Label>Work Experience</Label><p className="text-sm whitespace-pre-wrap">{candidate.workExperience}</p></div>
+          <div><Label>Address</Label><p className="text-sm">{`${candidate.address}, ${candidate.pincode}`}</p></div>
+          <div><Label>Education</Label><p className="text-sm">{candidate.education || 'N/A'}</p></div>
+          <div><Label>Experience</Label><p className="text-sm whitespace-pre-wrap">{candidate.experience || candidate.workExperience || 'N/A'}</p></div>
           <div className="flex items-center gap-4">
             {candidate.portfolio && (
               <Button variant="outline" asChild>

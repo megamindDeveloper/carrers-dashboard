@@ -30,7 +30,7 @@ import { useToast } from '@/hooks/use-toast';
 import { parseResumeAction } from '@/app/actions';
 import type { Candidate, CandidateType } from '@/lib/types';
 import { Loader2, PlusCircle } from 'lucide-react';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/app/utils/firebase/firebaseConfig';
 import { getStorage, ref, uploadString, getDownloadURL } from "firebase/storage";
 
@@ -41,10 +41,13 @@ const candidateSchema = z.object({
   fullName: z.string().min(1, 'Full name is required'),
   email: z.string().email('Invalid email address'),
   contactNumber: z.string().min(1, 'Contact number is required'),
-  location: z.string().min(1, 'Location is required'),
+  whatsappNumber: z.string().min(1, 'WhatsApp number is required'),
   address: z.string().min(1, 'Address is required'),
-  education: z.string().min(1, 'Education is required'),
-  workExperience: z.string().min(1, 'Work experience is required'),
+  city: z.string().min(1, 'City is required'),
+  state: z.string().min(1, 'State is required'),
+  pincode: z.string().min(1, 'Pincode is required'),
+  education: z.string().optional(),
+  experience: z.string().min(1, 'Experience is required'),
   position: z.string().min(1, 'Position is required'),
   portfolio: z.string().url('Invalid URL').or(z.literal('')),
   resumeDataUri: z.string().min(1, 'Resume is required'),
@@ -61,10 +64,13 @@ export function AddCandidateSheet({}: AddCandidateSheetProps) {
       fullName: '',
       email: '',
       contactNumber: '',
-      location: '',
+      whatsappNumber: '',
       address: '',
+      city: '',
+      state: '',
+      pincode: '',
       education: '',
-      workExperience: '',
+      experience: '',
       position: '',
       portfolio: '',
       resumeDataUri: '',
@@ -93,10 +99,19 @@ export function AddCandidateSheet({}: AddCandidateSheetProps) {
         const result = await parseResumeAction({ resumeDataUri });
 
         if (result.success && result.data) {
+           const [city, state] = (result.data.location || ',').split(',');
+
           form.reset({
             ...form.getValues(),
-            ...result.data,
+            fullName: result.data.fullName,
+            email: result.data.email,
             contactNumber: result.data.phone,
+            whatsappNumber: result.data.phone, // Assuming same as contact
+            address: result.data.address,
+            city: city.trim(),
+            state: state ? state.trim() : '',
+            experience: result.data.experience,
+            education: result.data.education,
             resumeDataUri: resumeDataUri,
           });
           toast({
@@ -138,21 +153,24 @@ export function AddCandidateSheet({}: AddCandidateSheetProps) {
         ? 'intern'
         : 'emp';
 
-      const newCandidate: Omit<Candidate, 'id' | 'type'> & { type: CandidateType } = {
+      const newCandidate = {
         fullName: data.fullName,
         email: data.email,
         contactNumber: data.contactNumber,
-        location: data.location,
+        whatsappNumber: data.whatsappNumber,
         address: data.address,
+        city: data.city,
+        state: data.state,
+        pincode: data.pincode,
         education: data.education,
-        workExperience: data.workExperience,
+        experience: data.experience,
         position: data.position,
         portfolio: data.portfolio,
         resumeUrl: resumeUrl,
         avatar: `https://i.pravatar.cc/150?u=${data.email}`,
-        status: 'Applied',
+        status: 'applied',
         type: candidateType,
-        submittedAt: new Date().toISOString(),
+        submittedAt: serverTimestamp(),
       };
 
       await addDoc(collection(db, 'applications'), newCandidate);
@@ -263,14 +281,14 @@ export function AddCandidateSheet({}: AddCandidateSheetProps) {
                       </FormItem>
                     )}
                   />
-                  <FormField
+                   <FormField
                     control={form.control}
-                    name="location"
+                    name="whatsappNumber"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Location (City)</FormLabel>
+                        <FormLabel>WhatsApp Number</FormLabel>
                         <FormControl>
-                          <Input placeholder="e.g., San Francisco" {...field} />
+                          <Input placeholder="+1234567890" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -285,7 +303,7 @@ export function AddCandidateSheet({}: AddCandidateSheetProps) {
                       <FormLabel>Address</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="123 Main St, Anytown, USA"
+                          placeholder="123 Main St"
                           {...field}
                         />
                       </FormControl>
@@ -293,6 +311,47 @@ export function AddCandidateSheet({}: AddCandidateSheetProps) {
                     </FormItem>
                   )}
                 />
+                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                   <FormField
+                    control={form.control}
+                    name="city"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>City</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Anytown" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                   <FormField
+                    control={form.control}
+                    name="state"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>State</FormLabel>
+                        <FormControl>
+                          <Input placeholder="CA" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="pincode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Pincode</FormLabel>
+                        <FormControl>
+                          <Input placeholder="12345" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
                 <FormField
                   control={form.control}
                   name="education"
@@ -301,7 +360,7 @@ export function AddCandidateSheet({}: AddCandidateSheetProps) {
                       <FormLabel>Education</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="B.S. in Computer Science, University of Example, 2024"
+                          placeholder="B.S. in Computer Science"
                           {...field}
                         />
                       </FormControl>
@@ -311,7 +370,7 @@ export function AddCandidateSheet({}: AddCandidateSheetProps) {
                 />
                 <FormField
                   control={form.control}
-                  name="workExperience"
+                  name="experience"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Work / Internship Experience</FormLabel>
@@ -333,7 +392,7 @@ export function AddCandidateSheet({}: AddCandidateSheetProps) {
                       <FormLabel>Position Applying For</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="Graphic Designer Intern"
+                          placeholder="Social Media Manager"
                           {...field}
                         />
                       </FormControl>

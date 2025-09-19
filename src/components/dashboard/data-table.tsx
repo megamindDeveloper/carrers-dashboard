@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -31,13 +32,18 @@ interface DataTableProps<TData, TValue> {
   onRowClick: (row: TData) => void;
 }
 
+const toTitleCase = (str: string) => {
+    if (!str) return '';
+    return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
+};
+
+
 export function DataTable<TData extends {id: string}, TValue>({
   columns,
   data,
   onRowClick
 }: DataTableProps<TData, TValue>) {
 
-    console.log('DataTable received rowssss:', data?.length);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
@@ -61,10 +67,11 @@ export function DataTable<TData extends {id: string}, TValue>({
     },
     filterFns: {
       myCustomFilter: (row, columnId, filterValue) => {
-        if (filterValue === 'all') {
+        if (!filterValue || filterValue === 'all') {
           return true;
         }
-        return row.getValue(columnId) === filterValue;
+        const status = row.getValue(columnId) as string;
+        return toTitleCase(status) === filterValue;
       },
     },
   });
