@@ -69,28 +69,18 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="w-full min-h-screen lg:grid lg:grid-cols-2">
-      <div className="hidden bg-muted lg:block">
-        <Image
-          src="https://picsum.photos/seed/10/1920/1080"
-          alt="Office"
-          width="1920"
-          height="1080"
-          data-ai-hint="office workspace"
-          className="h-full w-full object-cover"
-        />
-      </div>
-      <div className="flex items-center justify-center py-12">
-        <div className="mx-auto grid w-[350px] gap-6">
-          <div className="grid gap-2 text-center">
-            <Image height={50} width={200} src={mmLogo} alt="MegaMind Careers Logo" className="mx-auto" />
-            <h1 className="text-3xl font-bold">Login</h1>
-            <p className="text-balance text-muted-foreground">
+    <div className="flex min-h-screen w-full items-center justify-center bg-muted/40 p-4">
+      <Card className="w-full max-w-sm">
+         <CardHeader className="text-center">
+           <Image height={50} width={200} src={mmLogo} alt="MegaMind Careers Logo" className="mx-auto mb-4" />
+           <CardTitle className="text-2xl">Login</CardTitle>
+           <CardDescription>
               Enter your credentials to access your dashboard.
               <br/>
               Use <span className="font-semibold">admin@example.com</span> and <span className="font-semibold">password</span> to log in.
-            </p>
-          </div>
+           </CardDescription>
+        </CardHeader>
+        <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
@@ -131,8 +121,8 @@ export default function LoginPage() {
               </Button>
             </form>
           </Form>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
