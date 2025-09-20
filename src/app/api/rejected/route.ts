@@ -23,9 +23,9 @@ export async function POST(req: Request) {
 
     // Replace placeholders with actual values
     template = template
-      .replace(/<<Candidate Name>>/g, fullName)
-      .replace(/<<Position>>/g, position)
-      .replace(/<<Reason>>/g, reason);
+      .replace(/&lt;&lt;Candidate Name&gt;&gt;/g, fullName)
+      .replace(/&lt;&lt;Position&gt;&gt;/g, position)
+      .replace(/&lt;&lt;Reason&gt;&gt;/g, reason);
 
     // Setup nodemailer transporter
     const transporter = nodemailer.createTransport({
