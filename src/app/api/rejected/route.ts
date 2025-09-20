@@ -1,3 +1,4 @@
+
 import { NextResponse } from "next/server";
 import path from "path";
 import fs from "fs/promises";
@@ -22,9 +23,9 @@ export async function POST(req: Request) {
 
     // Replace placeholders with actual values
     template = template
-      .replace("<<Candidate Name>>", fullName)
-      .replace("<<Position>>", position)
-      .replace("<<Reason>>", reason);
+      .replace(/<<Candidate Name>>/g, fullName)
+      .replace(/<<Position>>/g, position)
+      .replace(/<<Reason>>/g, reason);
 
     // Setup nodemailer transporter
     const transporter = nodemailer.createTransport({
@@ -49,5 +50,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
-
-    
