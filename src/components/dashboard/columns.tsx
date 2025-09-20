@@ -128,6 +128,7 @@ export const getColumns = ({
       const { submittedAt } = row.original;
       if (!submittedAt) return 'N/A';
       try {
+        // Firestore Timestamps can be converted to JS Date with toDate()
         const date = submittedAt.toDate ? submittedAt.toDate() : new Date(submittedAt);
         if (isNaN(date.getTime())) {
           return 'Invalid Date';
@@ -177,7 +178,7 @@ export const getColumns = ({
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             {candidate.portfolio && (
               <DropdownMenuItem
