@@ -116,7 +116,7 @@ export function CandidateDetailsModal({
                   </Button>
                 )}
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+              <div className="grid grid-cols-1 gap-4 items-end">
                 <div>
                   <Label htmlFor="status">Status</Label>
                   <Select value={selectedStatus} onValueChange={(value: CandidateStatus) => setSelectedStatus(value)}>
