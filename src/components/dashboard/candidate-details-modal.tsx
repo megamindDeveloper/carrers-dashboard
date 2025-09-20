@@ -26,6 +26,8 @@ import { Badge } from '@/components/ui/badge';
 import { ExternalLink, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { ScrollArea } from '../ui/scroll-area';
+import { useToast } from '@/hooks/use-toast';
+
 
 interface CandidateDetailsModalProps {
   isOpen: boolean;
@@ -47,6 +49,7 @@ export function CandidateDetailsModal({
 }: CandidateDetailsModalProps) {
   const [selectedStatus, setSelectedStatus] = useState<CandidateStatus | undefined>(undefined);
   const [rejectionReason, setRejectionReason] = useState('');
+  const { toast } = useToast();
 
   useEffect(() => {
     if (candidate) {
@@ -58,6 +61,14 @@ export function CandidateDetailsModal({
   if (!candidate) return null;
 
   const handleSave = () => {
+    if (selectedStatus === 'Rejected' && !rejectionReason.trim()) {
+        toast({
+            variant: "destructive",
+            title: "Reason Required",
+            description: "Please provide a reason for rejection.",
+        });
+        return;
+    }
     if (selectedStatus) {
       onStatusChange(candidate.id, selectedStatus, rejectionReason);
     }
@@ -138,7 +149,7 @@ export function CandidateDetailsModal({
                   <Label htmlFor="rejectionReason">Rejection Reason</Label>
                   <Textarea
                     id="rejectionReason"
-                    placeholder="Provide a reason for rejection..."
+                    placeholder="Provide a reason for rejection... (This will be sent to the candidate)"
                     value={rejectionReason}
                     onChange={(e) => setRejectionReason(e.target.value)}
                   />

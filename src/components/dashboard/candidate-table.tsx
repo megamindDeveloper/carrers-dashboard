@@ -123,6 +123,12 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
 
       if (!candidateToUpdate) return;
       
+      if (status === 'Rejected' && !reason) {
+        setSelectedCandidate(candidateToUpdate);
+        // Defer status update until reason is provided in modal
+        return;
+      }
+      
       const updateData: { status: CandidateStatus, rejectionReason?: string } = { status };
       if (status === 'Rejected' && reason) {
         updateData.rejectionReason = reason;
