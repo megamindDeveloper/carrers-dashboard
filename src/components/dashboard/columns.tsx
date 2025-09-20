@@ -99,20 +99,6 @@ export const getColumns = ({
       return <div className="truncate max-w-[200px]">{experience || 'N/A'}</div>
     },
   },
-  {
-    accessorKey: 'type',
-    header: 'Type',
-    cell: ({ row }) => {
-      const { type } = row.original;
-      let variant: 'default' | 'secondary' = 'secondary';
-      let label = 'Internship';
-      if (type === 'full-time') {
-        variant = 'default';
-        label = 'Full-time';
-      }
-      return <Badge variant={variant}>{label}</Badge>;
-    }
-  },
     {
     accessorKey: 'submittedAt',
     header: ({ column }) => (
