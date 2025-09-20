@@ -23,7 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { ExternalLink, FileText } from 'lucide-react';
+import { ExternalLink, FileText, Video } from 'lucide-react';
 import { format } from 'date-fns';
 import { ScrollArea } from '../ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
@@ -123,6 +123,13 @@ export function CandidateDetailsModal({
                   <Button variant="outline" asChild>
                     <a href={candidate.resumeUrl} target="_blank" rel="noopener noreferrer">
                       <FileText className="mr-2 h-4 w-4" /> View Resume
+                    </a>
+                  </Button>
+                )}
+                {candidate.introductionVideoIntern && (
+                  <Button variant="outline" asChild>
+                    <a href={candidate.introductionVideoIntern} target="_blank" rel="noopener noreferrer">
+                      <Video className="mr-2 h-4 w-4" /> View Intro Video
                     </a>
                   </Button>
                 )}

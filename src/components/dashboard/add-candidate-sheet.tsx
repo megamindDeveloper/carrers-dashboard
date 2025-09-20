@@ -51,6 +51,7 @@ const candidateSchema = z.object({
   position: z.string().min(1, 'Position is required'),
   portfolio: z.string().url('Invalid URL').or(z.literal('')),
   resumeDataUri: z.string().min(1, 'Resume is required'),
+  introductionVideoIntern: z.string().url('Invalid URL').or(z.literal('')),
 });
 
 export function AddCandidateSheet({}: AddCandidateSheetProps) {
@@ -74,6 +75,7 @@ export function AddCandidateSheet({}: AddCandidateSheetProps) {
       position: '',
       portfolio: '',
       resumeDataUri: '',
+      introductionVideoIntern: '',
     },
   });
 
@@ -153,7 +155,7 @@ export function AddCandidateSheet({}: AddCandidateSheetProps) {
         ? 'internship'
         : 'full-time';
 
-      const newCandidate = {
+      const newCandidate: Omit<Candidate, 'id' | 'status' | 'submittedAt' | 'avatar'> & { submittedAt: any } = {
         fullName: data.fullName,
         email: data.email,
         contactNumber: data.contactNumber,
@@ -167,13 +169,17 @@ export function AddCandidateSheet({}: AddCandidateSheetProps) {
         position: data.position,
         portfolio: data.portfolio,
         resumeUrl: resumeUrl,
-        avatar: `https://i.pravatar.cc/150?u=${data.email}`,
-        status: 'applied',
         type: candidateType,
+        introductionVideoIntern: data.introductionVideoIntern,
         submittedAt: serverTimestamp(),
       };
 
-      await addDoc(collection(db, 'applications'), newCandidate);
+      await addDoc(collection(db, 'applications'), {
+        ...newCandidate,
+        status: 'applied',
+        avatar: `https://i.pravatar.cc/150?u=${data.email}`,
+      });
+
 
       form.reset();
       setIsOpen(false);
@@ -409,6 +415,22 @@ export function AddCandidateSheet({}: AddCandidateSheetProps) {
                       <FormControl>
                         <Input
                           placeholder="https://yourportfolio.com"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="introductionVideoIntern"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Intro Video Link (Interns)</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="https://yourvideo.com"
                           {...field}
                         />
                       </FormControl>

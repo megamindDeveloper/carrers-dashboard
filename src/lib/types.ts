@@ -35,4 +35,5 @@ export type Candidate = {
   submittedAt: any; // Allow for Firestore timestamp object
   rejectionReason?: string;
   whatsappNumber: string;
+  introductionVideoIntern?: string;
 };

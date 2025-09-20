@@ -23,6 +23,7 @@ import {
   MoreHorizontal,
   FileText,
   ExternalLink,
+  Video,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
@@ -153,6 +154,29 @@ export const getColumns = ({
     }
   },
   {
+    accessorKey: 'introductionVideoIntern',
+    header: 'Intro Video',
+    cell: ({ row }) => {
+      const { introductionVideoIntern } = row.original;
+      if (!introductionVideoIntern) {
+        return <span className="text-muted-foreground">N/A</span>;
+      }
+      return (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            window.open(introductionVideoIntern, '_blank');
+          }}
+        >
+          <Video className="mr-2 h-4 w-4" />
+          View
+        </Button>
+      );
+    },
+  },
+  {
     id: 'actions',
     cell: ({ row }) => {
       const candidate = row.original;
@@ -178,6 +202,12 @@ export const getColumns = ({
               <DropdownMenuItem onClick={() => window.open(candidate.resumeUrl!, '_blank')}>
                 <FileText className="mr-2 h-4 w-4" />
                 View Resume
+              </DropdownMenuItem>
+            )}
+             {candidate.introductionVideoIntern && (
+              <DropdownMenuItem onClick={() => window.open(candidate.introductionVideoIntern!, '_blank')}>
+                <Video className="mr-2 h-4 w-4" />
+                View Intro Video
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
