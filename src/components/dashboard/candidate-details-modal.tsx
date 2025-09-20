@@ -33,7 +33,7 @@ interface CandidateDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   candidate: Candidate | null;
-  onStatusChange: (candidateId: string, status: CandidateStatus, reason?: string) => void;
+  onSaveChanges: (candidateId: string, updates: Partial<Candidate>) => void;
 }
 
 const toTitleCase = (str: string) => {
@@ -45,16 +45,18 @@ export function CandidateDetailsModal({
   isOpen,
   onClose,
   candidate,
-  onStatusChange,
+  onSaveChanges,
 }: CandidateDetailsModalProps) {
   const [selectedStatus, setSelectedStatus] = useState<CandidateStatus | undefined>(undefined);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [comments, setComments] = useState('');
   const { toast } = useToast();
 
   useEffect(() => {
     if (candidate) {
       setSelectedStatus(candidate.status ? toTitleCase(candidate.status as string) as CandidateStatus : undefined);
       setRejectionReason(candidate.rejectionReason || '');
+      setComments(candidate.comments || '');
     }
   }, [candidate]);
 
@@ -69,9 +71,19 @@ export function CandidateDetailsModal({
         });
         return;
     }
+    
+    const updates: Partial<Candidate> = { comments };
+
     if (selectedStatus) {
-      onStatusChange(candidate.id, selectedStatus, rejectionReason);
+      updates.status = selectedStatus;
     }
+    if (selectedStatus === 'Rejected') {
+      updates.rejectionReason = rejectionReason;
+    } else {
+        updates.rejectionReason = '';
+    }
+    
+    onSaveChanges(candidate.id, updates);
     onClose();
   };
   
@@ -108,7 +120,7 @@ export function CandidateDetailsModal({
                 <div><Label>Location</Label><p className="text-sm">{displayLocation}</p></div>
                 <div><Label>Applied On</Label><p className="text-sm">{getFormattedDate(candidate.submittedAt)}</p></div>
               </div>
-              <div><Label>Address</Label><p className="text-sm">{`${candidate.address}, ${candidate.pincode}`}</p></div>
+              <div><Label>Address</Label><p className="text-sm">{`${candidate.address}, ${candidate.city}, ${candidate.state} ${candidate.pincode}`}</p></div>
               <div><Label>Education</Label><p className="text-sm">{candidate.education || 'N/A'}</p></div>
               <div><Label>Experience</Label><p className="text-sm whitespace-pre-wrap">{candidate.experience || candidate.workExperience || 'N/A'}</p></div>
               <div className="flex flex-wrap items-center gap-4">
@@ -169,6 +181,16 @@ export function CandidateDetailsModal({
                   </div>
                 )
               }
+               <div>
+                <Label htmlFor="comments">Internal Comments</Label>
+                <Textarea
+                  id="comments"
+                  placeholder="Add internal notes about the candidate..."
+                  value={comments}
+                  onChange={(e) => setComments(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
             </div>
         </ScrollArea>
         <DialogFooter className="pt-4 flex-shrink-0">

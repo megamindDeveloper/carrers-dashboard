@@ -39,7 +39,10 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
           candidates = candidates.filter(c => c.type === filterType);
         }
 
-        setData(candidates);
+        setData(candidates.map(c => ({
+          ...c,
+          type: c.type === 'intern' ? 'internship' : c.type === 'emp' ? 'full-time' : c.type,
+        })));
         setLoading(false);
       },
       error => {
@@ -72,7 +75,7 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
       'ID', 'Full Name', 'Email', 'Contact Number', 'WhatsApp Number',
       'Address', 'City', 'State', 'Pincode', 'Education', 'Experience',
       'Position', 'Portfolio', 'Resume URL', 'Status', 'Type',
-      'Submitted At'
+      'Submitted At', 'Comments'
     ];
   
     const csvContent = [
@@ -94,7 +97,8 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
         c.resumeUrl,
         c.status,
         c.type,
-        c.submittedAt?.toDate ? c.submittedAt.toDate().toISOString() : ''
+        c.submittedAt?.toDate ? c.submittedAt.toDate().toISOString() : '',
+        `"${(c.comments || '').replace(/"/g, '""')}"`
       ].join(','))
     ].join('\n');
   
@@ -116,71 +120,71 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
     });
   };
 
-  const handleStatusChange = useCallback(
-    async (candidateId: string, status: CandidateStatus, reason?: string) => {
+  const handleSaveChanges = useCallback(
+    async (candidateId: string, updates: Partial<Candidate>) => {
       const originalData = [...data];
       const candidateToUpdate = originalData.find(c => c.id === candidateId);
 
       if (!candidateToUpdate) return;
       
-      if (status === 'Rejected' && !reason) {
-        setSelectedCandidate(candidateToUpdate);
-        // Defer status update until reason is provided in modal
+      const { status, rejectionReason } = updates;
+
+      if (status === 'Rejected' && !rejectionReason) {
+        // Open the modal to get rejection reason
+        setSelectedCandidate(originalData.find(c => c.id === candidateId) || null);
         return;
       }
       
-      const updateData: { status: CandidateStatus, rejectionReason?: string } = { status };
-      if (status === 'Rejected' && reason) {
-        updateData.rejectionReason = reason;
-      } else if (status !== 'Rejected') {
-        // Clear rejection reason if status is changed from 'Rejected' to something else
-        updateData.rejectionReason = '';
-      }
-
       // Optimistically update UI
-      setData(prev => prev.map(c => (c.id === candidateId ? { ...c, ...updateData } : c)));
+      setData(prev => prev.map(c => (c.id === candidateId ? { ...c, ...updates } : c)));
       if (selectedCandidate && selectedCandidate.id === candidateId) {
-          setSelectedCandidate(prev => prev ? {...prev, ...updateData} : null);
+          setSelectedCandidate(prev => prev ? {...prev, ...updates} : null);
       }
 
 
       try {
-        await updateDoc(doc(db, 'applications', candidateId), updateData);
+        await updateDoc(doc(db, 'applications', candidateId), updates);
         toast({
-          title: "Status Updated",
-          description: `${candidateToUpdate.fullName}'s status is now ${status}.`,
+          title: "Update Successful",
+          description: `${candidateToUpdate.fullName}'s details have been updated.`,
         });
 
-        if (status === 'Shortlisted') {
-          await fetch('/api/shortlisted', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              fullName: candidateToUpdate.fullName,
-              email: candidateToUpdate.email,
-              position: candidateToUpdate.position,
-            }),
-          });
-          toast({
-            title: "Email Sent",
-            description: `An email has been sent to ${candidateToUpdate.fullName}.`,
+        if (status && status !== candidateToUpdate.status) {
+            toast({
+              title: "Status Updated",
+              description: `${candidateToUpdate.fullName}'s status is now ${status}.`,
+            });
+            if (status === 'Shortlisted') {
+              await fetch('/api/shortlisted', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  fullName: candidateToUpdate.fullName,
+                  email: candidateToUpdate.email,
+                  position: candidateToUpdate.position,
+                }),
+              });
+              toast({
+                title: "Email Sent",
+                description: `An email has been sent to ${candidateToUpdate.fullName}.`,
 
-          });
-        } else if (status === 'Rejected' && reason) {
-           await fetch('/api/rejected', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              fullName: candidateToUpdate.fullName,
-              email: candidateToUpdate.email,
-              position: candidateToUpdate.position,
-              reason: reason,
-            }),
-          });
-           toast({
-            title: "Rejection Email Sent",
-            description: `An email has been sent to ${candidateToUpdate.fullName}.`,
-          });
+              });
+            } else if (status === 'Rejected' && rejectionReason) {
+               await fetch('/api/rejected', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  fullName: candidateToUpdate.fullName,
+                  email: candidateToUpdate.email,
+                  position: candidateToUpdate.position,
+                  reason: rejectionReason,
+                }),
+              });
+               toast({
+                title: "Rejection Email Sent",
+                description: `An email has been sent to ${candidateToUpdate.fullName}.`,
+              });
+            }
         }
       } catch (err) {
         // Revert UI on error
@@ -191,17 +195,31 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
         toast({
           variant: "destructive",
           title: "Update Failed",
-          description: "Failed to update candidate status. Please try again.",
+          description: "Failed to update candidate details. Please try again.",
         });
-        console.error('Failed to update status', err);
+        console.error('Failed to update details', err);
       }
     },
     [data, toast, selectedCandidate]
   );
+  
+  const handleStatusChangeFromDropdown = (candidateId: string, status: CandidateStatus) => {
+    const candidate = data.find(c => c.id === candidateId);
+    if (!candidate) return;
+
+    if (status === 'Rejected') {
+      // If 'Rejected' is selected from dropdown, open modal to get reason
+      setSelectedCandidate(candidate);
+    } else {
+      // For other statuses, update directly
+      handleSaveChanges(candidateId, { status });
+    }
+  }
+
 
   const columns = useMemo(
-    () => getColumns({ onStatusChange: handleStatusChange, filterType }),
-    [handleStatusChange, filterType]
+    () => getColumns({ onStatusChange: handleStatusChangeFromDropdown, filterType }),
+    [handleStatusChangeFromDropdown, filterType]
   );
 
   if (loading) return <p className="p-4">Loading candidates...</p>;
@@ -230,7 +248,7 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
         isOpen={!!selectedCandidate}
         onClose={handleCloseModal}
         candidate={selectedCandidate}
-        onStatusChange={handleStatusChange}
+        onSaveChanges={handleSaveChanges}
       />
     </>
   );

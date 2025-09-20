@@ -29,7 +29,7 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 
 type GetColumnsProps = {
-  onStatusChange: (candidateId: string, status: CandidateStatus, reason?: string) => void;
+  onStatusChange: (candidateId: string, status: CandidateStatus) => void;
   filterType?: CandidateType;
 };
 
@@ -174,6 +174,8 @@ export const getColumns = ({
           variant = 'default';
         } else if (safeStatus === 'Rejected') {
           variant = 'destructive';
+        } else if (safeStatus === 'Hired') {
+          variant = 'default';
         }
         return <Badge variant={variant}>{safeStatus}</Badge>;
       },

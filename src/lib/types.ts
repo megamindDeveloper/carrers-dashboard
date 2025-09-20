@@ -31,9 +31,10 @@ export type Candidate = {
   resumeUrl: string;
   avatar: string;
   status: CandidateStatus | string; // Allow for lowercase from db
-  type: CandidateType | 'emp' | 'intern'; // Allow old values from db
+  type: CandidateType;
   submittedAt: any; // Allow for Firestore timestamp object
   rejectionReason?: string;
   whatsappNumber: string;
   introductionVideoIntern?: string;
+  comments?: string;
 };
