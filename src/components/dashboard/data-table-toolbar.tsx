@@ -61,7 +61,7 @@ export function DataTableToolbar<TData>({
           />
         )}
         <Select
-          value={(table.getColumn('status')?.getFilterValue() as string) ?? ''}
+          value={(table.getColumn('status')?.getFilterValue() as string) ?? 'all'}
           onValueChange={value =>
             table.getColumn('status')?.setFilterValue(value === 'all' ? null : value)
           }
