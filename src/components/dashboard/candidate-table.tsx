@@ -132,6 +132,9 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
       const updateData: { status: CandidateStatus, rejectionReason?: string } = { status };
       if (status === 'Rejected' && reason) {
         updateData.rejectionReason = reason;
+      } else if (status !== 'Rejected') {
+        // Clear rejection reason if status is changed from 'Rejected' to something else
+        updateData.rejectionReason = '';
       }
 
       // Optimistically update UI
@@ -163,7 +166,7 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
             description: `An email has been sent to ${candidateToUpdate.fullName}.`,
 
           });
-        } else if (status === 'Rejected') {
+        } else if (status === 'Rejected' && reason) {
            await fetch('/api/rejected', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -171,7 +174,7 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
               fullName: candidateToUpdate.fullName,
               email: candidateToUpdate.email,
               position: candidateToUpdate.position,
-              reason: reason || 'Not provided',
+              reason: reason,
             }),
           });
            toast({
@@ -197,8 +200,8 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
   );
 
   const columns = useMemo(
-    () => getColumns({ onStatusChange: handleStatusChange }),
-    [handleStatusChange]
+    () => getColumns({ onStatusChange: handleStatusChange, filterType }),
+    [handleStatusChange, filterType]
   );
 
   if (loading) return <p className="p-4">Loading candidates...</p>;
@@ -220,7 +223,7 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
           </div>
         </CardHeader>
         <CardContent>
-          <DataTable columns={columns} data={data} onRowClick={handleRowClick} />
+          <DataTable columns={columns} data={data} onRowClick={handleRowClick} filterType={filterType}/>
         </CardContent>
       </Card>
       <CandidateDetailsModal

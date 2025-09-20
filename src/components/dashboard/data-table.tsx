@@ -24,12 +24,13 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { DataTableToolbar } from './data-table-toolbar';
-import type { Candidate } from '@/lib/types';
+import type { Candidate, CandidateType } from '@/lib/types';
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   onRowClick: (row: TData) => void;
+  filterType?: CandidateType;
 }
 
 const toTitleCase = (str: string) => {
@@ -41,7 +42,8 @@ const toTitleCase = (str: string) => {
 export function DataTable<TData extends {id: string}, TValue>({
   columns,
   data,
-  onRowClick
+  onRowClick,
+  filterType,
 }: DataTableProps<TData, TValue>) {
 
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -78,7 +80,7 @@ export function DataTable<TData extends {id: string}, TValue>({
 
   return (
     <div className="space-y-4">
-      <DataTableToolbar table={table} />
+      <DataTableToolbar table={table} filterType={filterType} />
       <div className="rounded-md border">
         <Table>
           <TableHeader>

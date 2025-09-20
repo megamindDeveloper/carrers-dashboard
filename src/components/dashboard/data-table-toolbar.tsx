@@ -3,7 +3,7 @@
 
 import type { Table } from '@tanstack/react-table';
 import { Input } from '@/components/ui/input';
-import { CANDIDATE_STATUSES } from '@/lib/types';
+import { CANDIDATE_STATUSES, CandidateType } from '@/lib/types';
 import {
   Select,
   SelectContent,
@@ -16,10 +16,12 @@ import { X } from 'lucide-react';
 
 interface DataTableToolbarProps<TData> {
   table: Table<TData>;
+  filterType?: CandidateType;
 }
 
 export function DataTableToolbar<TData>({
   table,
+  filterType,
 }: DataTableToolbarProps<TData>) {
   const isFiltered =
     table.getState().columnFilters.length > 0;
@@ -46,16 +48,18 @@ export function DataTableToolbar<TData>({
           }
           className="h-8 w-[150px] lg:w-[250px]"
         />
-         <Input
-          placeholder="Filter by experience..."
-          value={
-            (table.getColumn('experience')?.getFilterValue() as string) ?? ''
-          }
-          onChange={event =>
-            table.getColumn('experience')?.setFilterValue(event.target.value)
-          }
-          className="h-8 w-[150px] lg:w-[250px]"
-        />
+        {filterType !== 'internship' && (
+          <Input
+            placeholder="Filter by experience..."
+            value={
+              (table.getColumn('experience')?.getFilterValue() as string) ?? ''
+            }
+            onChange={event =>
+              table.getColumn('experience')?.setFilterValue(event.target.value)
+            }
+            className="h-8 w-[150px] lg:w-[250px]"
+          />
+        )}
         <Select
           value={(table.getColumn('status')?.getFilterValue() as string) ?? ''}
           onValueChange={value =>

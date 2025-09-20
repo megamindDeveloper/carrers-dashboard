@@ -2,7 +2,7 @@
 'use client';
 
 import type { ColumnDef } from '@tanstack/react-table';
-import type { Candidate, CandidateStatus } from '@/lib/types';
+import type { Candidate, CandidateStatus, CandidateType } from '@/lib/types';
 import { CANDIDATE_STATUSES } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,6 +30,7 @@ import { format } from 'date-fns';
 
 type GetColumnsProps = {
   onStatusChange: (candidateId: string, status: CandidateStatus, reason?: string) => void;
+  filterType?: CandidateType;
 };
 
 const toTitleCase = (str: string) => {
@@ -39,51 +40,54 @@ const toTitleCase = (str: string) => {
 
 export const getColumns = ({
   onStatusChange,
-}: GetColumnsProps): ColumnDef<Candidate>[] => [
- {
-    id: 'slNo',
-    header: 'Sl. No.',
-    cell: ({ row, table }) => {
-      const { pageIndex, pageSize } = table.getState().pagination;
-      const index = (pageIndex * pageSize) + row.index + 1;
-      return <span>{index}</span>;
+  filterType,
+}: GetColumnsProps): ColumnDef<Candidate>[] => {
+  const baseColumns: ColumnDef<Candidate>[] = [
+    {
+      id: 'slNo',
+      header: 'Sl. No.',
+      cell: ({ row, table }) => {
+        const { pageIndex, pageSize } = table.getState().pagination;
+        const index = (pageIndex * pageSize) + row.index + 1;
+        return <span>{index}</span>;
+      },
     },
-    
-  },
-  {
-    accessorKey: 'fullName',
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-      >
-        Full Name
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
-    ),
-    cell: ({ row }) => {
-      const candidate = row.original;
-      const name = candidate.fullName ?? 'Unnamed Candidate';
-      return (
-        <div className="flex items-center gap-3">
-          <div className="flex flex-col">
-            <span className="font-medium">{name}</span>
-            <span className="text-sm text-muted-foreground">
-              {candidate.email ?? 'No email'}
-            </span>
+    {
+      accessorKey: 'fullName',
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Full Name
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => {
+        const candidate = row.original;
+        const name = candidate.fullName ?? 'Unnamed Candidate';
+        return (
+          <div className="flex items-center gap-3">
+            <div className="flex flex-col">
+              <span className="font-medium">{name}</span>
+              <span className="text-sm text-muted-foreground">
+                {candidate.email ?? 'No email'}
+              </span>
+            </div>
           </div>
-        </div>
-      );
+        );
+      },
     },
-  },
-  {
-    accessorKey: 'position',
-    header: 'Position',
-    cell: ({ row }) => (
-      <Badge variant="secondary">{row.original.position ?? 'N/A'}</Badge>
-    ),
-  },
-  {
+    {
+      accessorKey: 'position',
+      header: 'Position',
+      cell: ({ row }) => (
+        <Badge variant="secondary">{row.original.position ?? 'N/A'}</Badge>
+      ),
+    },
+  ];
+
+  const experienceColumn: ColumnDef<Candidate> = {
     accessorKey: 'experience',
     header: ({ column }) => (
       <Button
@@ -99,61 +103,9 @@ export const getColumns = ({
       const experience = candidate.experience || candidate.workExperience;
       return <div className="truncate max-w-[200px]">{experience || 'N/A'}</div>
     },
-  },
-    {
-    accessorKey: 'submittedAt',
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-      >
-        Applied Date
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
-    ),
-    cell: ({ row }) => {
-      const { submittedAt } = row.original;
-      if (!submittedAt) return 'N/A';
-      try {
-        // Firestore Timestamps can be converted to JS Date with toDate()
-        const date = submittedAt.toDate ? submittedAt.toDate() : new Date(submittedAt);
-        if (isNaN(date.getTime())) {
-          return 'Invalid Date';
-        }
-        return format(date, 'MMM d, yyyy');
-      } catch (e) {
-        return 'Invalid Date';
-      }
-    },
-  },
-  {
-    accessorKey: 'status',
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-      >
-        Status
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
-    ),
-    cell: ({ row }) => {
-      const { status } = row.original;
-      const safeStatus = toTitleCase(status as string) ?? 'Unknown';
-      let variant: 'default' | 'secondary' | 'destructive' = 'secondary';
-      if (['Shortlisted', 'First Round', 'Second Round', 'Third Round', 'Final Round'].includes(safeStatus)) {
-        variant = 'default';
-      } else if (safeStatus === 'Rejected') {
-        variant = 'destructive';
-      }
-      return <Badge variant={variant}>{safeStatus}</Badge>;
-    },
-    filterFn: (row, columnId, filterValue) => {
-        const status = row.getValue(columnId) as string;
-        return toTitleCase(status) === filterValue;
-    }
-  },
-  {
+  };
+  
+  const introVideoColumn: ColumnDef<Candidate> = {
     accessorKey: 'introductionVideoIntern',
     header: 'Intro Video',
     cell: ({ row }) => {
@@ -175,8 +127,64 @@ export const getColumns = ({
         </Button>
       );
     },
-  },
-  {
+  };
+
+  const commonColumns: ColumnDef<Candidate>[] = [
+    {
+      accessorKey: 'submittedAt',
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Applied Date
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => {
+        const { submittedAt } = row.original;
+        if (!submittedAt) return 'N/A';
+        try {
+          const date = submittedAt.toDate ? submittedAt.toDate() : new Date(submittedAt);
+          if (isNaN(date.getTime())) {
+            return 'Invalid Date';
+          }
+          return format(date, 'MMM d, yyyy');
+        } catch (e) {
+          return 'Invalid Date';
+        }
+      },
+    },
+    {
+      accessorKey: 'status',
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Status
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => {
+        const { status } = row.original;
+        const safeStatus = toTitleCase(status as string) ?? 'Unknown';
+        let variant: 'default' | 'secondary' | 'destructive' = 'secondary';
+        if (['Shortlisted', 'First Round', 'Second Round', 'Third Round', 'Final Round'].includes(safeStatus)) {
+          variant = 'default';
+        } else if (safeStatus === 'Rejected') {
+          variant = 'destructive';
+        }
+        return <Badge variant={variant}>{safeStatus}</Badge>;
+      },
+      filterFn: (row, columnId, filterValue) => {
+          const status = row.getValue(columnId) as string;
+          return toTitleCase(status) === filterValue;
+      }
+    },
+  ];
+
+  const actionColumn: ColumnDef<Candidate> = {
     id: 'actions',
     cell: ({ row }) => {
       const candidate = row.original;
@@ -234,5 +242,20 @@ export const getColumns = ({
         </DropdownMenu>
       );
     },
-  },
-];
+  };
+
+  let columns: ColumnDef<Candidate>[] = [...baseColumns];
+
+  if (filterType === 'internship') {
+    // For interns, add intro video and remove experience
+    columns = [...columns, ...commonColumns, introVideoColumn, actionColumn];
+  } else if (filterType === 'full-time') {
+    // For full-time, add experience
+    columns = [...columns, experienceColumn, ...commonColumns, actionColumn];
+  } else {
+    // For 'all' or undefined, include both
+    columns = [...columns, experienceColumn, ...commonColumns, introVideoColumn, actionColumn];
+  }
+
+  return columns;
+};
