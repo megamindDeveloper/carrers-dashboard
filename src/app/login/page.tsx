@@ -8,13 +8,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
   Form,
   FormControl,
   FormField,
@@ -27,12 +20,41 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
 import { Loader2 } from 'lucide-react';
 import Image from 'next/image';
-import mmLogo from '../../../.idx/mmLogo.png'
+import mmLogo from '../../../.idx/mmLogo.png';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(1, 'Password is required'),
 });
+
+const Illustration = () => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 1024 1024"
+      className="h-auto w-full max-w-sm text-primary"
+    >
+      <path
+        fill="currentColor"
+        d="M512 0c282.8 0 512 229.2 512 512s-229.2 512-512 512S0 794.8 0 512 229.2 0 512 0zm0 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64z"
+        opacity=".1"
+      />
+      <path
+        fill="currentColor"
+        d="M512 128c212.1 0 384 171.9 384 384S724.1 896 512 896 128 724.1 128 512s171.9-384 384-384zm0 64c-176.7 0-320 143.3-320 320s143.3 320 320 320 320-143.3 320-320-143.3-320-320-320z"
+        opacity=".2"
+      />
+      <path
+        fill="currentColor"
+        d="M512 256c141.4 0 256 114.6 256 256s-114.6 256-256 256-256-114.6-256-256 114.6-256 256-256zm0 64c-106 0-192 86-192 192s86 192 192 192 192-86 192-192-86-192-192-192z"
+        opacity=".4"
+      />
+      <path
+        fill="hsl(var(--foreground))"
+        d="M608 416a96 96 0 100 192 96 96 0 000-192zm-96 32a64 64 0 110 128 64 64 0 010-128zM416 320a96 96 0 100 192 96 96 0 000-192zm-96 96a64 64 0 11128 0 64 64 0 01-128 0zM512 608a96 96 0 100 192 96 96 0 000-192zm-64 96a64 64 0 11128 0 64 64 0 01-128 0z"
+      />
+    </svg>
+  );
+
 
 export default function LoginPage() {
   const router = useRouter();
@@ -69,18 +91,18 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-muted/40 p-4">
-      <Card className="w-full max-w-sm">
-         <CardHeader className="text-center">
-           <Image height={50} width={200} src={mmLogo} alt="MegaMind Careers Logo" className="mx-auto mb-4" />
-           <CardTitle className="text-2xl">Login</CardTitle>
-           <CardDescription>
+    <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2 xl:min-h-screen">
+      <div className="flex items-center justify-center py-12">
+        <div className="mx-auto grid w-[350px] gap-6">
+          <div className="grid gap-2 text-center">
+            <Image height={50} width={200} src={mmLogo} alt="MegaMind Careers Logo" className="mx-auto mb-4" />
+            <h1 className="text-3xl font-bold">Login</h1>
+            <p className="text-balance text-muted-foreground">
               Enter your credentials to access your dashboard.
               <br/>
               Use <span className="font-semibold">admin@example.com</span> and <span className="font-semibold">password</span> to log in.
-           </CardDescription>
-        </CardHeader>
-        <CardContent>
+            </p>
+          </div>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
@@ -121,8 +143,17 @@ export default function LoginPage() {
               </Button>
             </form>
           </Form>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+      <div className="hidden lg:flex items-center justify-center bg-muted">
+        <div className="flex flex-col items-center justify-center text-center p-8">
+            <Illustration />
+            <h2 className="mt-6 text-3xl font-bold">Streamline Your Hiring</h2>
+            <p className="mt-2 text-muted-foreground">
+                The ultimate platform to manage candidates and find the perfect fit.
+            </p>
+        </div>
+      </div>
     </div>
   );
 }
