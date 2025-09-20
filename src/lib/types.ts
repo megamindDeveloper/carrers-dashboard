@@ -11,7 +11,7 @@ export const CANDIDATE_STATUSES = [
 ] as const;
 
 export type CandidateStatus = (typeof CANDIDATE_STATUSES)[number];
-export type CandidateType = 'intern' | 'emp';
+export type CandidateType = 'internship' | 'full-time';
 
 export type Candidate = {
   id: string;
@@ -31,7 +31,7 @@ export type Candidate = {
   resumeUrl: string;
   avatar: string;
   status: CandidateStatus | string; // Allow for lowercase from db
-  type: CandidateType;
+  type: CandidateType | 'emp' | 'intern'; // Allow old values from db
   submittedAt: any; // Allow for Firestore timestamp object
   rejectionReason?: string;
   whatsappNumber: string;

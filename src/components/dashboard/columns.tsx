@@ -105,8 +105,8 @@ export const getColumns = ({
     cell: ({ row }) => {
       const { type } = row.original;
       let variant: 'default' | 'secondary' = 'secondary';
-      let label = 'Intern';
-      if (type === 'emp') {
+      let label = 'Internship';
+      if (type === 'full-time') {
         variant = 'default';
         label = 'Full-time';
       }

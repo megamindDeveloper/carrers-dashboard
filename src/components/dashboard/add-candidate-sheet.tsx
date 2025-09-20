@@ -150,8 +150,8 @@ export function AddCandidateSheet({}: AddCandidateSheetProps) {
       const resumeUrl = await getDownloadURL(uploadResult.ref);
 
       const candidateType: CandidateType = data.position.toLowerCase().includes('intern')
-        ? 'intern'
-        : 'emp';
+        ? 'internship'
+        : 'full-time';
 
       const newCandidate = {
         fullName: data.fullName,

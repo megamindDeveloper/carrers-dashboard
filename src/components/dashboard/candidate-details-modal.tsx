@@ -85,7 +85,7 @@ export function CandidateDetailsModal({
         <DialogHeader>
           <DialogTitle>{candidate.fullName}</DialogTitle>
           <DialogDescription>
-            {candidate.position} - <span className="capitalize">{candidate.type === 'emp' ? 'Full-time' : 'Intern'}</span>
+            {candidate.position} - <span className="capitalize">{candidate.type === 'full-time' ? 'Full-time' : 'Internship'}</span>
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-6 py-4">

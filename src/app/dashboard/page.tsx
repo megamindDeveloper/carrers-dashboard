@@ -73,10 +73,10 @@ export default function DashboardPage() {
     );
   }
 
-  const fullTimeCount = candidates.filter(c => c.type === 'emp').length;
-  const internCount = candidates.filter(c => c.type === 'intern').length;
+  const fullTimeCount = candidates.filter(c => c.type === 'full-time').length;
+  const internCount = candidates.filter(c => c.type === 'internship').length;
 
-  const getPositionSummary = (type: 'emp' | 'intern'): PositionSummary[] => {
+  const getPositionSummary = (type: 'full-time' | 'internship'): PositionSummary[] => {
     const positionCounts = candidates
       .filter(c => c.type === type)
       .reduce<Record<string, number>>((acc, candidate) => {
@@ -89,8 +89,8 @@ export default function DashboardPage() {
       .sort((a, b) => b.count - a.count);
   };
 
-  const fullTimeSummary = getPositionSummary('emp');
-  const internSummary = getPositionSummary('intern');
+  const fullTimeSummary = getPositionSummary('full-time');
+  const internSummary = getPositionSummary('internship');
 
   const SummaryTable = ({
     title,
@@ -181,7 +181,7 @@ export default function DashboardPage() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
-                  Intern Applications
+                  Internship Applications
                 </CardTitle>
                 <GraduationCap className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
