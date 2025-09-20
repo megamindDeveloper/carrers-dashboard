@@ -65,8 +65,8 @@ export default function LoginPage() {
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: 'admin@example.com',
-      password: 'password',
+      email: '',
+      password: '',
     },
   });
 
@@ -99,8 +99,6 @@ export default function LoginPage() {
             <h1 className="text-3xl font-bold">Login</h1>
             <p className="text-balance text-muted-foreground">
               Enter your credentials to access your dashboard.
-              <br/>
-              Use <span className="font-semibold">admin@example.com</span> and <span className="font-semibold">password</span> to log in.
             </p>
           </div>
           <Form {...form}>
