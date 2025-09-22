@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -222,6 +223,18 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
                     <FormItem>
                       <FormLabel>Lucide Icon Name</FormLabel>
                       <FormControl><Input placeholder="e.g., Briefcase" {...field} /></FormControl>
+                      <FormDescription>
+                        Visit{' '}
+                        <a
+                          href="https://lucide.dev/icons/"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline"
+                        >
+                          lucide.dev/icons
+                        </a>{' '}
+                        and pick an icon name that matches the job, or connect with a designer/developer.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )} />
