@@ -26,7 +26,9 @@ export function DataTableToolbar<TData>({
   const isFiltered =
     table.getState().columnFilters.length > 0;
     
-  const columnExists = (columnId: string) => table.getColumn(columnId);
+  const columnExists = (columnId: string) => {
+    return table.getAllColumns().some(column => column.id === columnId);
+  }
 
   return (
     <div className="flex items-center justify-between">
