@@ -9,7 +9,6 @@ import { Loader2, Briefcase, Users, GraduationCap } from 'lucide-react';
 import { onSnapshot, collection } from 'firebase/firestore';
 import { db } from '@/app/utils/firebase/firebaseConfig';
 import type { Candidate } from '@/lib/types';
-import { Header } from '@/components/dashboard/header';
 import {
   Table,
   TableBody,
@@ -138,8 +137,6 @@ export default function DashboardPage() {
   );
 
   return (
-    <div className="flex min-h-screen w-full flex-col">
-      <Header />
       <main className="flex-1 space-y-4 p-8 pt-6">
         <div className="flex items-center justify-between space-y-2">
           <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
@@ -199,6 +196,5 @@ export default function DashboardPage() {
           <SummaryTable title="Internship Positions" data={internSummary} />
         </div>
       </main>
-    </div>
   );
 }

@@ -5,7 +5,6 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth-context';
 import { Loader2 } from 'lucide-react';
-import { Header } from '@/components/dashboard/header';
 import { CandidateTable } from '@/components/dashboard/candidate-table';
 
 export default function FullTimeCandidatesPage() {
@@ -27,8 +26,6 @@ export default function FullTimeCandidatesPage() {
   }
 
   return (
-    <div className="flex min-h-screen w-full flex-col">
-      <Header />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         <CandidateTable
           title="Full-time Candidates"
@@ -36,6 +33,5 @@ export default function FullTimeCandidatesPage() {
           filterType="full-time"
         />
       </main>
-    </div>
   );
 }
