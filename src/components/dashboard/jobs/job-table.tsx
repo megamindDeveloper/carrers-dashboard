@@ -27,7 +27,7 @@ export function JobTable() {
         const jobs = snapshot.docs.map(d => ({
           id: d.id,
           ...(d.data() as Omit<Job, 'id'>),
-        })).sort((a, b) => b.createdAt?.toDate() - a.createdAt?.toDate());
+        })).sort((a, b) => (b.createdAt?.toDate() ?? 0) - (a.createdAt?.toDate() ?? 0));
         setData(jobs);
         setLoading(false);
       },
@@ -74,18 +74,24 @@ export function JobTable() {
     try {
       if (selectedJob) {
         // Update existing job
-        const jobRef = doc(db, 'jobs', selectedJob.id);
-        await updateDoc(jobRef, jobData as any);
+        const response = await fetch('/api/jobs', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: selectedJob.id, ...jobData }),
+        });
+        if (!response.ok) throw new Error('Failed to update job');
         toast({
           title: 'Job Updated',
           description: `The job "${jobData.title}" has been updated successfully.`,
         });
       } else {
         // Add new job
-        await addDoc(collection(db, 'jobs'), {
-          ...jobData,
-          createdAt: serverTimestamp(),
+        const response = await fetch('/api/jobs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(jobData),
         });
+        if (!response.ok) throw new Error('Failed to create job');
         toast({
           title: 'Job Added',
           description: `The job "${jobData.title}" has been created.`,
