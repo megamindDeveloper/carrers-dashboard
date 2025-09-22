@@ -14,6 +14,7 @@ import {
   Briefcase,
   GraduationCap,
   LayoutGrid,
+  Menu,
 } from 'lucide-react';
 import mmLogo from '../../../.idx/mmLogo.png';
 import { usePathname } from 'next/navigation';
@@ -24,7 +25,11 @@ import {
   TooltipTrigger,
 } from '../ui/tooltip';
 
-export function Header() {
+interface HeaderProps {
+    onToggleSidebar: () => void;
+}
+
+export function Header({ onToggleSidebar }: HeaderProps) {
   const { logout } = useAuth();
   const pathname = usePathname();
 
@@ -37,6 +42,10 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+       <Button size="icon" variant="outline" className="hidden sm:flex" onClick={onToggleSidebar}>
+        <Menu className="h-5 w-5" />
+        <span className="sr-only">Toggle Menu</span>
+      </Button>
       <Sheet>
         <SheetTrigger asChild>
           <Button size="icon" variant="outline" className="sm:hidden">
