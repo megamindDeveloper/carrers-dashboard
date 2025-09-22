@@ -105,6 +105,8 @@ export function JobTable() {
         title: 'Save Failed',
         description: 'An error occurred while saving the job.',
       });
+      // Re-throw to be caught in the sheet component
+      throw error;
     }
   };
 
@@ -140,3 +142,5 @@ export function JobTable() {
     </>
   );
 }
+
+    

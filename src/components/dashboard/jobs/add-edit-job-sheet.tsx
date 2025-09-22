@@ -42,7 +42,7 @@ interface AddEditJobSheetProps {
   isOpen: boolean;
   onClose: () => void;
   job: Job | null;
-  onSave: (jobData: Omit<Job, 'id' | 'createdAt'>) => void;
+  onSave: (jobData: Omit<Job, 'id' | 'createdAt'>) => Promise<void>;
 }
 
 const jobSchema = z.object({
@@ -84,30 +84,32 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
 
 
   useEffect(() => {
-    if (job) {
-      form.reset({
-        ...job,
-        openings: job.openings || 1,
-        highlightPoints: job.highlightPoints.map(s => ({ value: s })),
-        responsibilities: job.responsibilities.map(r => ({ value: r })),
-        requiredSkills: job.requiredSkills.map(s => ({ value: s })),
-        type: job.type || 'full-time',
-      });
-    } else {
-      form.reset({
-        position: '',
-        icon: 'Briefcase',
-        openings: 1,
-        experience: '',
-        location: '',
-        highlightPoints: [{ value: '' }],
-        responsibilities: [{ value: '' }],
-        requiredSkills: [{ value: '' }],
-        status: 'Open',
-        type: 'full-time'
-      });
+    if (isOpen) {
+      if (job) {
+        form.reset({
+          ...job,
+          openings: job.openings || 1,
+          highlightPoints: job.highlightPoints.map(s => ({ value: s })),
+          responsibilities: job.responsibilities.map(r => ({ value: r })),
+          requiredSkills: job.requiredSkills.map(s => ({ value: s })),
+          type: job.type || 'full-time',
+        });
+      } else {
+        form.reset({
+          position: '',
+          icon: 'Briefcase',
+          openings: 1,
+          experience: '',
+          location: '',
+          highlightPoints: [{ value: '' }],
+          responsibilities: [{ value: '' }],
+          requiredSkills: [{ value: '' }],
+          status: 'Open',
+          type: 'full-time'
+        });
+      }
     }
-  }, [job, form]);
+  }, [job, isOpen, form]);
 
   const onSubmit = async (data: z.infer<typeof jobSchema>) => {
     setIsProcessing(true);
@@ -118,7 +120,7 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
           responsibilities: data.responsibilities.map(r => r.value),
           requiredSkills: data.requiredSkills.map(s => s.value),
       };
-      onSave(jobData);
+      await onSave(jobData);
     } catch (error) {
        console.error("Error saving job:", error);
        toast({
@@ -321,5 +323,7 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
     </Sheet>
   );
 }
+
+    
 
     
