@@ -27,7 +27,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import type { Job, JobStatus } from '@/lib/types';
+import type { Job, JobStatus, JobType } from '@/lib/types';
 import { JOB_STATUSES, JOB_TYPES } from '@/lib/types';
 import { Loader2, PlusCircle, Trash2, X } from 'lucide-react';
 import {
@@ -131,14 +131,14 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
     }
   };
 
-  const BulletPointInput = ({ fields, append, remove, label, placeholder }: any) => (
+  const BulletPointInput = ({ fields, append, remove, label, placeholder, name }: any) => (
     <div className="space-y-2">
       <FormLabel>{label}</FormLabel>
       {fields.map((field: any, index: number) => (
         <FormField
           key={field.id}
           control={form.control}
-          name={`${label.toLowerCase().replace(' ', '')}.${index}.value` as any}
+          name={`${name}.${index}.value` as any}
           render={({ field }) => (
             <FormItem className="flex items-center gap-2">
               <FormControl>
@@ -279,8 +279,8 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
                   </Button>
               </div>
 
-              <BulletPointInput fields={respFields} append={appendResp} remove={removeResp} label="Responsibilities" placeholder="e.g., Develop new features" />
-              <BulletPointInput fields={reqSkillsFields} append={appendReqSkill} remove={removeReqSkill} label="Required Skills" placeholder="e.g., Proficient in TypeScript" />
+              <BulletPointInput fields={respFields} append={appendResp} remove={removeResp} label="Responsibilities" placeholder="e.g., Develop new features" name="responsibilities" />
+              <BulletPointInput fields={reqSkillsFields} append={appendReqSkill} remove={removeReqSkill} label="Required Skills" placeholder="e.g., Proficient in TypeScript" name="requiredSkills" />
 
 
                <FormField control={form.control} name="status" render={({ field }) => (
@@ -321,3 +321,5 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
     </Sheet>
   );
 }
+
+    
