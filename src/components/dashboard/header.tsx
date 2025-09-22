@@ -24,11 +24,7 @@ import {
   TooltipTrigger,
 } from '../ui/tooltip';
 
-interface HeaderProps {
-  setSidebarOpen: (open: boolean) => void;
-}
-
-export function Header({ setSidebarOpen }: HeaderProps) {
+export function Header() {
   const { logout } = useAuth();
   const pathname = usePathname();
 

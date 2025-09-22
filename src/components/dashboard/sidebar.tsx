@@ -18,12 +18,7 @@ import {
 } from 'lucide-react';
 import mmLogo from '../../../.idx/mmLogo.png';
 
-interface SidebarProps {
-  isSidebarOpen: boolean;
-  setSidebarOpen: (open: boolean) => void;
-}
-
-export function Sidebar({ isSidebarOpen, setSidebarOpen }: SidebarProps) {
+export function Sidebar() {
   const pathname = usePathname();
 
   const navItems = [
