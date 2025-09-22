@@ -49,7 +49,6 @@ export type JobType = (typeof JOB_TYPES)[number];
 export type Job = {
   id: string;
   position: string;
-  description: string;
   icon: string;
   openings: number;
   experience: string;

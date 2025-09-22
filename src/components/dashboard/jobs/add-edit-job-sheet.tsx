@@ -47,7 +47,6 @@ interface AddEditJobSheetProps {
 
 const jobSchema = z.object({
   position: z.string().min(1, 'Position is required'),
-  description: z.string().min(1, 'Description is required'),
   icon: z.string().min(1, 'Icon name is required'),
   openings: z.coerce.number().min(1, 'At least one opening is required'),
   experience: z.string().min(1, 'Experience is required'),
@@ -67,7 +66,6 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
     resolver: zodResolver(jobSchema),
     defaultValues: {
       position: '',
-      description: '',
       icon: 'Briefcase',
       openings: 1,
       experience: '',
@@ -99,7 +97,6 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
       } else {
         form.reset({
           position: '',
-          description: '',
           icon: 'Briefcase',
           openings: 1,
           experience: '',
@@ -195,22 +192,6 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
                     <FormMessage />
                   </FormItem>
                 )} />
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Provide a brief description of the job..."
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                  <FormField control={form.control} name="type" render={({ field }) => (
                     <FormItem>
