@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
@@ -43,9 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser({ uid: firebaseUser.uid, ...docSnap.data() } as AppUser);
         } else {
           // This could happen if the user exists in Auth but not in Firestore 'users' collection
-          // For now, we'll treat them as a logged-out user.
-          // You might want to handle this case differently, e.g., by creating a default user profile.
-          console.error("User document doesn't exist in Firestore.");
+          // We treat them as a logged-out user.
           setUser(null);
         }
         setLoading(false);
