@@ -53,7 +53,7 @@ export type Job = {
   openings: number;
   experience: string;
   location: string;
-  skills: string[];
+  highlightPoints: string[];
   responsibilities: string[];
   requiredSkills: string[];
   status: JobStatus;

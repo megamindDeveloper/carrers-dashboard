@@ -51,7 +51,7 @@ const jobSchema = z.object({
   openings: z.coerce.number().min(1, 'At least one opening is required'),
   experience: z.string().min(1, 'Experience is required'),
   location: z.string().min(1, 'Location is required'),
-  skills: z.array(z.object({ value: z.string().min(1, "Skill cannot be empty") })).min(1, "At least one skill is required"),
+  highlightPoints: z.array(z.object({ value: z.string().min(1, "Highlight point cannot be empty") })).min(1, "At least one highlight point is required"),
   responsibilities: z.array(z.object({ value: z.string().min(1, "Responsibility cannot be empty") })).min(1, "At least one responsibility is required"),
   requiredSkills: z.array(z.object({ value: z.string().min(1, "Required skill cannot be empty") })).min(1, "At least one required skill is required"),
   status: z.enum(JOB_STATUSES),
@@ -70,7 +70,7 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
       openings: 1,
       experience: '',
       location: '',
-      skills: [{ value: '' }],
+      highlightPoints: [{ value: '' }],
       responsibilities: [{ value: '' }],
       requiredSkills: [{ value: '' }],
       status: 'Open',
@@ -78,7 +78,7 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
     },
   });
 
-  const { fields: skillsFields, append: appendSkill, remove: removeSkill } = useFieldArray({ control: form.control, name: "skills" });
+  const { fields: highlightPointsFields, append: appendHighlightPoint, remove: removeHighlightPoint } = useFieldArray({ control: form.control, name: "highlightPoints" });
   const { fields: respFields, append: appendResp, remove: removeResp } = useFieldArray({ control: form.control, name: "responsibilities" });
   const { fields: reqSkillsFields, append: appendReqSkill, remove: removeReqSkill } = useFieldArray({ control: form.control, name: "requiredSkills" });
 
@@ -88,7 +88,7 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
       form.reset({
         ...job,
         openings: job.openings || 1,
-        skills: job.skills.map(s => ({ value: s })),
+        highlightPoints: job.highlightPoints.map(s => ({ value: s })),
         responsibilities: job.responsibilities.map(r => ({ value: r })),
         requiredSkills: job.requiredSkills.map(s => ({ value: s })),
         type: job.type || 'full-time',
@@ -100,7 +100,7 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
         openings: 1,
         experience: '',
         location: '',
-        skills: [{ value: '' }],
+        highlightPoints: [{ value: '' }],
         responsibilities: [{ value: '' }],
         requiredSkills: [{ value: '' }],
         status: 'Open',
@@ -114,7 +114,7 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
     try {
       const jobData = {
           ...data,
-          skills: data.skills.map(s => s.value),
+          highlightPoints: data.highlightPoints.map(s => s.value),
           responsibilities: data.responsibilities.map(r => r.value),
           requiredSkills: data.requiredSkills.map(s => s.value),
       };
@@ -256,26 +256,26 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
                 )} />
 
               <div className="space-y-2">
-                <FormLabel>Skills</FormLabel>
-                 {skillsFields.map((field, index) => (
+                <FormLabel>Highlight Points</FormLabel>
+                 {highlightPointsFields.map((field, index) => (
                     <FormField
                       key={field.id}
                       control={form.control}
-                      name={`skills.${index}.value`}
+                      name={`highlightPoints.${index}.value`}
                       render={({ field }) => (
                         <FormItem className="flex items-center gap-2">
                           <FormControl>
-                            <Input {...field} placeholder="e.g., React" />
+                            <Input {...field} placeholder="e.g., Competitive salary" />
                           </FormControl>
-                          <Button type="button" variant="ghost" size="icon" onClick={() => removeSkill(index)}>
+                          <Button type="button" variant="ghost" size="icon" onClick={() => removeHighlightPoint(index)}>
                             <X className="h-4 w-4" />
                           </Button>
                         </FormItem>
                       )}
                     />
                   ))}
-                  <Button type="button" variant="outline" size="sm" onClick={() => appendSkill({ value: '' })}>
-                    <PlusCircle className="mr-2 h-4 w-4" />Add Skill
+                  <Button type="button" variant="outline" size="sm" onClick={() => appendHighlightPoint({ value: '' })}>
+                    <PlusCircle className="mr-2 h-4 w-4" />Add Highlight Point
                   </Button>
               </div>
 

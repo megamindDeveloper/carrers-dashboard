@@ -75,7 +75,7 @@ export function JobTable() {
       if (selectedJob) {
         // Update existing job
         const jobRef = doc(db, 'jobs', selectedJob.id);
-        await updateDoc(jobRef, jobData);
+        await updateDoc(jobRef, jobData as any);
         toast({
           title: 'Job Updated',
           description: `The job "${jobData.title}" has been updated successfully.`,
