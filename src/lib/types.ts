@@ -1,4 +1,5 @@
 
+
 export const CANDIDATE_STATUSES = [
   'Applied',
   'Shortlisted',
@@ -37,4 +38,21 @@ export type Candidate = {
   whatsappNumber: string;
   introductionVideoIntern?: string;
   comments?: string;
+};
+
+export const JOB_STATUSES = ['Open', 'Closed'] as const;
+export type JobStatus = (typeof JOB_STATUSES)[number];
+
+export type Job = {
+  id: string;
+  title: string;
+  icon: string;
+  openings: number;
+  experience: string;
+  location: string;
+  skills: string[];
+  responsibilities: string[];
+  requiredSkills: string[];
+  status: JobStatus;
+  createdAt: any;
 };

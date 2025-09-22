@@ -15,6 +15,7 @@ import {
   Briefcase,
   GraduationCap,
   LayoutGrid,
+  FileText,
 } from 'lucide-react';
 import mmLogo from '../../../.idx/mmLogo.png';
 import { cn } from '@/lib/utils';
@@ -28,6 +29,7 @@ export function Sidebar({ isSidebarOpen }: SidebarProps) {
 
   const navItems = [
     { href: '/dashboard', icon: LayoutGrid, label: 'Overview' },
+    { href: '/dashboard/jobs', icon: FileText, label: 'Jobs' },
     { href: '/dashboard/all', icon: Users, label: 'All Candidates' },
     { href: '/dashboard/full-time', icon: Briefcase, label: 'Full-time' },
     { href: '/dashboard/intern', icon: GraduationCap, label: 'Interns' },
