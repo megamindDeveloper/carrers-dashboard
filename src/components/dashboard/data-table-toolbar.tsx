@@ -3,7 +3,7 @@
 
 import type { Table } from '@tanstack/react-table';
 import { Input } from '@/components/ui/input';
-import { CANDIDATE_STATUSES, CandidateType } from '@/lib/types';
+import { CANDIDATE_STATUSES, JOB_STATUSES, CandidateType } from '@/lib/types';
 import {
   Select,
   SelectContent,
@@ -13,10 +13,17 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
+import type { Job } from '@/lib/types';
 
 interface DataTableToolbarProps<TData> {
   table: Table<TData>;
   filterType?: CandidateType;
+}
+
+function isJobData<TData>(data: TData[]): data is Job[] {
+    if (data.length === 0) return false;
+    const firstItem = data[0] as any;
+    return 'position' in firstItem && 'openings' in firstItem && 'responsibilities' in firstItem;
 }
 
 export function DataTableToolbar<TData>({
@@ -29,6 +36,10 @@ export function DataTableToolbar<TData>({
   const columnExists = (columnId: string) => {
     return table.getAllColumns().some(column => column.id === columnId);
   }
+
+  const isJobTable = table.options.data.length > 0 && 'openings' in table.options.data[0];
+
+  const statusOptions = isJobTable ? JOB_STATUSES : CANDIDATE_STATUSES;
 
   return (
     <div className="flex items-center justify-between">
@@ -55,7 +66,7 @@ export function DataTableToolbar<TData>({
             className="h-8 w-[150px] lg:w-[250px]"
           />
         )}
-        {filterType !== 'internship' && columnExists('experience') && (
+        {filterType !== 'internship' && columnExists('experience') && !isJobTable && (
           <Input
             placeholder="Filter by experience..."
             value={
@@ -79,7 +90,7 @@ export function DataTableToolbar<TData>({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Statuses</SelectItem>
-              {CANDIDATE_STATUSES.map(status => (
+              {statusOptions.map(status => (
                 <SelectItem key={status} value={status}>
                   {status}
                 </SelectItem>
