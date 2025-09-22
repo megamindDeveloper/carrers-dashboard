@@ -45,16 +45,24 @@ export function Sidebar({ isSidebarOpen }: SidebarProps) {
       <nav className="flex flex-col items-center gap-4 px-2 sm:py-4">
         <Link
           href="/dashboard"
-          className="group flex h-9 w-full shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:h-8 md:text-base"
+          className={cn(
+            'group flex h-9 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:h-8',
+            isSidebarOpen ? 'w-full' : 'w-9'
+          )}
         >
           <Image
             height={20}
-            width={80}
+            width={isSidebarOpen ? 80 : 20}
             src={mmLogo}
             alt="MegaMind Careers Logo"
-            className="h-4 w-12 transition-all group-hover:scale-110"
+            className={cn(
+              'transition-all group-hover:scale-110',
+              isSidebarOpen ? 'h-4 w-20' : 'h-5 w-5'
+            )}
           />
-          <span className={cn('sr-only', isSidebarOpen && 'sm:not-sr-only sm:ml-2')}>MegaMind</span>
+          <span className={cn('sr-only', isSidebarOpen && 'sm:not-sr-only')}>
+            MegaMind
+          </span>
         </Link>
         <TooltipProvider>
           {navItems.map(item =>
