@@ -3,7 +3,7 @@
 
 import type { Table } from '@tanstack/react-table';
 import { Input } from '@/components/ui/input';
-import { CANDIDATE_STATUSES, JOB_STATUSES, CandidateType } from '@/lib/types';
+import { CANDIDATE_STATUSES, JOB_STATUSES, JOB_TYPES, CandidateType } from '@/lib/types';
 import {
   Select,
   SelectContent,
@@ -77,6 +77,26 @@ export function DataTableToolbar<TData>({
             }
             className="h-8 w-[150px] lg:w-[250px]"
           />
+        )}
+        {isJobTable && columnExists('type') && (
+          <Select
+            value={(table.getColumn('type')?.getFilterValue() as string) ?? 'all'}
+            onValueChange={value =>
+              table.getColumn('type')?.setFilterValue(value === 'all' ? null : value)
+            }
+          >
+            <SelectTrigger className="h-8 w-[150px] lg:w-[180px]">
+              <SelectValue placeholder="Filter by type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              {JOB_TYPES.map(type => (
+                <SelectItem key={type} value={type} className="capitalize">
+                  {type}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         )}
         {columnExists('status') && (
           <Select
