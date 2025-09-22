@@ -71,14 +71,6 @@ export default async function SharedCandidatePage({ params }: { params: { id: st
         <Card className="overflow-hidden shadow-lg">
           <CardHeader className="bg-background p-6">
             <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
-                <div className="relative h-24 w-24 flex-shrink-0">
-                    <Image
-                        src={candidate.avatar}
-                        alt={candidate.fullName}
-                        layout="fill"
-                        className="rounded-full object-cover"
-                    />
-                </div>
                 <div className="flex-grow">
                     <CardTitle className="text-3xl font-bold">{candidate.fullName}</CardTitle>
                     <CardDescription className="text-lg text-muted-foreground">{candidate.position}</CardDescription>
