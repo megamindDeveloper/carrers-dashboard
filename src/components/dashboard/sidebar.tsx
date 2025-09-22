@@ -22,7 +22,7 @@ export function Sidebar() {
   const pathname = usePathname();
 
   const navItems = [
-    { href: '/dashboard', icon: LayoutGrid, label: 'Dashboard' },
+    { href: '/dashboard', icon: LayoutGrid, label: 'Overview' },
     { href: '/dashboard/all', icon: Users, label: 'All Candidates' },
     { href: '/dashboard/full-time', icon: Briefcase, label: 'Full-time' },
     { href: '/dashboard/intern', icon: GraduationCap, label: 'Interns' },
