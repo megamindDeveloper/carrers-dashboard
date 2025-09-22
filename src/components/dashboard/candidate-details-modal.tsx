@@ -109,88 +109,90 @@ export function CandidateDetailsModal({
             {candidate.position} - <span className="capitalize">{candidate.type === 'full-time' ? 'Full-time' : 'Internship'}</span>
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="flex-grow pr-6 -mr-6">
-            <div className="grid gap-6 py-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div><Label>Email</Label><p className="text-sm break-words">{candidate.email}</p></div>
-                <div><Label>Contact</Label><p className="text-sm">{candidate.contactNumber}</p></div>
-                <div><Label>WhatsApp</Label><p className="text-sm">{candidate.whatsappNumber}</p></div>
-                <div><Label>Location</Label><p className="text-sm">{displayLocation}</p></div>
-                <div><Label>Applied On</Label><p className="text-sm">{getFormattedDate(candidate.submittedAt)}</p></div>
-              </div>
-              <div><Label>Address</Label><p className="text-sm">{`${candidate.address}, ${candidate.city}, ${candidate.state} ${candidate.pincode}`}</p></div>
-              <div><Label>Education</Label><p className="text-sm">{candidate.education || 'N/A'}</p></div>
-              <div><Label>Experience</Label><p className="text-sm whitespace-pre-wrap">{candidate.experience || candidate.workExperience || 'N/A'}</p></div>
-              <div className="flex flex-wrap items-center gap-4">
-                {candidate.portfolio && (
-                  <Button variant="outline" asChild>
-                    <a href={candidate.portfolio} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="mr-2 h-4 w-4" /> View Portfolio
-                    </a>
-                  </Button>
-                )}
-                {candidate.resumeUrl && (
-                  <Button variant="outline" asChild>
-                    <a href={candidate.resumeUrl} target="_blank" rel="noopener noreferrer">
-                      <FileText className="mr-2 h-4 w-4" /> View Resume
-                    </a>
-                  </Button>
-                )}
-                {candidate.introductionVideoIntern && (
-                  <Button variant="outline" asChild>
-                    <a href={candidate.introductionVideoIntern} target="_blank" rel="noopener noreferrer">
-                      <Video className="mr-2 h-4 w-4" /> View Intro Video
-                    </a>
-                  </Button>
-                )}
-              </div>
-              <div className="grid grid-cols-1 gap-4 items-end">
-                <div>
-                  <Label htmlFor="status">Status</Label>
-                  <Select value={selectedStatus} onValueChange={(value: CandidateStatus) => setSelectedStatus(value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Change status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CANDIDATE_STATUSES.map(status => (
-                        <SelectItem key={status} value={status}>
-                          {status}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+        <div className="flex-grow min-h-0">
+          <ScrollArea className="h-full pr-6 -mr-6">
+              <div className="grid gap-6 py-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div><Label>Email</Label><p className="text-sm break-words">{candidate.email}</p></div>
+                  <div><Label>Contact</Label><p className="text-sm">{candidate.contactNumber}</p></div>
+                  <div><Label>WhatsApp</Label><p className="text-sm">{candidate.whatsappNumber}</p></div>
+                  <div><Label>Location</Label><p className="text-sm">{displayLocation}</p></div>
+                  <div><Label>Applied On</Label><p className="text-sm">{getFormattedDate(candidate.submittedAt)}</p></div>
                 </div>
-              </div>
-              {selectedStatus === 'Rejected' && (
-                <div>
-                  <Label htmlFor="rejectionReason">Rejection Reason</Label>
+                <div><Label>Address</Label><p className="text-sm">{`${candidate.address}, ${candidate.city}, ${candidate.state} ${candidate.pincode}`}</p></div>
+                <div><Label>Education</Label><p className="text-sm">{candidate.education || 'N/A'}</p></div>
+                <div><Label>Experience</Label><p className="text-sm whitespace-pre-wrap">{candidate.experience || candidate.workExperience || 'N/A'}</p></div>
+                <div className="flex flex-wrap items-center gap-4">
+                  {candidate.portfolio && (
+                    <Button variant="outline" asChild>
+                      <a href={candidate.portfolio} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="mr-2 h-4 w-4" /> View Portfolio
+                      </a>
+                    </Button>
+                  )}
+                  {candidate.resumeUrl && (
+                    <Button variant="outline" asChild>
+                      <a href={candidate.resumeUrl} target="_blank" rel="noopener noreferrer">
+                        <FileText className="mr-2 h-4 w-4" /> View Resume
+                      </a>
+                    </Button>
+                  )}
+                  {candidate.introductionVideoIntern && (
+                    <Button variant="outline" asChild>
+                      <a href={candidate.introductionVideoIntern} target="_blank" rel="noopener noreferrer">
+                        <Video className="mr-2 h-4 w-4" /> View Intro Video
+                      </a>
+                    </Button>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 gap-4 items-end">
+                  <div>
+                    <Label htmlFor="status">Status</Label>
+                    <Select value={selectedStatus} onValueChange={(value: CandidateStatus) => setSelectedStatus(value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Change status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CANDIDATE_STATUSES.map(status => (
+                          <SelectItem key={status} value={status}>
+                            {status}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                {selectedStatus === 'Rejected' && (
+                  <div>
+                    <Label htmlFor="rejectionReason">Rejection Reason</Label>
+                    <Textarea
+                      id="rejectionReason"
+                      placeholder="Provide a reason for rejection... (This will be sent to the candidate)"
+                      value={rejectionReason}
+                      onChange={(e) => setRejectionReason(e.target.value)}
+                    />
+                  </div>
+                )}
+                {candidate.status === 'Rejected' && candidate.rejectionReason && selectedStatus !== 'Rejected' && (
+                    <div>
+                      <Label>Previous Rejection Reason</Label>
+                      <p className="text-sm text-muted-foreground p-2 border rounded-md">{candidate.rejectionReason}</p>
+                    </div>
+                  )
+                }
+                 <div>
+                  <Label htmlFor="comments">Internal Comments</Label>
                   <Textarea
-                    id="rejectionReason"
-                    placeholder="Provide a reason for rejection... (This will be sent to the candidate)"
-                    value={rejectionReason}
-                    onChange={(e) => setRejectionReason(e.target.value)}
+                    id="comments"
+                    placeholder="Add internal notes about the candidate..."
+                    value={comments}
+                    onChange={(e) => setComments(e.target.value)}
+                    className="mt-1"
                   />
                 </div>
-              )}
-              {candidate.status === 'Rejected' && candidate.rejectionReason && selectedStatus !== 'Rejected' && (
-                  <div>
-                    <Label>Previous Rejection Reason</Label>
-                    <p className="text-sm text-muted-foreground p-2 border rounded-md">{candidate.rejectionReason}</p>
-                  </div>
-                )
-              }
-               <div>
-                <Label htmlFor="comments">Internal Comments</Label>
-                <Textarea
-                  id="comments"
-                  placeholder="Add internal notes about the candidate..."
-                  value={comments}
-                  onChange={(e) => setComments(e.target.value)}
-                  className="mt-1"
-                />
               </div>
-            </div>
-        </ScrollArea>
+          </ScrollArea>
+        </div>
         <DialogFooter className="pt-4 flex-shrink-0">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button onClick={handleSave}>Save Changes</Button>
@@ -199,5 +201,3 @@ export function CandidateDetailsModal({
     </Dialog>
   );
 }
-
-    
