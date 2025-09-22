@@ -10,6 +10,7 @@ import { db } from '@/app/utils/firebase/firebaseConfig';
 import { AddCandidateSheet } from './add-candidate-sheet';
 import { useToast } from '@/hooks/use-toast';
 import { CandidateDetailsModal } from './candidate-details-modal';
+import { ConfirmationDialog } from './confirmation-dialog';
 import { Button } from '../ui/button';
 import { Download } from 'lucide-react';
 
@@ -19,11 +20,24 @@ interface CandidateTableProps {
   filterType?: CandidateType;
 }
 
+type ConfirmationState = {
+  isOpen: boolean;
+  title: string;
+  description: string;
+  onConfirm: () => void;
+};
+
 export function CandidateTable({ title, description, filterType }: CandidateTableProps) {
   const [data, setData] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const { toast } = useToast();
+  const [confirmation, setConfirmation] = useState<ConfirmationState>({
+    isOpen: false,
+    title: '',
+    description: '',
+    onConfirm: () => {},
+  });
 
   useEffect(() => {
     const colRef = collection(db, 'applications');
@@ -74,7 +88,7 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
     const headers = [
       'ID', 'Full Name', 'Email', 'Contact Number', 'WhatsApp Number',
       'Address', 'City', 'State', 'Pincode', 'Education', 'Experience',
-      'Position', 'Portfolio', 'Resume URL', 'Status', 'Type',
+      'Position', 'Portfolio', 'Resume URL', 'Introduction Video', 'Status', 'Type',
       'Submitted At', 'Comments'
     ];
   
@@ -95,6 +109,7 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
         `"${c.position.replace(/"/g, '""')}"`,
         c.portfolio,
         c.resumeUrl,
+        c.introductionVideoIntern,
         c.status,
         c.type,
         c.submittedAt?.toDate ? c.submittedAt.toDate().toISOString() : '',
@@ -120,27 +135,19 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
     });
   };
 
-  const handleSaveChanges = useCallback(
-    async (candidateId: string, updates: Partial<Candidate>) => {
+  const proceedWithStatusUpdate = async (candidateId: string, updates: Partial<Candidate>) => {
       const originalData = [...data];
       const candidateToUpdate = originalData.find(c => c.id === candidateId);
 
       if (!candidateToUpdate) return;
-      
-      const { status, rejectionReason } = updates;
 
-      if (status === 'Rejected' && !rejectionReason) {
-        // Open the modal to get rejection reason
-        setSelectedCandidate(originalData.find(c => c.id === candidateId) || null);
-        return;
-      }
+      const { status, rejectionReason } = updates;
       
       // Optimistically update UI
       setData(prev => prev.map(c => (c.id === candidateId ? { ...c, ...updates } : c)));
       if (selectedCandidate && selectedCandidate.id === candidateId) {
           setSelectedCandidate(prev => prev ? {...prev, ...updates} : null);
       }
-
 
       try {
         await updateDoc(doc(db, 'applications', candidateId), updates);
@@ -199,8 +206,38 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
         });
         console.error('Failed to update details', err);
       }
+  };
+
+
+  const handleSaveChanges = useCallback(
+    async (candidateId: string, updates: Partial<Candidate>) => {
+      const candidateToUpdate = data.find(c => c.id === candidateId);
+      if (!candidateToUpdate) return;
+      
+      const { status, rejectionReason } = updates;
+
+      if (status === 'Rejected' && !rejectionReason) {
+        // Open the modal to get rejection reason
+        setSelectedCandidate(data.find(c => c.id === candidateId) || null);
+        return;
+      }
+      
+      if (status === 'Shortlisted' && status !== candidateToUpdate.status) {
+        setConfirmation({
+          isOpen: true,
+          title: 'Are you sure you want to shortlist this candidate?',
+          description: `This will send a "shortlisted" email to ${candidateToUpdate.fullName}. Do you want to proceed?`,
+          onConfirm: () => {
+            proceedWithStatusUpdate(candidateId, updates);
+            setConfirmation({ ...confirmation, isOpen: false });
+          },
+        });
+        return;
+      }
+
+      await proceedWithStatusUpdate(candidateId, updates);
     },
-    [data, toast, selectedCandidate]
+    [data, toast, selectedCandidate, confirmation]
   );
   
   const handleStatusChangeFromDropdown = (candidateId: string, status: CandidateStatus) => {
@@ -211,7 +248,7 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
       // If 'Rejected' is selected from dropdown, open modal to get reason
       setSelectedCandidate(candidate);
     } else {
-      // For other statuses, update directly
+      // For other statuses, update directly (or show confirmation)
       handleSaveChanges(candidateId, { status });
     }
   }
@@ -249,6 +286,14 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
         onClose={handleCloseModal}
         candidate={selectedCandidate}
         onSaveChanges={handleSaveChanges}
+      />
+      <ConfirmationDialog
+        isOpen={confirmation.isOpen}
+        onOpenChange={(isOpen) => setConfirmation({ ...confirmation, isOpen })}
+        title={confirmation.title}
+        description={confirmation.description}
+        onConfirm={confirmation.onConfirm}
+        onCancel={() => setConfirmation({ ...confirmation, isOpen: false })}
       />
     </>
   );
