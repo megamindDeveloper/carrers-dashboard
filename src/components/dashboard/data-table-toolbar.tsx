@@ -25,30 +25,47 @@ export function DataTableToolbar<TData>({
 }: DataTableToolbarProps<TData>) {
   const isFiltered =
     table.getState().columnFilters.length > 0;
+    
+  const columnExists = (columnId: string) => table.getColumn(columnId);
+
   return (
     <div className="flex items-center justify-between">
       <div className="flex flex-1 flex-wrap items-center gap-2">
-        <Input
-          placeholder="Filter by name..."
-          value={
-            (table.getColumn('fullName')?.getFilterValue() as string) ?? ''
-          }
-          onChange={event =>
-            table.getColumn('fullName')?.setFilterValue(event.target.value)
-          }
-          className="h-8 w-[150px] lg:w-[250px]"
-        />
-        <Input
-          placeholder="Filter by position..."
-          value={
-            (table.getColumn('position')?.getFilterValue() as string) ?? ''
-          }
-          onChange={event =>
-            table.getColumn('position')?.setFilterValue(event.target.value)
-          }
-          className="h-8 w-[150px] lg:w-[250px]"
-        />
-        {filterType !== 'internship' && (
+        {columnExists('fullName') && (
+          <Input
+            placeholder="Filter by name..."
+            value={
+              (table.getColumn('fullName')?.getFilterValue() as string) ?? ''
+            }
+            onChange={event =>
+              table.getColumn('fullName')?.setFilterValue(event.target.value)
+            }
+            className="h-8 w-[150px] lg:w-[250px]"
+          />
+        )}
+        {columnExists('title') && (
+           <Input
+            placeholder="Filter by title..."
+            value={(table.getColumn('title')?.getFilterValue() as string) ?? ''}
+            onChange={(event) =>
+              table.getColumn('title')?.setFilterValue(event.target.value)
+            }
+            className="h-8 w-[150px] lg:w-[250px]"
+          />
+        )}
+        {columnExists('position') && (
+          <Input
+            placeholder="Filter by position..."
+            value={
+              (table.getColumn('position')?.getFilterValue() as string) ?? ''
+            }
+            onChange={event =>
+              table.getColumn('position')?.setFilterValue(event.target.value)
+            }
+            className="h-8 w-[150px] lg:w-[250px]"
+          />
+        )}
+        {filterType !== 'internship' && columnExists('experience') && (
           <Input
             placeholder="Filter by experience..."
             value={
@@ -60,24 +77,26 @@ export function DataTableToolbar<TData>({
             className="h-8 w-[150px] lg:w-[250px]"
           />
         )}
-        <Select
-          value={(table.getColumn('status')?.getFilterValue() as string) ?? 'all'}
-          onValueChange={value =>
-            table.getColumn('status')?.setFilterValue(value === 'all' ? null : value)
-          }
-        >
-          <SelectTrigger className="h-8 w-[150px] lg:w-[180px]">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            {CANDIDATE_STATUSES.map(status => (
-              <SelectItem key={status} value={status}>
-                {status}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {columnExists('status') && (
+          <Select
+            value={(table.getColumn('status')?.getFilterValue() as string) ?? 'all'}
+            onValueChange={value =>
+              table.getColumn('status')?.setFilterValue(value === 'all' ? null : value)
+            }
+          >
+            <SelectTrigger className="h-8 w-[150px] lg:w-[180px]">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              {CANDIDATE_STATUSES.map(status => (
+                <SelectItem key={status} value={status}>
+                  {status}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         {isFiltered && (
           <Button
             variant="ghost"
