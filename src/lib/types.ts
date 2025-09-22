@@ -43,6 +43,9 @@ export type Candidate = {
 export const JOB_STATUSES = ['Open', 'Closed'] as const;
 export type JobStatus = (typeof JOB_STATUSES)[number];
 
+export const JOB_TYPES = ['full-time', 'internship'] as const;
+export type JobType = (typeof JOB_TYPES)[number];
+
 export type Job = {
   id: string;
   title: string;
@@ -55,4 +58,5 @@ export type Job = {
   requiredSkills: string[];
   status: JobStatus;
   createdAt: any;
+  type: JobType;
 };

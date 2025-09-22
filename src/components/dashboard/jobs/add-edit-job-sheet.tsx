@@ -27,7 +27,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import type { Job, JobStatus } from '@/lib/types';
-import { JOB_STATUSES } from '@/lib/types';
+import { JOB_STATUSES, JOB_TYPES } from '@/lib/types';
 import { Loader2, PlusCircle, Trash2, X } from 'lucide-react';
 import {
   Select,
@@ -54,6 +54,7 @@ const jobSchema = z.object({
   responsibilities: z.array(z.object({ value: z.string().min(1, "Responsibility cannot be empty") })).min(1, "At least one responsibility is required"),
   requiredSkills: z.array(z.object({ value: z.string().min(1, "Required skill cannot be empty") })).min(1, "At least one required skill is required"),
   status: z.enum(JOB_STATUSES),
+  type: z.enum(JOB_TYPES),
 });
 
 export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobSheetProps) {
@@ -72,6 +73,7 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
       responsibilities: [{ value: '' }],
       requiredSkills: [{ value: '' }],
       status: 'Open',
+      type: 'full-time'
     },
   });
 
@@ -88,6 +90,7 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
         skills: job.skills.map(s => ({ value: s })),
         responsibilities: job.responsibilities.map(r => ({ value: r })),
         requiredSkills: job.requiredSkills.map(s => ({ value: s })),
+        type: job.type || 'full-time',
       });
     } else {
       form.reset({
@@ -100,6 +103,7 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
         responsibilities: [{ value: '' }],
         requiredSkills: [{ value: '' }],
         status: 'Open',
+        type: 'full-time'
       });
     }
   }, [job, form]);
@@ -185,29 +189,39 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
                     <FormMessage />
                   </FormItem>
                 )} />
-
-               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                 <FormField control={form.control} name="icon" render={({ field }) => (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                 <FormField control={form.control} name="type" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Lucide Icon Name</FormLabel>
-                      <FormControl><Input placeholder="e.g., Briefcase" {...field} /></FormControl>
+                      <FormLabel>Job Type</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {JOB_TYPES.map(type => (
+                              <SelectItem key={type} value={type} className="capitalize">{type}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
-                  )} />
-                 <FormField control={form.control} name="openings" render={({ field }) => (
+                  )}
+                  />
+                  <FormField control={form.control} name="openings" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Number of Openings</FormLabel>
                       <FormControl><Input type="number" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
-               </div>
-
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                 <FormField control={form.control} name="experience" render={({ field }) => (
+                </div>
+               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                 <FormField control={form.control} name="icon" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Experience</FormLabel>
-                      <FormControl><Input placeholder="e.g., 2-4 years" {...field} /></FormControl>
+                      <FormLabel>Lucide Icon Name</FormLabel>
+                      <FormControl><Input placeholder="e.g., Briefcase" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
@@ -219,6 +233,14 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
                     </FormItem>
                   )} />
                </div>
+
+               <FormField control={form.control} name="experience" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Experience</FormLabel>
+                    <FormControl><Input placeholder="e.g., 2-4 years" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
 
               <div className="space-y-2">
                 <FormLabel>Skills</FormLabel>

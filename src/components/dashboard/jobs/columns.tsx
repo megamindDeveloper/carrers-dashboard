@@ -2,8 +2,8 @@
 'use client';
 
 import type { ColumnDef } from '@tanstack/react-table';
-import type { Job, JobStatus } from '@/lib/types';
-import { JOB_STATUSES } from '@/lib/types';
+import type { Job, JobStatus, JobType } from '@/lib/types';
+import { JOB_STATUSES, JOB_TYPES } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -65,6 +65,14 @@ export const getColumns = ({ onStatusChange }: GetColumnsProps): ColumnDef<Job>[
             </div>
           </div>
         );
+      },
+    },
+    {
+      accessorKey: 'type',
+      header: 'Type',
+      cell: ({ row }) => {
+        const type = row.original.type;
+        return <Badge variant={type === 'full-time' ? 'default' : 'secondary'} className="capitalize">{type}</Badge>;
       },
     },
     {
