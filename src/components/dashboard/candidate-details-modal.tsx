@@ -21,7 +21,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { ExternalLink, FileText, Video } from 'lucide-react';
+import { ExternalLink, FileText, Video, Share2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 
@@ -57,6 +57,15 @@ export function CandidateDetailsModal({
   }, [candidate]);
 
   if (!candidate) return null;
+
+  const handleShare = () => {
+    const shareUrl = `${window.location.origin}/share/candidate/${candidate.id}`;
+    navigator.clipboard.writeText(shareUrl);
+    toast({
+      title: 'Link Copied!',
+      description: "A shareable link has been copied to your clipboard.",
+    });
+  };
 
   const handleSave = () => {
     if (selectedStatus === 'Rejected' && !rejectionReason.trim()) {
@@ -101,9 +110,17 @@ export function CandidateDetailsModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-3xl flex flex-col max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle>{candidate.fullName}</DialogTitle>
-          <DialogDescription>
-            {candidate.position} - <span className="capitalize">{candidate.type === 'full-time' ? 'Full-time' : 'Internship'}</span> </DialogDescription>
+          <div className="flex justify-between items-start">
+            <div>
+              <DialogTitle>{candidate.fullName}</DialogTitle>
+              <DialogDescription>
+                {candidate.position} - <span className="capitalize">{candidate.type === 'full-time' ? 'Full-time' : 'Internship'}</span> </DialogDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleShare}>
+              <Share2 className="mr-2 h-4 w-4" />
+              Share
+            </Button>
+          </div>
         </DialogHeader>
 
         {/* 👇 KEY CHANGE IS HERE 👇 */}
