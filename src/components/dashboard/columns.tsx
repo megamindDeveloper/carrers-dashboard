@@ -24,9 +24,11 @@ import {
   FileText,
   ExternalLink,
   Video,
+  Share2,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 
 type GetColumnsProps = {
   onStatusChange: (candidateId: string, status: CandidateStatus) => void;
@@ -37,6 +39,27 @@ const toTitleCase = (str: string) => {
     if (!str) return '';
     return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
 };
+
+const ShareActionItem = ({ candidateId }: { candidateId: string }) => {
+    const { toast } = useToast();
+    
+    const handleShare = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const shareUrl = `${window.location.origin}/share/candidate/${candidateId}`;
+        navigator.clipboard.writeText(shareUrl);
+        toast({
+          title: 'Link Copied!',
+          description: "A shareable link has been copied to your clipboard.",
+        });
+    }
+
+    return (
+        <DropdownMenuItem onClick={handleShare}>
+            <Share2 className="mr-2 h-4 w-4" />
+            Share Profile
+        </DropdownMenuItem>
+    )
+}
 
 export const getColumns = ({
   onStatusChange,
@@ -200,6 +223,7 @@ export const getColumns = ({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <ShareActionItem candidateId={candidate.id} />
             {candidate.portfolio && (
               <DropdownMenuItem
                 onClick={() => window.open(candidate.portfolio!, '_blank')}

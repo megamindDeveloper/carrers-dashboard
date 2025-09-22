@@ -4,9 +4,10 @@ import type { Candidate } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, FileText, Video, Briefcase, GraduationCap, MapPin, Building, Calendar } from 'lucide-react';
+import { ExternalLink, FileText, Video, Briefcase, GraduationCap, MapPin, Building, Calendar, Mail, Phone, MessageSquare } from 'lucide-react';
 import Image from 'next/image';
 import mmLogo from '../../../../../.idx/mmLogo.png';
+import { format } from 'date-fns';
 
 async function getCandidateData(id: string): Promise<Candidate | null> {
   const docRef = doc(db, 'applications', id);
@@ -38,6 +39,18 @@ export default async function SharedCandidatePage({ params }: { params: { id: st
   }
   
   const displayLocation = candidate.city && candidate.state ? `${candidate.city}, ${candidate.state}` : candidate.location;
+
+  const getFormattedDate = (date: any) => {
+    if (!date) return 'N/A';
+    try {
+      if (date.toDate) {
+        return format(date.toDate(), 'MMM d, yyyy');
+      }
+      return format(new Date(date), 'MMM d, yyyy');
+    } catch (e) {
+      return 'Invalid Date';
+    }
+  };
 
   return (
     <div className="min-h-screen bg-muted/40 p-4 sm:p-8">
@@ -73,12 +86,46 @@ export default async function SharedCandidatePage({ params }: { params: { id: st
                            <MapPin className="h-4 w-4" />
                            <span>{displayLocation}</span>
                         </Badge>
+                         <Badge variant="secondary" className="flex items-center gap-2">
+                           <Calendar className="h-4 w-4" />
+                           <span>Applied on {getFormattedDate(candidate.submittedAt)}</span>
+                        </Badge>
                     </div>
                 </div>
             </div>
           </CardHeader>
           <CardContent className="p-6 space-y-6">
-            <div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="flex items-center gap-3">
+                    <Mail className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                        <p className="text-sm font-medium">Email</p>
+                        <p className="text-sm text-muted-foreground">{candidate.email}</p>
+                    </div>
+                </div>
+                 <div className="flex items-center gap-3">
+                    <Phone className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                        <p className="text-sm font-medium">Contact Number</p>
+                        <p className="text-sm text-muted-foreground">{candidate.contactNumber}</p>
+                    </div>
+                </div>
+                 <div className="flex items-center gap-3">
+                    <MessageSquare className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                        <p className="text-sm font-medium">WhatsApp</p>
+                        <p className="text-sm text-muted-foreground">{candidate.whatsappNumber}</p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-3">
+                    <MapPin className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                        <p className="text-sm font-medium">Address</p>
+                        <p className="text-sm text-muted-foreground">{`${candidate.address}, ${candidate.city}, ${candidate.state} ${candidate.pincode}`}</p>
+                    </div>
+                </div>
+            </div>
+            <div className="border-t border-border pt-6">
               <h3 className="text-lg font-semibold text-primary mb-2 flex items-center gap-2"><Building className="h-5 w-5" /> Education</h3>
               <p className="text-muted-foreground">{candidate.education || 'N/A'}</p>
             </div>
