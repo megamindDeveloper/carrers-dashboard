@@ -47,13 +47,14 @@ interface AddEditJobSheetProps {
 
 const jobSchema = z.object({
   position: z.string().min(1, 'Position is required'),
+  description: z.string().min(1, 'Description is required'),
   icon: z.string().min(1, 'Icon name is required'),
   openings: z.coerce.number().min(1, 'At least one opening is required'),
   experience: z.string().min(1, 'Experience is required'),
   location: z.string().min(1, 'Location is required'),
   highlightPoints: z.array(z.object({ value: z.string().min(1, "Highlight point cannot be empty") })).min(1, "At least one highlight point is required"),
   responsibilities: z.array(z.object({ value: z.string().min(1, "Responsibility cannot be empty") })).min(1, "At least one responsibility is required"),
-  requiredSkills: z.array(z.object({ value: z.string().min(1, "Required skill cannot be empty") })).min(1, "At least one required skill is required"),
+  skills: z.array(z.object({ value: z.string().min(1, "Skill cannot be empty") })).min(1, "At least one skill is required"),
   status: z.enum(JOB_STATUSES),
   type: z.enum(JOB_TYPES),
 });
@@ -66,13 +67,14 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
     resolver: zodResolver(jobSchema),
     defaultValues: {
       position: '',
+      description: '',
       icon: 'Briefcase',
       openings: 1,
       experience: '',
       location: '',
       highlightPoints: [{ value: '' }],
       responsibilities: [{ value: '' }],
-      requiredSkills: [{ value: '' }],
+      skills: [{ value: '' }],
       status: 'Open',
       type: 'full-time'
     },
@@ -80,7 +82,7 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
 
   const { fields: highlightPointsFields, append: appendHighlightPoint, remove: removeHighlightPoint } = useFieldArray({ control: form.control, name: "highlightPoints" });
   const { fields: respFields, append: appendResp, remove: removeResp } = useFieldArray({ control: form.control, name: "responsibilities" });
-  const { fields: reqSkillsFields, append: appendReqSkill, remove: removeReqSkill } = useFieldArray({ control: form.control, name: "requiredSkills" });
+  const { fields: skillsFields, append: appendSkill, remove: removeSkill } = useFieldArray({ control: form.control, name: "skills" });
 
 
   useEffect(() => {
@@ -91,19 +93,20 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
           openings: job.openings || 1,
           highlightPoints: job.highlightPoints.map(s => ({ value: s })),
           responsibilities: job.responsibilities.map(r => ({ value: r })),
-          requiredSkills: job.requiredSkills.map(s => ({ value: s })),
+          skills: job.skills.map(s => ({ value: s })),
           type: job.type || 'full-time',
         });
       } else {
         form.reset({
           position: '',
+          description: '',
           icon: 'Briefcase',
           openings: 1,
           experience: '',
           location: '',
           highlightPoints: [{ value: '' }],
           responsibilities: [{ value: '' }],
-          requiredSkills: [{ value: '' }],
+          skills: [{ value: '' }],
           status: 'Open',
           type: 'full-time'
         });
@@ -118,7 +121,7 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
           ...data,
           highlightPoints: data.highlightPoints.map(s => s.value),
           responsibilities: data.responsibilities.map(r => r.value),
-          requiredSkills: data.requiredSkills.map(s => s.value),
+          skills: data.skills.map(s => s.value),
       };
       await onSave(jobData);
     } catch (error) {
@@ -192,6 +195,22 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
                     <FormMessage />
                   </FormItem>
                 )} />
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Provide a brief description of the job..."
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                  <FormField control={form.control} name="type" render={({ field }) => (
                     <FormItem>
@@ -282,7 +301,7 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
               </div>
 
               <BulletPointInput fields={respFields} append={appendResp} remove={removeResp} label="Responsibilities" placeholder="e.g., Develop new features" name="responsibilities" />
-              <BulletPointInput fields={reqSkillsFields} append={appendReqSkill} remove={removeReqSkill} label="Required Skills" placeholder="e.g., Proficient in TypeScript" name="requiredSkills" />
+              <BulletPointInput fields={skillsFields} append={appendSkill} remove={removeSkill} label="Skills" placeholder="e.g., Proficient in TypeScript" name="skills" />
 
 
                <FormField control={form.control} name="status" render={({ field }) => (
@@ -323,7 +342,3 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
     </Sheet>
   );
 }
-
-    
-
-    
