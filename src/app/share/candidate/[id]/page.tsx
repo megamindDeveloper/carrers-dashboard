@@ -4,7 +4,7 @@ import type { Candidate } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, FileText, Video, Briefcase, GraduationCap, MapPin, Building, Calendar, Mail, Phone, MessageSquare } from 'lucide-react';
+import { ExternalLink, FileText, Video, Briefcase, GraduationCap, MapPin, Building, Calendar, Mail, Phone, MessageSquare, Info } from 'lucide-react';
 import Image from 'next/image';
 import mmLogo from '../../../../../.idx/mmLogo.png';
 import { format } from 'date-fns';
@@ -51,6 +51,11 @@ export default async function SharedCandidatePage({ params }: { params: { id: st
       return 'Invalid Date';
     }
   };
+  
+  const toTitleCase = (str: string | undefined) => {
+    if (!str) return 'N/A';
+    return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
+  };
 
   return (
     <div className="min-h-screen bg-muted/40 p-4 sm:p-8">
@@ -89,6 +94,10 @@ export default async function SharedCandidatePage({ params }: { params: { id: st
                          <Badge variant="secondary" className="flex items-center gap-2">
                            <Calendar className="h-4 w-4" />
                            <span>Applied on {getFormattedDate(candidate.submittedAt)}</span>
+                        </Badge>
+                        <Badge variant="default" className="flex items-center gap-2">
+                           <Info className="h-4 w-4" />
+                           <span>Status: {toTitleCase(candidate.status as string)}</span>
                         </Badge>
                     </div>
                 </div>
@@ -133,6 +142,12 @@ export default async function SharedCandidatePage({ params }: { params: { id: st
               <h3 className="text-lg font-semibold text-primary mb-2 flex items-center gap-2"><Calendar className="h-5 w-5" /> Experience</h3>
               <p className="text-muted-foreground whitespace-pre-wrap">{candidate.experience || candidate.workExperience || 'N/A'}</p>
             </div>
+            {candidate.comments && (
+              <div>
+                <h3 className="text-lg font-semibold text-primary mb-2 flex items-center gap-2"><MessageSquare className="h-5 w-5" /> Internal Comments</h3>
+                <p className="text-muted-foreground whitespace-pre-wrap">{candidate.comments}</p>
+              </div>
+            )}
           </CardContent>
           <CardFooter className="bg-background p-6 flex flex-wrap items-center gap-4">
               {candidate.portfolio && (
