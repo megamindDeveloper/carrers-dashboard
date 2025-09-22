@@ -92,8 +92,8 @@ export default function LoginPage() {
 
   return (
     <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2 xl:min-h-screen">
-      <div className="flex items-center justify-center py-12">
-        <div className="mx-auto grid w-[350px] gap-6">
+      <div className="flex items-center justify-center p-6 py-12 sm:p-12">
+        <div className="mx-auto grid w-full max-w-sm gap-6">
           <div className="grid gap-2 text-center">
             <Image height={50} width={200} src={mmLogo} alt="MegaMind Careers Logo" className="mx-auto mb-4" />
             <h1 className="text-3xl font-bold">Login</h1>
@@ -143,8 +143,8 @@ export default function LoginPage() {
           </Form>
         </div>
       </div>
-      <div className="hidden lg:flex items-center justify-center bg-muted">
-        <div className="flex flex-col items-center justify-center text-center p-8">
+      <div className="hidden lg:flex items-center justify-center bg-muted p-8">
+        <div className="flex flex-col items-center justify-center text-center">
             <Illustration />
             <h2 className="mt-6 text-3xl font-bold">Streamline Your Hiring</h2>
             <p className="mt-2 text-muted-foreground">

@@ -203,12 +203,12 @@ export function AddCandidateSheet({}: AddCandidateSheetProps) {
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
-        <Button>
+        <Button className="w-full sm:w-auto">
           <PlusCircle className="mr-2" />
           Add Candidate
         </Button>
       </SheetTrigger>
-      <SheetContent className="sm:max-w-2xl">
+      <SheetContent className="w-full sm:max-w-2xl">
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}

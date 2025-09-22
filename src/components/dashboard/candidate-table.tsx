@@ -264,13 +264,13 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
   return (
     <>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col items-stretch gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <CardTitle>{title}</CardTitle>
             <CardDescription>{description}</CardDescription>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleExport}>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button variant="outline" onClick={handleExport} className="w-full sm:w-auto">
               <Download className="mr-2 h-4 w-4" />
               Export to CSV
             </Button>
