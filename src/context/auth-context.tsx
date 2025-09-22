@@ -6,7 +6,14 @@ import { useRouter } from 'next/navigation';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, User as FirebaseUser } from 'firebase/auth';
 import { auth, db } from '@/app/utils/firebase/firebaseConfig';
 import { doc, onSnapshot } from 'firebase/firestore';
-import type { AppUser } from '@/lib/types';
+import type { Candidate } from '@/lib/types';
+
+// This is a simplified user. In a real app, you'd have roles and permissions.
+export interface AppUser {
+  uid: string;
+  email: string | null;
+  // Add other profile info like name, role, etc.
+}
 
 interface AuthContextType {
   user: AppUser | null;
@@ -25,38 +32,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (fbUser) => {
+    const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
       setFirebaseUser(fbUser);
-      if (!fbUser) {
+      if (fbUser) {
+        // In a real app, you would fetch the user profile from Firestore here
+        // For this starter, we'll create a basic user object from the auth user
+        setUser({
+          uid: fbUser.uid,
+          email: fbUser.email,
+        });
+      } else {
         setUser(null);
-        setLoading(false);
       }
+      setLoading(false);
     });
 
-    return () => unsubscribeAuth();
+    return () => unsubscribe();
   }, []);
-
-  useEffect(() => {
-    if (firebaseUser) {
-      const userDocRef = doc(db, 'users', firebaseUser.uid);
-      const unsubscribeSnapshot = onSnapshot(userDocRef, (docSnap) => {
-        if (docSnap.exists()) {
-          setUser({ uid: firebaseUser.uid, ...docSnap.data() } as AppUser);
-        } else {
-          // This could happen if the user exists in Auth but not in Firestore 'users' collection
-          // We treat them as a logged-out user.
-          setUser(null);
-        }
-        setLoading(false);
-      }, (error) => {
-        console.error("Error fetching user data:", error);
-        setUser(null);
-        setLoading(false);
-      });
-
-      return () => unsubscribeSnapshot();
-    }
-  }, [firebaseUser]);
 
   const login = async (email: string, pass: string) => {
     await signInWithEmailAndPassword(auth, email, pass);
@@ -64,8 +56,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     await signOut(auth);
-    setUser(null);
-    setFirebaseUser(null);
     router.push('/login');
   };
 
