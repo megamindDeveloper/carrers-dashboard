@@ -49,14 +49,23 @@ const jobSchema = z.object({
   position: z.string().min(1, 'Position is required'),
   icon: z.string().min(1, 'Icon name is required'),
   openings: z.coerce.number().min(1, 'At least one opening is required'),
-  experience: z.string().min(1, 'Experience is required'),
+  experience: z.string(),
   location: z.string().min(1, 'Location is required'),
   highlightPoints: z.array(z.object({ value: z.string().min(1, "Highlight point cannot be empty") })).min(1, "At least one highlight point is required"),
   responsibilities: z.array(z.object({ value: z.string().min(1, "Responsibility cannot be empty") })).min(1, "At least one responsibility is required"),
   skills: z.array(z.object({ value: z.string().min(1, "Skill cannot be empty") })).min(1, "At least one skill is required"),
   status: z.enum(JOB_STATUSES),
   type: z.enum(JOB_TYPES),
+}).superRefine((data, ctx) => {
+    if (data.type === 'full-time' && !data.experience.trim()) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['experience'],
+            message: 'Experience is required for full-time jobs.',
+        });
+    }
 });
+
 
 export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobSheetProps) {
   const [isProcessing, setIsProcessing] = useState(false);
