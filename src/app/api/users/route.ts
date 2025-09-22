@@ -42,20 +42,25 @@ export async function PUT(req: Request) {
         return NextResponse.json({ success: false, error: "Missing required fields for update" }, { status: 400 });
       }
 
+      // Update password in Firebase Auth only if a new one is provided
       if (password) {
           await adminAuth.updateUser(uid, { password });
       }
       
+      // Update custom claims (role) in Firebase Auth
       await adminAuth.setCustomUserClaims(uid, { role });
 
+      // Prepare the document for Firestore update
       const userDoc = {
         role,
         accessibleTabs: role === 'superAdmin' ? [] : accessibleTabs || [],
       };
   
+      // Update the user document in Firestore
       await adminDb.collection("users").doc(uid).update(userDoc);
   
-      return NextResponse.json({ success: true, uid, email: (await adminAuth.getUser(uid)).email });
+      const updatedUser = await adminAuth.getUser(uid);
+      return NextResponse.json({ success: true, uid: updatedUser.uid, email: updatedUser.email });
     } catch (error: any) {
       console.error("Error updating user:", error);
       return NextResponse.json({ success: false, error: error.message }, { status: 500 });

@@ -42,9 +42,9 @@ interface AddEditUserSheetProps {
   onSave: (data: any) => Promise<void>;
 }
 
-const userSchema = z.object({
+const newUserSchema = z.object({
     email: z.string().email('Invalid email address'),
-    password: z.string().min(8, 'Password must be at least 8 characters').optional().or(z.literal('')),
+    password: z.string().min(8, 'Password must be at least 8 characters'),
     role: z.enum(USER_ROLES),
     accessibleTabs: z.array(z.string()).optional(),
 }).refine(data => data.role !== 'user' || (data.accessibleTabs && data.accessibleTabs.length > 0), {
@@ -52,12 +52,31 @@ const userSchema = z.object({
     path: ["accessibleTabs"],
 });
 
+const editUserSchema = z.object({
+    email: z.string().email('Invalid email address'),
+    password: z.string().optional().or(z.literal('')),
+    role: z.enum(USER_ROLES),
+    accessibleTabs: z.array(z.string()).optional(),
+}).refine(data => {
+    if (data.password && data.password.length > 0 && data.password.length < 8) {
+        return false;
+    }
+    return true;
+}, {
+    message: "Password must be at least 8 characters if provided.",
+    path: ["password"],
+}).refine(data => data.role !== 'user' || (data.accessibleTabs && data.accessibleTabs.length > 0), {
+    message: "At least one tab must be selected for the 'user' role.",
+    path: ["accessibleTabs"],
+});
+
+
 export function AddEditUserSheet({ isOpen, onClose, user, onSave }: AddEditUserSheetProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const isEditMode = !!user;
 
-  const form = useForm<z.infer<typeof userSchema>>({
-    resolver: zodResolver(userSchema),
+  const form = useForm<z.infer<typeof editUserSchema | typeof newUserSchema>>({
+    resolver: zodResolver(isEditMode ? editUserSchema : newUserSchema),
     defaultValues: {
       email: '',
       password: '',
@@ -86,7 +105,7 @@ export function AddEditUserSheet({ isOpen, onClose, user, onSave }: AddEditUserS
     }
   }, [user, isOpen, form, isEditMode]);
 
-  const onSubmit = async (data: z.infer<typeof userSchema>) => {
+  const onSubmit = async (data: z.infer<typeof editUserSchema | typeof newUserSchema>) => {
     setIsProcessing(true);
     const submissionData: any = {
         ...data,
@@ -182,7 +201,7 @@ export function AddEditUserSheet({ isOpen, onClose, user, onSave }: AddEditUserS
                         <div className="mb-4">
                             <FormLabel className="text-base">Accessible Tabs</FormLabel>
                         </div>
-                        {NAV_ITEMS.map((item) => (
+                        {NAV_ITEMS.filter(item => item.id !== 'overview').map((item) => (
                             <FormField
                             key={item.id}
                             control={form.control}
