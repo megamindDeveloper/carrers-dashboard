@@ -2,11 +2,14 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut, User } from 'firebase/auth';
-import { auth } from '@/app/utils/firebase/firebaseConfig';
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut, User as FirebaseUser } from 'firebase/auth';
+import { auth, db } from '@/app/utils/firebase/firebaseConfig';
+import { doc, onSnapshot } from 'firebase/firestore';
+import type { AppUser } from '@/lib/types';
 
 interface AuthContextType {
-  user: User | null;
+  user: AppUser | null;
+  firebaseUser: FirebaseUser | null;
   loading: boolean;
   login: (email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -15,32 +18,59 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    // Listen for Firebase auth state changes
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
-      setLoading(false);
+    const unsubscribeAuth = onAuthStateChanged(auth, (fbUser) => {
+      setFirebaseUser(fbUser);
+      if (!fbUser) {
+        setUser(null);
+        setLoading(false);
+      }
     });
 
-    return () => unsubscribe();
+    return () => unsubscribeAuth();
   }, []);
+
+  useEffect(() => {
+    if (firebaseUser) {
+      const userDocRef = doc(db, 'users', firebaseUser.uid);
+      const unsubscribeSnapshot = onSnapshot(userDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+          setUser({ uid: firebaseUser.uid, ...docSnap.data() } as AppUser);
+        } else {
+          // This could happen if the user exists in Auth but not in Firestore 'users' collection
+          // For now, we'll treat them as a logged-out user.
+          // You might want to handle this case differently, e.g., by creating a default user profile.
+          console.error("User document doesn't exist in Firestore.");
+          setUser(null);
+        }
+        setLoading(false);
+      }, (error) => {
+        console.error("Error fetching user data:", error);
+        setUser(null);
+        setLoading(false);
+      });
+
+      return () => unsubscribeSnapshot();
+    }
+  }, [firebaseUser]);
 
   const login = async (email: string, pass: string) => {
     await signInWithEmailAndPassword(auth, email, pass);
-    // Firebase automatically updates `user` through onAuthStateChanged
   };
 
   const logout = async () => {
     await signOut(auth);
     setUser(null);
+    setFirebaseUser(null);
     router.push('/login');
   };
 
-  const value = { user, loading, login, logout };
+  const value = { user, firebaseUser, loading, login, logout };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

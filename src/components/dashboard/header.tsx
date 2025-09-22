@@ -16,6 +16,7 @@ import {
   LayoutGrid,
   Menu,
   FileText,
+  UserCog,
 } from 'lucide-react';
 import mmLogo from '../../../.idx/mmLogo.png';
 import { usePathname } from 'next/navigation';
@@ -25,22 +26,41 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '../ui/tooltip';
+import { NAV_ITEMS } from '@/lib/types';
 
 interface HeaderProps {
     onToggleSidebar: () => void;
 }
 
+const navIcons: { [key: string]: React.ElementType } = {
+  overview: LayoutGrid,
+  jobs: FileText,
+  'all-candidates': Users,
+  'full-time': Briefcase,
+  interns: GraduationCap,
+  users: UserCog,
+};
+
+
 export function Header({ onToggleSidebar }: HeaderProps) {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const pathname = usePathname();
 
-  const navItems = [
-    { href: '/dashboard', icon: LayoutGrid, label: 'Overview' },
-    { href: '/dashboard/jobs', icon: FileText, label: 'Jobs' },
-    { href: '/dashboard/all', icon: Users, label: 'All Candidates' },
-    { href: '/dashboard/full-time', icon: Briefcase, label: 'Full-time' },
-    { href: '/dashboard/intern', icon: GraduationCap, label: 'Interns' },
+  const allNavLinks = [
+    { id: 'overview', href: '/dashboard', icon: navIcons['overview'], label: 'Overview' },
+    { id: 'jobs', href: '/dashboard/jobs', icon: navIcons['jobs'], label: 'Jobs' },
+    { id: 'all-candidates', href: '/dashboard/all', icon: navIcons['all-candidates'], label: 'All Candidates' },
+    { id: 'full-time', href: '/dashboard/full-time', icon: navIcons['full-time'], label: 'Full-time' },
+    { id: 'interns', href: '/dashboard/intern', icon: navIcons['interns'], label: 'Interns' },
   ];
+
+  if (user?.role === 'superAdmin') {
+    allNavLinks.push({ id: 'users', href: '/dashboard/users', icon: navIcons['users'], label: 'Users' });
+  }
+
+  const accessibleNavLinks = allNavLinks.filter(item => 
+      user?.role === 'superAdmin' || item.id === 'overview' || user?.accessibleTabs?.includes(item.id as any)
+  );
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
@@ -64,7 +84,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
               <Image height={30} width={120} src={mmLogo} alt="MegaMind Careers Logo" />
               <span className="sr-only">MegaMind Careers</span>
             </Link>
-            {navItems.map(item => (
+            {accessibleNavLinks.map(item => (
               <Link
                 key={item.href}
                 href={item.href}

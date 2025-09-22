@@ -1,4 +1,5 @@
 
+
 export const CANDIDATE_STATUSES = [
   'Applied',
   'Shortlisted',
@@ -60,3 +61,24 @@ export type Job = {
   createdAt: any;
   type: JobType;
 };
+
+
+// User Management
+export const USER_ROLES = ['superAdmin', 'user'] as const;
+export type UserRole = (typeof USER_ROLES)[number];
+
+export const NAV_ITEMS = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'jobs', label: 'Jobs' },
+  { id: 'all-candidates', label: 'All Candidates' },
+  { id: 'full-time', label: 'Full-time' },
+  { id: 'interns', label: 'Interns' },
+] as const;
+export type NavItemId = (typeof NAV_ITEMS)[number]['id'];
+
+export interface AppUser {
+  uid: string;
+  email: string | null;
+  role: UserRole;
+  accessibleTabs: NavItemId[];
+}

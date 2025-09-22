@@ -16,24 +16,46 @@ import {
   GraduationCap,
   LayoutGrid,
   FileText,
+  UserCog,
 } from 'lucide-react';
 import mmLogo from '../../../.idx/mmLogo.png';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/auth-context';
 
 interface SidebarProps {
   isSidebarOpen: boolean;
 }
 
+const navIcons: { [key: string]: React.ElementType } = {
+  overview: LayoutGrid,
+  jobs: FileText,
+  'all-candidates': Users,
+  'full-time': Briefcase,
+  interns: GraduationCap,
+  users: UserCog,
+};
+
 export function Sidebar({ isSidebarOpen }: SidebarProps) {
   const pathname = usePathname();
+  const { user } = useAuth();
 
-  const navItems = [
-    { href: '/dashboard', icon: LayoutGrid, label: 'Overview' },
-    { href: '/dashboard/jobs', icon: FileText, label: 'Jobs' },
-    { href: '/dashboard/all', icon: Users, label: 'All Candidates' },
-    { href: '/dashboard/full-time', icon: Briefcase, label: 'Full-time' },
-    { href: '/dashboard/intern', icon: GraduationCap, label: 'Interns' },
+  const allNavLinks = [
+    { id: 'overview', href: '/dashboard', icon: navIcons['overview'], label: 'Overview' },
+    { id: 'jobs', href: '/dashboard/jobs', icon: navIcons['jobs'], label: 'Jobs' },
+    { id: 'all-candidates', href: '/dashboard/all', icon: navIcons['all-candidates'], label: 'All Candidates' },
+    { id: 'full-time', href: '/dashboard/full-time', icon: navIcons['full-time'], label: 'Full-time' },
+    { id: 'interns', href: '/dashboard/intern', icon: navIcons['interns'], label: 'Interns' },
   ];
+
+  if (user?.role === 'superAdmin') {
+    allNavLinks.push({ id: 'users', href: '/dashboard/users', icon: navIcons['users'], label: 'Users' });
+  }
+
+  // Filter links based on user's permissions
+  // SuperAdmin sees all, regular users see what's in their accessibleTabs array + overview.
+  const accessibleNavLinks = allNavLinks.filter(item => 
+      user?.role === 'superAdmin' || item.id === 'overview' || user?.accessibleTabs?.includes(item.id as any)
+  );
 
   return (
     <aside
@@ -65,7 +87,7 @@ export function Sidebar({ isSidebarOpen }: SidebarProps) {
           </span>
         </Link>
         <TooltipProvider>
-          {navItems.map(item =>
+          {accessibleNavLinks.map(item =>
             isSidebarOpen ? (
               <Link
                 key={item.href}
