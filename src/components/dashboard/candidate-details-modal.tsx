@@ -22,12 +22,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { ExternalLink, FileText, Video } from 'lucide-react';
 import { format } from 'date-fns';
 import { ScrollArea } from '../ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-
 
 interface CandidateDetailsModalProps {
   isOpen: boolean;
@@ -104,7 +102,7 @@ export function CandidateDetailsModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-3xl flex flex-col max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>{candidate.fullName}</DialogTitle>
           <DialogDescription>
@@ -201,3 +199,5 @@ export function CandidateDetailsModal({
     </Dialog>
   );
 }
+
+    
