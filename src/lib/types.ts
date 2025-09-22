@@ -1,5 +1,4 @@
 
-
 export const CANDIDATE_STATUSES = [
   'Applied',
   'Shortlisted',
@@ -48,7 +47,7 @@ export type JobType = (typeof JOB_TYPES)[number];
 
 export type Job = {
   id: string;
-  title: string;
+  position: string;
   icon: string;
   openings: number;
   experience: string;

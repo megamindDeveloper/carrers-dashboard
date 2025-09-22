@@ -42,13 +42,13 @@ const Icon = ({ name, className }: { name: string; className?: string }) => {
 export const getColumns = ({ onStatusChange }: GetColumnsProps): ColumnDef<Job>[] => {
   const columns: ColumnDef<Job>[] = [
     {
-      accessorKey: 'title',
+      accessorKey: 'position',
       header: ({ column }) => (
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         >
-          Title
+          Position
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
@@ -58,7 +58,7 @@ export const getColumns = ({ onStatusChange }: GetColumnsProps): ColumnDef<Job>[
           <div className="flex items-center gap-3">
              <Icon name={job.icon} className="h-5 w-5 text-muted-foreground" />
             <div className="flex flex-col">
-              <span className="font-medium">{job.title}</span>
+              <span className="font-medium">{job.position}</span>
               <span className="text-sm text-muted-foreground">
                 {job.location}
               </span>

@@ -45,23 +45,11 @@ export function DataTableToolbar<TData>({
             className="h-8 w-[150px] lg:w-[250px]"
           />
         )}
-        {columnExists('title') && (
-           <Input
-            placeholder="Filter by title..."
-            value={(table.getColumn('title')?.getFilterValue() as string) ?? ''}
-            onChange={(event) =>
-              table.getColumn('title')?.setFilterValue(event.target.value)
-            }
-            className="h-8 w-[150px] lg:w-[250px]"
-          />
-        )}
         {columnExists('position') && (
-          <Input
+           <Input
             placeholder="Filter by position..."
-            value={
-              (table.getColumn('position')?.getFilterValue() as string) ?? ''
-            }
-            onChange={event =>
+            value={(table.getColumn('position')?.getFilterValue() as string) ?? ''}
+            onChange={(event) =>
               table.getColumn('position')?.setFilterValue(event.target.value)
             }
             className="h-8 w-[150px] lg:w-[250px]"

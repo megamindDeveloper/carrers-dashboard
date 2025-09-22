@@ -82,7 +82,7 @@ export function JobTable() {
         if (!response.ok) throw new Error('Failed to update job');
         toast({
           title: 'Job Updated',
-          description: `The job "${jobData.title}" has been updated successfully.`,
+          description: `The job "${jobData.position}" has been updated successfully.`,
         });
       } else {
         // Add new job
@@ -94,7 +94,7 @@ export function JobTable() {
         if (!response.ok) throw new Error('Failed to create job');
         toast({
           title: 'Job Added',
-          description: `The job "${jobData.title}" has been created.`,
+          description: `The job "${jobData.position}" has been created.`,
         });
       }
       handleCloseSheet();

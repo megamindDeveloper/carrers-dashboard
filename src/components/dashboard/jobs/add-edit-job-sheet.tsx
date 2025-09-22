@@ -46,7 +46,7 @@ interface AddEditJobSheetProps {
 }
 
 const jobSchema = z.object({
-  title: z.string().min(1, 'Title is required'),
+  position: z.string().min(1, 'Position is required'),
   icon: z.string().min(1, 'Icon name is required'),
   openings: z.coerce.number().min(1, 'At least one opening is required'),
   experience: z.string().min(1, 'Experience is required'),
@@ -65,7 +65,7 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
   const form = useForm<z.infer<typeof jobSchema>>({
     resolver: zodResolver(jobSchema),
     defaultValues: {
-      title: '',
+      position: '',
       icon: 'Briefcase',
       openings: 1,
       experience: '',
@@ -95,7 +95,7 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
       });
     } else {
       form.reset({
-        title: '',
+        position: '',
         icon: 'Briefcase',
         openings: 1,
         experience: '',
@@ -183,9 +183,9 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
               </SheetDescription>
             </SheetHeader>
             <div className="flex-1 overflow-y-auto p-1 pr-6 space-y-4 py-4">
-               <FormField control={form.control} name="title" render={({ field }) => (
+               <FormField control={form.control} name="position" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Job Title</FormLabel>
+                    <FormLabel>Job Position</FormLabel>
                     <FormControl><Input placeholder="e.g., Software Engineer" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
