@@ -151,29 +151,32 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
 
       try {
         await updateDoc(doc(db, 'applications', candidateId), updates);
+        
+        handleCloseModal();
+
         toast({
           title: "Update Successful",
-          description: `${candidateToUpdate.fullName}'s details have been updated.`,
+          description: `${updates.fullName || candidateToUpdate.fullName}'s details have been updated.`,
         });
 
         if (status && status !== candidateToUpdate.status) {
             toast({
               title: "Status Updated",
-              description: `${candidateToUpdate.fullName}'s status is now ${status}.`,
+              description: `${updates.fullName || candidateToUpdate.fullName}'s status is now ${status}.`,
             });
             if (status === 'Shortlisted') {
               await fetch('/api/shortlisted', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                  fullName: candidateToUpdate.fullName,
-                  email: candidateToUpdate.email,
-                  position: candidateToUpdate.position,
+                  fullName: updates.fullName || candidateToUpdate.fullName,
+                  email: updates.email || candidateToUpdate.email,
+                  position: updates.position || candidateToUpdate.position,
                 }),
               });
               toast({
                 title: "Email Sent",
-                description: `An email has been sent to ${candidateToUpdate.fullName}.`,
+                description: `An email has been sent to ${updates.fullName || candidateToUpdate.fullName}.`,
 
               });
             } else if (status === 'Rejected' && rejectionReason) {
@@ -181,15 +184,15 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                  fullName: candidateToUpdate.fullName,
-                  email: candidateToUpdate.email,
-                  position: candidateToUpdate.position,
+                  fullName: updates.fullName || candidateToUpdate.fullName,
+                  email: updates.email || candidateToUpdate.email,
+                  position: updates.position || candidateToUpdate.position,
                   reason: rejectionReason,
                 }),
               });
                toast({
                 title: "Rejection Email Sent",
-                description: `An email has been sent to ${candidateToUpdate.fullName}.`,
+                description: `An email has been sent to ${updates.fullName || candidateToUpdate.fullName}.`,
               });
             }
         }
@@ -215,18 +218,12 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
       if (!candidateToUpdate) return;
       
       const { status, rejectionReason } = updates;
-
-      if (status === 'Rejected' && !rejectionReason) {
-        // Open the modal to get rejection reason
-        setSelectedCandidate(data.find(c => c.id === candidateId) || null);
-        return;
-      }
       
       if (status === 'Shortlisted' && status !== candidateToUpdate.status) {
         setConfirmation({
           isOpen: true,
           title: 'Are you sure you want to shortlist this candidate?',
-          description: `This will send a "shortlisted" email to ${candidateToUpdate.fullName}. Do you want to proceed?`,
+          description: `This will send a "shortlisted" email to ${updates.fullName || candidateToUpdate.fullName}. Do you want to proceed?`,
           onConfirm: () => {
             proceedWithStatusUpdate(candidateId, updates);
             setConfirmation({ ...confirmation, isOpen: false });
@@ -237,7 +234,7 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
 
       await proceedWithStatusUpdate(candidateId, updates);
     },
-    [data, toast, selectedCandidate, confirmation]
+    [data, toast]
   );
   
   const handleStatusChangeFromDropdown = (candidateId: string, status: CandidateStatus) => {

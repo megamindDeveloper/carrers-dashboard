@@ -1,6 +1,8 @@
 
 
 
+import { z } from 'zod';
+
 export const CANDIDATE_STATUSES = [
   'Applied',
   'Shortlisted',
@@ -40,6 +42,26 @@ export type Candidate = {
   introductionVideoIntern?: string;
   comments?: string;
 };
+
+export const CandidateUpdateSchema = z.object({
+  fullName: z.string().min(1, 'Full name is required'),
+  email: z.string().email('Invalid email address'),
+  contactNumber: z.string().min(1, 'Contact number is required'),
+  whatsappNumber: z.string().min(1, 'WhatsApp number is required'),
+  address: z.string().min(1, 'Address is required'),
+  city: z.string().min(1, 'City is required'),
+  state: z.string().min(1, 'State is required'),
+  pincode: z.string().min(1, 'Pincode is required'),
+  education: z.string().optional(),
+  experience: z.string().min(1, 'Experience is required'),
+  position: z.string().min(1, 'Position is required'),
+  portfolio: z.string().url('Invalid URL').or(z.literal('')),
+  introductionVideoIntern: z.string().url('Invalid URL').or(z.literal('')),
+  status: z.enum(CANDIDATE_STATUSES),
+  rejectionReason: z.string().optional(),
+  comments: z.string().optional(),
+});
+
 
 export const JOB_STATUSES = ['Open', 'Closed'] as const;
 export type JobStatus = (typeof JOB_STATUSES)[number];

@@ -2,7 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import type { Candidate, CandidateStatus } from '@/lib/types';
-import { CANDIDATE_STATUSES } from '@/lib/types';
+import { CANDIDATE_STATUSES, CandidateUpdateSchema } from '@/lib/types';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import type * as z from 'zod';
 import {
   Dialog,
   DialogContent,
@@ -21,9 +24,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { ExternalLink, FileText, Video, Share2 } from 'lucide-react';
+import { ExternalLink, FileText, Video, Share2, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
+import { Input } from '../ui/input';
 
 interface CandidateDetailsModalProps {
   isOpen: boolean;
@@ -31,6 +36,8 @@ interface CandidateDetailsModalProps {
   candidate: Candidate | null;
   onSaveChanges: (candidateId: string, updates: Partial<Candidate>) => void;
 }
+
+type CandidateUpdateForm = z.infer<typeof CandidateUpdateSchema>;
 
 const toTitleCase = (str: string) => {
   if (!str) return '';
@@ -43,18 +50,35 @@ export function CandidateDetailsModal({
   candidate,
   onSaveChanges,
 }: CandidateDetailsModalProps) {
-  const [selectedStatus, setSelectedStatus] = useState<CandidateStatus | undefined>(undefined);
-  const [rejectionReason, setRejectionReason] = useState('');
-  const [comments, setComments] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
+  
+  const form = useForm<CandidateUpdateForm>({
+    resolver: zodResolver(CandidateUpdateSchema),
+  });
 
   useEffect(() => {
     if (candidate) {
-      setSelectedStatus(candidate.status ? toTitleCase(candidate.status as string) as CandidateStatus : undefined);
-      setRejectionReason(candidate.rejectionReason || '');
-      setComments(candidate.comments || '');
+      form.reset({
+        fullName: candidate.fullName || '',
+        email: candidate.email || '',
+        contactNumber: candidate.contactNumber || '',
+        whatsappNumber: candidate.whatsappNumber || '',
+        address: candidate.address || '',
+        city: candidate.city || '',
+        state: candidate.state || '',
+        pincode: candidate.pincode || '',
+        education: candidate.education || '',
+        experience: candidate.experience || candidate.workExperience || '',
+        position: candidate.position || '',
+        portfolio: candidate.portfolio || '',
+        introductionVideoIntern: candidate.introductionVideoIntern || '',
+        status: candidate.status ? toTitleCase(candidate.status as string) as CandidateStatus : 'Applied',
+        rejectionReason: candidate.rejectionReason || '',
+        comments: candidate.comments || '',
+      });
     }
-  }, [candidate]);
+  }, [candidate, form]);
 
   if (!candidate) return null;
 
@@ -67,29 +91,24 @@ export function CandidateDetailsModal({
     });
   };
 
-  const handleSave = () => {
-    if (selectedStatus === 'Rejected' && !rejectionReason.trim()) {
+  const onSubmit = (data: CandidateUpdateForm) => {
+    if (data.status === 'Rejected' && !data.rejectionReason?.trim()) {
       toast({
         variant: "destructive",
         title: "Reason Required",
         description: "Please provide a reason for rejection.",
       });
+      form.setFocus('rejectionReason');
       return;
     }
 
-    const updates: Partial<Candidate> = { comments };
-
-    if (selectedStatus) {
-      updates.status = selectedStatus;
-    }
-    if (selectedStatus === 'Rejected') {
-      updates.rejectionReason = rejectionReason;
-    } else {
+    const updates: Partial<Candidate> = { ...data };
+    if (data.status !== 'Rejected') {
       updates.rejectionReason = '';
     }
 
     onSaveChanges(candidate.id, updates);
-    onClose();
+    // The parent component will handle closing the modal after save.
   };
 
   const getFormattedDate = (date: any) => {
@@ -104,17 +123,18 @@ export function CandidateDetailsModal({
     }
   };
 
-  const displayLocation = candidate.city && candidate.state ? `${candidate.city}, ${candidate.state}` : candidate.location;
+  const currentStatus = form.watch('status');
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-3xl flex flex-col max-h-[90vh]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-4xl flex flex-col max-h-[90vh]">
+         <DialogHeader>
           <div className="flex justify-between items-start">
             <div>
               <DialogTitle>{candidate.fullName}</DialogTitle>
               <DialogDescription>
-                {candidate.position} - <span className="capitalize">{candidate.type === 'full-time' ? 'Full-time' : 'Internship'}</span> </DialogDescription>
+                Applied for {candidate.position} on {getFormattedDate(candidate.submittedAt)}
+              </DialogDescription>
             </div>
             <Button variant="outline" size="sm" onClick={handleShare}>
               <Share2 className="mr-2 h-4 w-4" />
@@ -123,95 +143,186 @@ export function CandidateDetailsModal({
           </div>
         </DialogHeader>
 
-        {/* 👇 KEY CHANGE IS HERE 👇 */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div><Label>Email</Label><p className="text-sm break-words">{candidate.email}</p></div>
-            <div><Label>Contact</Label><p className="text-sm">{candidate.contactNumber}</p></div>
-            <div><Label>WhatsApp</Label><p className="text-sm">{candidate.whatsappNumber}</p></div>
-            <div><Label>Location</Label><p className="text-sm">{displayLocation}</p></div>
-            <div><Label>Applied On</Label><p className="text-sm">{getFormattedDate(candidate.submittedAt)}</p></div>
-          </div>
-          <div><Label>Address</Label><p className="text-sm">{`${candidate.address}, ${candidate.city}, ${candidate.state} ${candidate.pincode}`}</p></div>
-          <div><Label>Education</Label><p className="text-sm">{candidate.education || 'N/A'}</p></div>
-          <div><Label>Experience</Label><p className="text-sm whitespace-pre-wrap">{candidate.experience || candidate.workExperience || 'N/A'}</p></div>
-          <div className="flex flex-wrap items-center gap-4">
-            {candidate.portfolio && (
-              <Button variant="outline" asChild>
-                <a href={candidate.portfolio} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="mr-2 h-4 w-4" /> View Portfolio
-                </a>
-              </Button>
-            )}
-            {candidate.resumeUrl && (
-              <Button variant="outline" asChild>
-                <a href={candidate.resumeUrl} target="_blank" rel="noopener noreferrer">
-                  <FileText className="mr-2 h-4 w-4" /> View Resume
-                </a>
-              </Button>
-            )}
-            {candidate.introductionVideoIntern && (
-              <Button variant="outline" asChild>
-                <a href={candidate.introductionVideoIntern} target="_blank" rel="noopener noreferrer">
-                  <Video className="mr-2 h-4 w-4" /> View Intro Video
-                </a>
-              </Button>
-            )}
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="status">Status</Label>
-              <Select value={selectedStatus} onValueChange={(value: CandidateStatus) => setSelectedStatus(value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Change status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CANDIDATE_STATUSES.map(status => (
-                    <SelectItem key={status} value={status}>
-                      {status}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 overflow-y-auto pr-6 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField control={form.control} name="fullName" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Full Name</FormLabel>
+                  <FormControl><Input {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="email" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl><Input {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
             </div>
 
-            {selectedStatus === 'Rejected' && (
-              <div>
-                <Label htmlFor="rejectionReason">Rejection Reason</Label>
-                <Textarea
-                  id="rejectionReason"
-                  placeholder="Provide a reason for rejection... (This will be sent to the candidate)"
-                  value={rejectionReason}
-                  onChange={(e) => setRejectionReason(e.target.value)}
-                />
-              </div>
-            )}
-            {candidate.status === 'Rejected' && candidate.rejectionReason && selectedStatus !== 'Rejected' && (
-              <div>
-                <Label>Previous Rejection Reason</Label>
-                <p className="text-sm text-muted-foreground p-2 border rounded-md">{candidate.rejectionReason}</p>
-              </div>
-            )
-            }
-            <div>
-              <Label htmlFor="comments">Internal Comments</Label>
-              <Textarea
-                id="comments"
-                placeholder="Add internal notes about the candidate..."
-                value={comments}
-                onChange={(e) => setComments(e.target.value)}
-                className="mt-1"
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField control={form.control} name="contactNumber" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Contact Number</FormLabel>
+                  <FormControl><Input {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="whatsappNumber" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>WhatsApp Number</FormLabel>
+                  <FormControl><Input {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            </div>
+            
+            <FormField control={form.control} name="address" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Address</FormLabel>
+                <FormControl><Input {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <FormField control={form.control} name="city" render={({ field }) => (
+                  <FormItem><FormLabel>City</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <FormField control={form.control} name="state" render={({ field }) => (
+                  <FormItem><FormLabel>State</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <FormField control={form.control} name="pincode" render={({ field }) => (
+                  <FormItem><FormLabel>Pincode</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+              )} />
+            </div>
+
+            <FormField control={form.control} name="education" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Education</FormLabel>
+                <FormControl><Input {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            <FormField control={form.control} name="experience" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Experience</FormLabel>
+                <FormControl><Textarea {...field} className="min-h-[100px]" /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField control={form.control} name="position" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Position Applied For</FormLabel>
+                    <FormControl><Input {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                 <FormField control={form.control} name="portfolio" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Portfolio/Link</FormLabel>
+                    <FormControl><Input {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+            </div>
+             {candidate.type === 'internship' && (
+              <FormField control={form.control} name="introductionVideoIntern" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Intro Video Link</FormLabel>
+                    <FormControl><Input {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+             )}
+
+            <div className="flex flex-wrap items-center gap-4 py-4">
+              {candidate.resumeUrl && (
+                <Button variant="outline" asChild>
+                  <a href={candidate.resumeUrl} target="_blank" rel="noopener noreferrer">
+                    <FileText className="mr-2 h-4 w-4" /> View Resume
+                  </a>
+                </Button>
+              )}
+            </div>
+            
+            <div className="space-y-4 pt-4 border-t">
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Change status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {CANDIDATE_STATUSES.map(status => (
+                          <SelectItem key={status} value={status}>
+                            {status}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {currentStatus === 'Rejected' && (
+                 <FormField
+                  control={form.control}
+                  name="rejectionReason"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Rejection Reason</FormLabel>
+                       <FormControl>
+                         <Textarea
+                          placeholder="Provide a reason for rejection... (This will be sent to the candidate)"
+                          {...field}
+                         />
+                       </FormControl>
+                       <FormMessage />
+                    </FormItem>
+                  )}
+                 />
+              )}
+
+              <FormField
+                control={form.control}
+                name="comments"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Internal Comments</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Add internal notes about the candidate..."
+                        className="mt-1"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
             </div>
-          </div>
-        </div>
-        {/* 👆 END OF KEY CHANGES 👆 */}
-
-        <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSave}>Save Changes</Button>
-        </DialogFooter>
+             <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-6">
+                <Button type="button" variant="outline" onClick={onClose} disabled={isProcessing}>Cancel</Button>
+                <Button type="submit" disabled={isProcessing}>
+                  {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Save Changes
+                </Button>
+              </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );
