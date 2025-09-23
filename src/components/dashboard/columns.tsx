@@ -192,15 +192,21 @@ export const getColumns = ({
       cell: ({ row }) => {
         const { status } = row.original;
         const safeStatus = toTitleCase(status as string) ?? 'Unknown';
-        let variant: 'default' | 'secondary' | 'destructive' = 'secondary';
-        if (['Shortlisted', 'First Round', 'Second Round', 'Third Round', 'Final Round'].includes(safeStatus)) {
-          variant = 'default';
-        } else if (safeStatus === 'Rejected') {
-          variant = 'destructive';
-        } else if (safeStatus === 'Hired') {
-          variant = 'default';
-        }
-        return <Badge variant={variant}>{safeStatus}</Badge>;
+        
+        const statusColors: { [key: string]: 'default' | 'secondary' | 'destructive' | 'outline' } = {
+            'Applied': 'secondary',
+            'Shortlisted': 'default',
+            'First Round': 'default',
+            'Second Round': 'default',
+            'Third Round': 'default',
+            'Final Round': 'default',
+            'Hired': 'default',
+            'Rejected': 'destructive',
+        };
+
+        const variant = statusColors[safeStatus] || 'secondary';
+
+        return <Badge variant={variant} className={safeStatus === 'Hired' ? 'bg-green-500 text-white' : ''}>{safeStatus}</Badge>;
       },
       filterFn: (row, columnId, filterValue) => {
           const status = row.getValue(columnId) as string;
