@@ -204,11 +204,20 @@ export const getColumns = ({
                 variant = 'default';
                 break;
             case 'First Round':
+                variant = 'outline';
+                className = 'border-blue-400 text-blue-400';
+                break;
             case 'Second Round':
+                 variant = 'outline';
+                 className = 'border-blue-500 text-blue-500';
+                 break;
             case 'Third Round':
+                variant = 'outline';
+                className = 'border-blue-600 text-blue-600';
+                break;
             case 'Final Round':
                 variant = 'outline';
-                className = 'border-blue-500 text-blue-500';
+                className = 'border-blue-700 text-blue-700';
                 break;
             case 'Hired':
                 variant = 'default';
