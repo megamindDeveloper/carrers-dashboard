@@ -17,7 +17,8 @@ import {
   LayoutGrid,
   FileText,
 } from 'lucide-react';
-import mmLogo from '../../../.idx/mmLogo.png';
+import mmLogoOpen from '../../../.idx/mmLogo.png';
+import mmLogoclose from '../../../public/icon.png';
 import { cn } from '@/lib/utils';
 
 interface SidebarProps {
@@ -43,27 +44,25 @@ export function Sidebar({ isSidebarOpen }: SidebarProps) {
       )}
     >
       <nav className="flex flex-col items-center gap-4 px-2 sm:py-4">
-        <Link
-          href="/dashboard"
-          className={cn(
-            'group flex h-9 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:h-8',
-            isSidebarOpen ? 'w-full' : 'w-9'
-          )}
-        >
-          <Image
-            height={20}
-            width={isSidebarOpen ? 80 : 20}
-            src={mmLogo}
-            alt="MegaMind Careers Logo"
-            className={cn(
-              'transition-all group-hover:scale-110',
-              isSidebarOpen ? 'h-4 w-20' : 'h-5 w-5'
-            )}
-          />
-          <span className={cn('sr-only', isSidebarOpen && 'sm:not-sr-only')}>
-            MegaMind
-          </span>
-        </Link>
+      <Link
+  href="/dashboard"
+  className={cn(
+    'group flex h-9 shrink-0 items-center justify-center gap-2 rounded-full text-lg font-semibold text-primary-foreground md:h-8',
+    isSidebarOpen ? 'w-full' : 'w-9'
+  )}
+>
+  <Image
+    height={20}
+    width={isSidebarOpen ? 80 : 20}
+    src={isSidebarOpen ? mmLogoOpen : mmLogoclose} // ✅ switch image
+    alt="MegaMind Careers Logo"
+    className={cn(
+      'transition-all group-hover:scale-110',
+      isSidebarOpen ? 'h-12 w-40' : 'h-8 w-8'
+    )}
+  />
+</Link>
+
         <TooltipProvider>
           {navItems.map(item =>
             isSidebarOpen ? (
