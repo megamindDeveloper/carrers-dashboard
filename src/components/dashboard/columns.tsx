@@ -193,20 +193,33 @@ export const getColumns = ({
         const { status } = row.original;
         const safeStatus = toTitleCase(status as string) ?? 'Unknown';
         
-        const statusColors: { [key: string]: 'default' | 'secondary' | 'destructive' | 'outline' } = {
-            'Applied': 'secondary',
-            'Shortlisted': 'default',
-            'First Round': 'default',
-            'Second Round': 'default',
-            'Third Round': 'default',
-            'Final Round': 'default',
-            'Hired': 'default',
-            'Rejected': 'destructive',
-        };
+        let variant: 'default' | 'secondary' | 'destructive' | 'outline' = 'secondary';
+        let className = '';
 
-        const variant = statusColors[safeStatus] || 'secondary';
+        switch (safeStatus) {
+            case 'Applied':
+                variant = 'secondary';
+                break;
+            case 'Shortlisted':
+                variant = 'default';
+                break;
+            case 'First Round':
+            case 'Second Round':
+            case 'Third Round':
+            case 'Final Round':
+                variant = 'outline';
+                className = 'border-blue-500 text-blue-500';
+                break;
+            case 'Hired':
+                variant = 'default';
+                className = 'bg-green-500 hover:bg-green-600 text-white border-green-500';
+                break;
+            case 'Rejected':
+                variant = 'destructive';
+                break;
+        }
 
-        return <Badge variant={variant} className={safeStatus === 'Hired' ? 'bg-green-500 text-white' : ''}>{safeStatus}</Badge>;
+        return <Badge variant={variant} className={className}>{safeStatus}</Badge>;
       },
       filterFn: (row, columnId, filterValue) => {
           const status = row.getValue(columnId) as string;
