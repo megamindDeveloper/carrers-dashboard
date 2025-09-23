@@ -202,23 +202,15 @@ export const getColumns = ({
                 break;
             case 'Shortlisted':
                 variant = 'default';
+                className = 'bg-blue-500 hover:bg-blue-600 text-white border-blue-500';
                 break;
             case 'First Round':
-                variant = 'outline';
-                className = 'border-blue-400 text-blue-400';
-                break;
             case 'Second Round':
-                 variant = 'outline';
-                 className = 'border-blue-500 text-blue-500';
-                 break;
             case 'Third Round':
-                variant = 'outline';
-                className = 'border-blue-600 text-blue-600';
-                break;
             case 'Final Round':
-                variant = 'outline';
-                className = 'border-blue-700 text-blue-700';
-                break;
+                 variant = 'outline';
+                 className = 'border-purple-500 text-purple-500';
+                 break;
             case 'Hired':
                 variant = 'default';
                 className = 'bg-green-500 hover:bg-green-600 text-white border-green-500';
