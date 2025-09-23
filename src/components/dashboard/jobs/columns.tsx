@@ -42,6 +42,15 @@ const Icon = ({ name, className }: { name: string; className?: string }) => {
 export const getColumns = ({ onStatusChange }: GetColumnsProps): ColumnDef<Job>[] => {
   const columns: ColumnDef<Job>[] = [
     {
+      id: 'slNo',
+      header: 'Sl. No.',
+      cell: ({ row, table }) => {
+        const { pageIndex, pageSize } = table.getState().pagination;
+        const index = (pageIndex * pageSize) + row.index + 1;
+        return <span>{index}</span>;
+      },
+    },
+    {
       accessorKey: 'position',
       header: ({ column }) => (
         <Button
@@ -81,14 +90,6 @@ export const getColumns = ({ onStatusChange }: GetColumnsProps): ColumnDef<Job>[
       cell: ({ row }) => (
         <div className="text-center">{row.original.openings}</div>
       ),
-    },
-    {
-      accessorKey: 'experience',
-      header: 'Experience',
-    },
-     {
-      accessorKey: 'duration',
-      header: 'Duration',
     },
     {
       accessorKey: 'createdAt',
