@@ -1,5 +1,6 @@
 
 
+
 export const CANDIDATE_STATUSES = [
   'Applied',
   'Shortlisted',
@@ -59,4 +60,5 @@ export type Job = {
   status: JobStatus;
   createdAt: any;
   type: JobType;
+  duration?: string;
 };

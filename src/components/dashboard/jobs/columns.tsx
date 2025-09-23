@@ -86,6 +86,10 @@ export const getColumns = ({ onStatusChange }: GetColumnsProps): ColumnDef<Job>[
       accessorKey: 'experience',
       header: 'Experience',
     },
+     {
+      accessorKey: 'duration',
+      header: 'Duration',
+    },
     {
       accessorKey: 'createdAt',
       header: ({ column }) => (

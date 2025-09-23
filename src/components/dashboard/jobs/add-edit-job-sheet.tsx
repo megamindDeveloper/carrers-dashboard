@@ -56,12 +56,20 @@ const jobSchema = z.object({
   skills: z.array(z.object({ value: z.string().min(1, "Skill cannot be empty") })).min(1, "At least one skill is required"),
   status: z.enum(JOB_STATUSES),
   type: z.enum(JOB_TYPES),
+  duration: z.string().optional(),
 }).superRefine((data, ctx) => {
     if (data.type === 'full-time' && !data.experience.trim()) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: ['experience'],
             message: 'Experience is required for full-time jobs.',
+        });
+    }
+    if (data.type === 'internship' && !data.duration?.trim()) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['duration'],
+            message: 'Duration is required for internships.',
         });
     }
 });
@@ -83,9 +91,12 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
       responsibilities: [{ value: '' }],
       skills: [{ value: '' }],
       status: 'Open',
-      type: 'full-time'
+      type: 'full-time',
+      duration: '',
     },
   });
+  
+  const jobType = form.watch('type');
 
   const { fields: highlightPointsFields, append: appendHighlightPoint, remove: removeHighlightPoint } = useFieldArray({ control: form.control, name: "highlightPoints" });
   const { fields: respFields, append: appendResp, remove: removeResp } = useFieldArray({ control: form.control, name: "responsibilities" });
@@ -102,6 +113,7 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
           responsibilities: job.responsibilities.map(r => ({ value: r })),
           skills: job.skills.map(s => ({ value: s })),
           type: job.type || 'full-time',
+          duration: job.duration || '',
         });
       } else {
         form.reset({
@@ -114,7 +126,8 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
           responsibilities: [{ value: '' }],
           skills: [{ value: '' }],
           status: 'Open',
-          type: 'full-time'
+          type: 'full-time',
+          duration: '',
         });
       }
     }
@@ -258,13 +271,27 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
                   )} />
                </div>
 
-               <FormField control={form.control} name="experience" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Experience</FormLabel>
-                    <FormControl><Input placeholder="e.g., 2-4 years" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
+                {jobType === 'full-time' && (
+                  <FormField control={form.control} name="experience" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Experience</FormLabel>
+                        <FormControl><Input placeholder="e.g., 2-4 years" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} 
+                  />
+                )}
+                
+                {jobType === 'internship' && (
+                  <FormField control={form.control} name="duration" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Duration</FormLabel>
+                        <FormControl><Input placeholder="e.g., 3 months" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )} 
+                  />
+                )}
 
               <div className="space-y-2">
                 <FormLabel>Highlight Points</FormLabel>
