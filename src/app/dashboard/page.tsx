@@ -79,7 +79,8 @@ export default function DashboardPage() {
     const positionCounts = candidates
       .filter(c => c.type === type)
       .reduce<Record<string, number>>((acc, candidate) => {
-        acc[candidate.position] = (acc[candidate.position] || 0) + 1;
+        const positionKey = candidate.position.trim();
+        acc[positionKey] = (acc[positionKey] || 0) + 1;
         return acc;
       }, {});
 
