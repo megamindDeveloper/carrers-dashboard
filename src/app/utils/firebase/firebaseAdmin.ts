@@ -1,31 +1,35 @@
-import admin from 'firebase-admin';
+import * as admin from 'firebase-admin';
 
-// Since we are using ES modules, we need to import the JSON file differently.
-// The `assert { type: 'json' }` is a standard way to do this.
-import serviceAccount from '../../../../firebase-service-account.json';
-
-// Ensure the service account has the correct structure for `cert`
-// The `cert` function expects project_id, client_email, and private_key
-const serviceAccountCredentials = {
-  projectId: serviceAccount.project_id,
-  clientEmail: serviceAccount.client_email,
-  privateKey: serviceAccount.private_key,
-};
-
-export function initializeAdminApp() {
+export async function initializeAdminApp() {
   if (admin.apps.length > 0) {
     return admin.app();
   }
 
+  console.log("-----------------------------------------");
+  console.log("ATTEMPTING TO INITIALIZE FIREBASE ADMIN");
+  const envVar = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  if (!envVar) {
+    console.error("FATAL: The FIREBASE_SERVICE_ACCOUNT_JSON environment variable was NOT found!");
+    throw new Error('The FIREBASE_SERVICE_ACCOUNT_JSON environment variable is not set.');
+  }
+  console.log("SUCCESS: Environment variable was found.");
+
+  let serviceAccount = JSON.parse(envVar);
+
+  // ✅ Fix newline issue in private key
+  if (serviceAccount.private_key?.includes('\\n')) {
+    serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+  }
+
+  console.log("Service account keys:", Object.keys(serviceAccount));
+
   try {
     return admin.initializeApp({
-      credential: admin.credential.cert(serviceAccountCredentials),
-      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+      credential: admin.credential.cert(serviceAccount),
+      storageBucket: "carrers-21341.appspot.com",
     });
-  } catch (error) {
-    console.error('Failed to initialize Firebase Admin SDK:', error);
-    // In a real app, you might want to throw this error
-    // or handle it more gracefully.
-    throw new Error('Firebase Admin SDK initialization failed.');
+  } catch (e: any) {
+    console.error("Admin init error:", e);
+    throw new Error(`Failed to initialize Firebase Admin SDK: ${e.message}`);
   }
 }

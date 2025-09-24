@@ -152,34 +152,21 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
         setData(prev => prev.filter(c => c.id !== candidateId));
         handleCloseModal();
         setConfirmation({ ...confirmation, isOpen: false });
-
+  
         try {
-          const response = await fetch('/api/candidate/delete', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              id: candidateId,
-              resumeUrl: candidateToDelete.resumeUrl,
-            }),
-          });
-          
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to delete candidate');
-          }
-
+          // Directly delete document from Firestore
+          await deleteDoc(doc(db, "applications", candidateId));
+  
           toast({
             title: 'Candidate Deleted',
             description: `${candidateName}'s application has been successfully deleted.`,
           });
-        } catch (error) {
-          setData(originalData); // Revert UI
+        } catch (error: any) {
+          setData(originalData); // revert UI
           toast({
             variant: 'destructive',
             title: 'Deletion Failed',
-            description: error instanceof Error ? error.message : 'An unknown error occurred.',
+            description: error.message || 'An unknown error occurred.',
           });
           console.error("Error deleting candidate:", error);
         }
