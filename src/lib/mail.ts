@@ -27,7 +27,7 @@ export interface SendEmailOptions {
 export async function sendEmail({ to, subject, htmlBody }: SendEmailOptions) {
   if (!token) {
     console.warn("ZeptoMail token not found. Skipping email.");
-    return { success: true, message: "Email skipped, ZeptoMail token not configured" };
+    return { success: false, message: "Email could not be sent. The ZeptoMail token is not configured on the server." };
   }
 
   try {

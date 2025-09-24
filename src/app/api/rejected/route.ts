@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     } else {
         // If there was a message from sendEmail (like token not configured), use it.
         const message = (emailResult as any).message || "Failed to send email";
-        console.error("Error sending email:", emailResult.error);
+        console.error("Error sending email:", (emailResult as any).error || message);
         return NextResponse.json({ success: false, message }, { status: 500 });
     }
   } catch (error: any) {
