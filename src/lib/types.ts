@@ -9,6 +9,7 @@ export const CANDIDATE_STATUSES = [
   'Final Round',
   'Hired',
   'Rejected',
+  'Future Reference',
 ] as const;
 
 export const CANDIDATE_TYPES = ['full-time', 'internship'] as const;

@@ -220,6 +220,10 @@ export const getColumns = ({
             case 'Rejected':
                 variant = 'destructive';
                 break;
+            case 'Future Reference':
+                variant = 'outline';
+                className = 'border-yellow-500 text-yellow-600';
+                break;
         }
 
         return <Badge variant={variant} className={className}>{safeStatus}</Badge>;
