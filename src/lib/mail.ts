@@ -1,4 +1,3 @@
-
 import { SendMailClient } from "zeptomail";
 
 // Define the structure for the function's arguments using an interface

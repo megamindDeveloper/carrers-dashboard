@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -319,24 +318,13 @@ export function CandidateDetailsModal({
                 )}
               />
             </div>
-             <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-between pt-6">
-                <Button
-                    type="button"
-                    variant="destructive"
-                    onClick={() => onDelete(candidate.id, candidate.fullName)}
-                    disabled={isProcessing}
-                >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete Candidate
+             <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-end pt-6">
+                <Button type="button" variant="outline" onClick={onClose} disabled={isProcessing}>Cancel</Button>
+                <Button type="submit" disabled={isProcessing}>
+                {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save Changes
                 </Button>
-                <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
-                    <Button type="button" variant="outline" onClick={onClose} disabled={isProcessing}>Cancel</Button>
-                    <Button type="submit" disabled={isProcessing}>
-                    {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Save Changes
-                    </Button>
-                </div>
-              </DialogFooter>
+            </DialogFooter>
           </form>
         </Form>
       </DialogContent>

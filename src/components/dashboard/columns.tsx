@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { ColumnDef } from '@tanstack/react-table';
@@ -287,14 +286,6 @@ export const getColumns = ({
                 </DropdownMenuRadioGroup>
               </DropdownMenuSubContent>
             </DropdownMenuSub>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
-              onClick={() => onDelete(candidate.id, candidate.fullName)}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Delete Candidate
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );

@@ -1,13 +1,11 @@
-
 'use client';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Candidate, CandidateStatus, CandidateType } from '@/lib/types';
 import { DataTable } from './data-table';
 import { getColumns } from './columns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { collection, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
-import { db, storage } from '@/app/utils/firebase/firebaseConfig';
-import { ref, deleteObject } from 'firebase/storage';
+import { collection, onSnapshot, updateDoc, doc } from 'firebase/firestore';
+import { db } from '@/app/utils/firebase/firebaseConfig';
 import { AddCandidateSheet } from './add-candidate-sheet';
 import { useToast } from '@/hooks/use-toast';
 import { CandidateDetailsModal } from './candidate-details-modal';
@@ -137,49 +135,8 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
   };
 
   const handleDeleteCandidate = (candidateId: string, candidateName: string) => {
-    setConfirmation({
-      isOpen: true,
-      title: 'Are you absolutely sure?',
-      description: `This will permanently delete the record for ${candidateName} and their resume file. This action cannot be undone.`,
-      onConfirm: async () => {
-        const originalData = [...data];
-        
-        // Optimistically remove from UI
-        setData(prev => prev.filter(c => c.id !== candidateId));
-        if (selectedCandidate?.id === candidateId) {
-            handleCloseModal();
-        }
-
-        try {
-          const response = await fetch('/api/candidate/delete', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: candidateId }),
-          });
-          
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to delete candidate');
-          }
-
-          toast({
-            title: 'Candidate Deleted',
-            description: `${candidateName}'s record has been permanently removed.`,
-          });
-        } catch (error) {
-          // Revert UI on error
-          setData(originalData);
-          toast({
-            variant: 'destructive',
-            title: 'Deletion Failed',
-            description: error instanceof Error ? error.message : 'Could not delete candidate.',
-          });
-           console.error("Deletion error:", error);
-        } finally {
-          setConfirmation({ ...confirmation, isOpen: false });
-        }
-      },
-    });
+    // This function is now a placeholder as requested by the user revert
+    console.log("Delete functionality has been reverted.");
   };
 
   const proceedWithStatusUpdate = async (candidateId: string, updates: Partial<Candidate>) => {
@@ -207,10 +164,7 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
         });
 
         if (status && status !== candidateToUpdate.status) {
-            toast({
-              title: "Status Updated",
-              description: `${updates.fullName || candidateToUpdate.fullName}'s status is now ${status}.`,
-            });
+            
              if (status === 'Shortlisted') {
               const response = await fetch('/api/shortlisted', {
                 method: 'POST',
@@ -259,6 +213,10 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
                 });
               }
             }
+             toast({
+              title: "Status Updated",
+              description: `${updates.fullName || candidateToUpdate.fullName}'s status is now ${status}.`,
+            });
         }
       } catch (err) {
         // Revert UI on error
@@ -281,7 +239,7 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
       const candidateToUpdate = data.find(c => c.id === candidateId);
       if (!candidateToUpdate) return;
       
-      const { status, rejectionReason } = updates;
+      const { status } = updates;
       
       if (status === 'Shortlisted' && status !== candidateToUpdate.status) {
         setConfirmation({
@@ -317,7 +275,7 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
 
   const columns = useMemo(
     () => getColumns({ onStatusChange: handleStatusChangeFromDropdown, filterType, onDelete: handleDeleteCandidate }),
-    [handleStatusChangeFromDropdown, filterType, handleDeleteCandidate]
+    [handleStatusChangeFromDropdown, filterType]
   );
 
   if (loading) return <p className="p-4">Loading candidates...</p>;
@@ -360,5 +318,3 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
     </>
   );
 }
-
-    
