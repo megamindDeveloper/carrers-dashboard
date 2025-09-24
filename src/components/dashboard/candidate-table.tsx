@@ -1,6 +1,7 @@
 'use client';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Candidate, CandidateStatus, CandidateType } from '@/lib/types';
+import { CANDIDATE_STATUSES } from '@/lib/types';
 import { DataTable } from './data-table';
 import { getColumns } from './columns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -15,7 +16,6 @@ import { Download } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { deleteObject, ref } from 'firebase/storage';
 
-
 interface CandidateTableProps {
   title: string;
   description: string;
@@ -27,6 +27,16 @@ type ConfirmationState = {
   title: string;
   description: string;
   onConfirm: () => void;
+};
+
+const statusOrder = CANDIDATE_STATUSES.reduce((acc, status, index) => {
+  acc[status] = index;
+  return acc;
+}, {} as Record<CandidateStatus, number>);
+
+const toTitleCase = (str: string) => {
+  if (!str) return '';
+  return str.replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
 };
 
 export function CandidateTable({ title, description, filterType }: CandidateTableProps) {
@@ -56,6 +66,14 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
         if (filterType) {
           candidates = candidates.filter(c => c.type === filterType);
         }
+        
+        candidates.sort((a, b) => {
+          const statusA = toTitleCase(a.status as string) as CandidateStatus;
+          const statusB = toTitleCase(b.status as string) as CandidateStatus;
+          const orderA = statusOrder[statusA] ?? 99;
+          const orderB = statusOrder[statusB] ?? 99;
+          return orderA - orderB;
+        });
 
         setData(candidates.map(c => ({
           ...c,
@@ -154,8 +172,20 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
         setConfirmation({ ...confirmation, isOpen: false });
   
         try {
-          // Directly delete document from Firestore
-          await deleteDoc(doc(db, "applications", candidateId));
+          const idToken = await firebaseUser?.getIdToken();
+          const response = await fetch('/api/candidate/delete', {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${idToken}`,
+              },
+              body: JSON.stringify({ id: candidateId }),
+          });
+
+          if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.message || 'Failed to delete candidate');
+          }
   
           toast({
             title: 'Candidate Deleted',
