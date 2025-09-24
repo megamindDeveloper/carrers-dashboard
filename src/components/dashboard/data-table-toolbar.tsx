@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import type { Table } from '@tanstack/react-table';
@@ -42,7 +43,7 @@ export function DataTableToolbar<TData>({
   const statusOptions = isJobTable ? JOB_STATUSES : CANDIDATE_STATUSES;
 
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex items-center justify-between gap-2">
       <div className="flex flex-1 flex-wrap items-center gap-2">
         {columnExists('fullName') && (
           <Input
