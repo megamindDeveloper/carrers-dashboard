@@ -1,4 +1,3 @@
-
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
@@ -39,5 +38,5 @@ next-env.d.ts
 # studio
 .idx
 
-# Firebase service account key
+# firebase
 firebase-service-account.json

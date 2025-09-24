@@ -139,7 +139,7 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
     });
   };
 
-    const handleDeleteCandidate = (candidateId: string, candidateName: string) => {
+  const handleDeleteCandidate = (candidateId: string, candidateName: string) => {
     const candidateToDelete = data.find(c => c.id === candidateId);
     if (!candidateToDelete) return;
 
@@ -154,13 +154,20 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
         setConfirmation({ ...confirmation, isOpen: false });
 
         try {
-          // Delete from Firestore
-          await deleteDoc(doc(db, 'applications', candidateId));
-
-          // Delete resume from Storage if it exists
-          if (candidateToDelete.resumeUrl) {
-            const storageRef = ref(storage, candidateToDelete.resumeUrl);
-            await deleteObject(storageRef);
+          const response = await fetch('/api/candidate/delete', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              id: candidateId,
+              resumeUrl: candidateToDelete.resumeUrl,
+            }),
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to delete candidate');
           }
 
           toast({
