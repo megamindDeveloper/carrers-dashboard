@@ -1,19 +1,12 @@
-
 import { NextResponse } from "next/server";
 import path from "path";
 import fs from "fs/promises";
-import nodemailer from "nodemailer";
+import { sendEmail } from "@/lib/mail";
 
 export async function POST(req: Request) {
+  console.log("email")
   try {
     const { fullName, email, position } = await req.json();
-
-    // NOTE: You must configure SMTP_USER and SMTP_PASS in your .env file
-    // for this to work.
-    if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-      console.warn('SMTP credentials not found. Skipping email.');
-      return NextResponse.json({ success: true, message: "Email skipped, SMTP not configured" });
-    }
     
     // Path to your template file
     const templatePath = path.join(process.cwd(), "src", "email-templates", "application-response-mail.html");
@@ -26,24 +19,20 @@ export async function POST(req: Request) {
       .replace(/&lt;&lt;Candidate Name&gt;&gt;/g, fullName)
       .replace(/&lt;&lt;Position&gt;&gt;/g, position);
 
-    // Setup nodemailer transporter
-    const transporter = nodemailer.createTransport({
-      service: "Gmail", // or other SMTP config
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
+    const emailResult = await sendEmail({
+        to: { email, name: fullName },
+        subject: "Update on your application with MegaMind Careers",
+        htmlBody: template,
     });
 
-    // Send email
-    await transporter.sendMail({
-      from: `"MegaMind Careers" <${process.env.SMTP_USER}>`,
-      to: email,
-      subject: "Update on your application with MegaMind Careers",
-      html: template,
-    });
 
-    return NextResponse.json({ success: true, message: "Email sent successfully" });
+    if (emailResult.success) {
+        return NextResponse.json({ success: true, message: "Email sent successfully" });
+    } else {
+        const message = (emailResult as any).message || "Failed to send email";
+        console.error("Error sending email:", (emailResult as any).error || message);
+        return NextResponse.json({ success: false, message }, { status: 500 });
+    }
   } catch (error: any) {
     console.error("Error sending email:", error);
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });

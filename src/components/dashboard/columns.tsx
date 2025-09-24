@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { ColumnDef } from '@tanstack/react-table';
@@ -25,6 +24,7 @@ import {
   ExternalLink,
   Video,
   Share2,
+  Trash2,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
@@ -32,6 +32,7 @@ import { useToast } from '@/hooks/use-toast';
 
 type GetColumnsProps = {
   onStatusChange: (candidateId: string, status: CandidateStatus) => void;
+  onDelete: (candidateId: string, candidateName: string) => void;
   filterType?: CandidateType;
 };
 
@@ -63,6 +64,7 @@ const ShareActionItem = ({ candidateId }: { candidateId: string }) => {
 
 export const getColumns = ({
   onStatusChange,
+  onDelete,
   filterType,
 }: GetColumnsProps): ColumnDef<Candidate>[] => {
   const baseColumns: ColumnDef<Candidate>[] = [
@@ -243,6 +245,17 @@ export const getColumns = ({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuItem onClick={() => {
+                // This triggers the row click handler in `candidate-table.tsx`
+                // which opens the modal.
+                const table = row.table;
+                const onRowClick = table.options.meta?.onRowClick;
+                 if (onRowClick) {
+                    (onRowClick as (row: any) => void)(row);
+                }
+            }}>
+                View/Edit Details
+            </DropdownMenuItem>
             <ShareActionItem candidateId={candidate.id} />
             {candidate.portfolio && (
               <DropdownMenuItem
@@ -284,6 +297,14 @@ export const getColumns = ({
                 </DropdownMenuRadioGroup>
               </DropdownMenuSubContent>
             </DropdownMenuSub>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => onDelete(candidate.id, candidate.fullName)}
+              className="text-red-600 focus:text-red-600 focus:bg-red-50"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );

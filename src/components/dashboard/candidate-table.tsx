@@ -1,18 +1,20 @@
-
 'use client';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Candidate, CandidateStatus, CandidateType } from '@/lib/types';
 import { DataTable } from './data-table';
 import { getColumns } from './columns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { collection, onSnapshot, updateDoc, doc } from 'firebase/firestore';
-import { db } from '@/app/utils/firebase/firebaseConfig';
+import { collection, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
+import { db, storage } from '@/app/utils/firebase/firebaseConfig';
 import { AddCandidateSheet } from './add-candidate-sheet';
 import { useToast } from '@/hooks/use-toast';
 import { CandidateDetailsModal } from './candidate-details-modal';
 import { ConfirmationDialog } from './confirmation-dialog';
 import { Button } from '../ui/button';
 import { Download } from 'lucide-react';
+import { useAuth } from '@/context/auth-context';
+import { deleteObject, ref } from 'firebase/storage';
+
 
 interface CandidateTableProps {
   title: string;
@@ -38,6 +40,8 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
     description: '',
     onConfirm: () => {},
   });
+  const { firebaseUser } = useAuth();
+
 
   useEffect(() => {
     const colRef = collection(db, 'applications');
@@ -135,6 +139,41 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
     });
   };
 
+  const handleDeleteCandidate = (candidateId: string, candidateName: string) => {
+    const candidateToDelete = data.find(c => c.id === candidateId);
+    if (!candidateToDelete) return;
+
+    setConfirmation({
+      isOpen: true,
+      title: 'Are you sure?',
+      description: `This will permanently delete ${candidateName}'s application. This action cannot be undone.`,
+      onConfirm: async () => {
+        const originalData = [...data];
+        setData(prev => prev.filter(c => c.id !== candidateId));
+        handleCloseModal();
+        setConfirmation({ ...confirmation, isOpen: false });
+  
+        try {
+          // Directly delete document from Firestore
+          await deleteDoc(doc(db, "applications", candidateId));
+  
+          toast({
+            title: 'Candidate Deleted',
+            description: `${candidateName}'s application has been successfully deleted.`,
+          });
+        } catch (error: any) {
+          setData(originalData); // revert UI
+          toast({
+            variant: 'destructive',
+            title: 'Deletion Failed',
+            description: error.message || 'An unknown error occurred.',
+          });
+          console.error("Error deleting candidate:", error);
+        }
+      },
+    });
+  };
+
   const proceedWithStatusUpdate = async (candidateId: string, updates: Partial<Candidate>) => {
       const originalData = [...data];
       const candidateToUpdate = originalData.find(c => c.id === candidateId);
@@ -160,12 +199,9 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
         });
 
         if (status && status !== candidateToUpdate.status) {
-            toast({
-              title: "Status Updated",
-              description: `${updates.fullName || candidateToUpdate.fullName}'s status is now ${status}.`,
-            });
-            if (status === 'Shortlisted') {
-              await fetch('/api/shortlisted', {
+            
+             if (status === 'Shortlisted') {
+              const response = await fetch('/api/shortlisted', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -174,13 +210,21 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
                   position: updates.position || candidateToUpdate.position,
                 }),
               });
-              toast({
-                title: "Email Sent",
-                description: `An email has been sent to ${updates.fullName || candidateToUpdate.fullName}.`,
-
-              });
+              const result = await response.json();
+              if (response.ok && result.success) {
+                toast({
+                  title: "Email Sent",
+                  description: `An email has been sent to ${updates.fullName || candidateToUpdate.fullName}.`,
+                });
+              } else {
+                 toast({
+                  variant: "destructive",
+                  title: "Email Failed",
+                  description: result.message || `Failed to send email to ${updates.fullName || candidateToUpdate.fullName}.`,
+                });
+              }
             } else if (status === 'Rejected' && rejectionReason) {
-               await fetch('/api/rejected', {
+               const response = await fetch('/api/rejected', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -190,11 +234,24 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
                   reason: rejectionReason,
                 }),
               });
-               toast({
-                title: "Rejection Email Sent",
-                description: `An email has been sent to ${updates.fullName || candidateToUpdate.fullName}.`,
-              });
+              const result = await response.json();
+              if (response.ok && result.success) {
+                toast({
+                  title: "Rejection Email Sent",
+                  description: `An email has been sent to ${updates.fullName || candidateToUpdate.fullName}.`,
+                });
+              } else {
+                 toast({
+                  variant: "destructive",
+                  title: "Email Failed",
+                  description: result.message || `Failed to send rejection email.`,
+                });
+              }
             }
+             toast({
+              title: "Status Updated",
+              description: `${updates.fullName || candidateToUpdate.fullName}'s status is now ${status}.`,
+            });
         }
       } catch (err) {
         // Revert UI on error
@@ -217,7 +274,7 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
       const candidateToUpdate = data.find(c => c.id === candidateId);
       if (!candidateToUpdate) return;
       
-      const { status, rejectionReason } = updates;
+      const { status } = updates;
       
       if (status === 'Shortlisted' && status !== candidateToUpdate.status) {
         setConfirmation({
@@ -252,8 +309,8 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
 
 
   const columns = useMemo(
-    () => getColumns({ onStatusChange: handleStatusChangeFromDropdown, filterType }),
-    [handleStatusChangeFromDropdown, filterType]
+    () => getColumns({ onStatusChange: handleStatusChangeFromDropdown, filterType, onDelete: handleDeleteCandidate }),
+    [handleStatusChangeFromDropdown, filterType, handleDeleteCandidate]
   );
 
   if (loading) return <p className="p-4">Loading candidates...</p>;
@@ -283,6 +340,7 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
         onClose={handleCloseModal}
         candidate={selectedCandidate}
         onSaveChanges={handleSaveChanges}
+        onDelete={handleDeleteCandidate}
       />
       <ConfirmationDialog
         isOpen={confirmation.isOpen}
