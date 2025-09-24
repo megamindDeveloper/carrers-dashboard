@@ -5,8 +5,9 @@ import type { Candidate, CandidateStatus, CandidateType } from '@/lib/types';
 import { DataTable } from './data-table';
 import { getColumns } from './columns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { collection, onSnapshot, updateDoc, doc } from 'firebase/firestore';
-import { db } from '@/app/utils/firebase/firebaseConfig';
+import { collection, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
+import { db, storage } from '@/app/utils/firebase/firebaseConfig';
+import { ref, deleteObject } from 'firebase/storage';
 import { AddCandidateSheet } from './add-candidate-sheet';
 import { useToast } from '@/hooks/use-toast';
 import { CandidateDetailsModal } from './candidate-details-modal';
@@ -136,6 +137,9 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
   };
 
     const handleDeleteCandidate = (candidateId: string, candidateName: string) => {
+    const candidateToDelete = data.find(c => c.id === candidateId);
+    if (!candidateToDelete) return;
+
     setConfirmation({
       isOpen: true,
       title: 'Are you absolutely sure?',
@@ -150,15 +154,19 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
         }
 
         try {
-          const response = await fetch(`/api/candidate/${candidateId}`, {
-            method: 'DELETE',
-          });
+            // Delete the document from Firestore
+            await deleteDoc(doc(db, "applications", candidateId));
 
-          const result = await response.json();
-
-          if (!response.ok || !result.success) {
-            throw new Error(result.message || 'Failed to delete candidate.');
-          }
+            // If there's a resume URL, try to delete the file from Storage
+            if (candidateToDelete.resumeUrl) {
+                try {
+                    const storageRef = ref(storage, candidateToDelete.resumeUrl);
+                    await deleteObject(storageRef);
+                } catch (storageError: any) {
+                    // Log storage error but don't fail the toast, as the main record is gone
+                    console.warn(`Failed to delete resume from storage: ${storageError.message}`);
+                }
+            }
 
           toast({
             title: 'Candidate Deleted',
@@ -170,8 +178,9 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
           toast({
             variant: 'destructive',
             title: 'Deletion Failed',
-            description: error instanceof Error ? error.message : 'Could not delete candidate.',
+            description: error instanceof Error ? error.message : 'Could not delete candidate. Check permissions.',
           });
+           console.error("Deletion error:", error);
         } finally {
           setConfirmation({ ...confirmation, isOpen: false });
         }
@@ -359,3 +368,5 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
     </>
   );
 }
+
+    
