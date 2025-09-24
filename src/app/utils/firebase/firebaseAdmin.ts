@@ -10,11 +10,7 @@ export async function initializeAdminApp() {
   }
 
   // Type cast to the ServiceAccount interface for type safety
-  const serviceAccountParams: admin.ServiceAccount = {
-    projectId: serviceAccount.project_id,
-    clientEmail: serviceAccount.client_email,
-    privateKey: serviceAccount.private_key,
-  };
+  const serviceAccountParams = serviceAccount as admin.ServiceAccount;
   
   try {
     return admin.initializeApp({
