@@ -1,5 +1,6 @@
 
 import * as admin from 'firebase-admin';
+import serviceAccount from '../../../../firebase-service-account.json';
 
 // This function initializes the Firebase Admin SDK.
 // It ensures that it's only initialized once.
@@ -8,26 +9,16 @@ export async function initializeAdminApp() {
     return admin.app();
   }
 
-  const projectId = process.env.FIREBASE_PROJECT_ID;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  // Replace escaped newlines from the environment variable
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-
-  if (!projectId || !clientEmail || !privateKey) {
-    throw new Error(
-      'Firebase Admin SDK credentials are not set in environment variables. Please set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY.'
-    );
-  }
+  // Type cast to the ServiceAccount interface for type safety
+  const serviceAccountParams: admin.ServiceAccount = {
+    projectId: serviceAccount.project_id,
+    clientEmail: serviceAccount.client_email,
+    privateKey: serviceAccount.private_key,
+  };
   
   try {
-    const serviceAccount: admin.ServiceAccount = {
-        projectId,
-        clientEmail,
-        privateKey,
-    };
-
     return admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
+      credential: admin.credential.cert(serviceAccountParams),
       storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
     });
   } catch (e: any) {
