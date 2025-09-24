@@ -4,8 +4,8 @@ import type { Candidate, CandidateStatus, CandidateType } from '@/lib/types';
 import { DataTable } from './data-table';
 import { getColumns } from './columns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { collection, onSnapshot, updateDoc, doc } from 'firebase/firestore';
-import { db } from '@/app/utils/firebase/firebaseConfig';
+import { collection, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
+import { db, storage } from '@/app/utils/firebase/firebaseConfig';
 import { AddCandidateSheet } from './add-candidate-sheet';
 import { useToast } from '@/hooks/use-toast';
 import { CandidateDetailsModal } from './candidate-details-modal';
@@ -13,6 +13,7 @@ import { ConfirmationDialog } from './confirmation-dialog';
 import { Button } from '../ui/button';
 import { Download } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
+import { deleteObject, ref } from 'firebase/storage';
 
 
 interface CandidateTableProps {
@@ -139,6 +140,9 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
   };
 
     const handleDeleteCandidate = (candidateId: string, candidateName: string) => {
+    const candidateToDelete = data.find(c => c.id === candidateId);
+    if (!candidateToDelete) return;
+
     setConfirmation({
       isOpen: true,
       title: 'Are you sure?',
@@ -150,20 +154,13 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
         setConfirmation({ ...confirmation, isOpen: false });
 
         try {
-          const token = await firebaseUser?.getIdToken();
+          // Delete from Firestore
+          await deleteDoc(doc(db, 'applications', candidateId));
 
-          const response = await fetch('/api/candidate/delete', {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json',
-              ...(token && {'Authorization': `Bearer ${token}`})
-            },
-            body: JSON.stringify({ id: candidateId }),
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to delete candidate');
+          // Delete resume from Storage if it exists
+          if (candidateToDelete.resumeUrl) {
+            const storageRef = ref(storage, candidateToDelete.resumeUrl);
+            await deleteObject(storageRef);
           }
 
           toast({
@@ -177,6 +174,7 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
             title: 'Deletion Failed',
             description: error instanceof Error ? error.message : 'An unknown error occurred.',
           });
+          console.error("Error deleting candidate:", error);
         }
       },
     });
@@ -318,7 +316,7 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
 
   const columns = useMemo(
     () => getColumns({ onStatusChange: handleStatusChangeFromDropdown, filterType, onDelete: handleDeleteCandidate }),
-    [handleStatusChangeFromDropdown, filterType]
+    [handleStatusChangeFromDropdown, filterType, handleDeleteCandidate]
   );
 
   if (loading) return <p className="p-4">Loading candidates...</p>;

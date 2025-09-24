@@ -245,6 +245,17 @@ export const getColumns = ({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuItem onClick={() => {
+                // This triggers the row click handler in `candidate-table.tsx`
+                // which opens the modal.
+                const table = row.table;
+                const onRowClick = table.options.meta?.onRowClick;
+                 if (onRowClick) {
+                    (onRowClick as (row: any) => void)(row);
+                }
+            }}>
+                View/Edit Details
+            </DropdownMenuItem>
             <ShareActionItem candidateId={candidate.id} />
             {candidate.portfolio && (
               <DropdownMenuItem
