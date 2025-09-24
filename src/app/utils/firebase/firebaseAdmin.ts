@@ -8,21 +8,29 @@ export async function initializeAdminApp() {
     return admin.app();
   }
 
-  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  // Replace escaped newlines from the environment variable
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
-  if (!serviceAccountJson) {
-      throw new Error("The FIREBASE_SERVICE_ACCOUNT_JSON environment variable is not set. Please add it to your .env file.");
+  if (!projectId || !clientEmail || !privateKey) {
+    throw new Error(
+      'Firebase Admin SDK credentials are not set in environment variables. Please set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY.'
+    );
   }
   
   try {
-      const serviceAccount = JSON.parse(serviceAccountJson);
-       return admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-      });
-  } catch (e) {
-      throw new Error("Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON. Make sure it is a valid JSON string.");
-  }
+    const serviceAccount: admin.ServiceAccount = {
+        projectId,
+        clientEmail,
+        privateKey,
+    };
 
- 
+    return admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    });
+  } catch (e: any) {
+    throw new Error(`Failed to initialize Firebase Admin SDK: ${e.message}`);
+  }
 }
