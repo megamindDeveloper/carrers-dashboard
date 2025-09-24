@@ -74,7 +74,12 @@ export const getColumns = ({
       header: 'Sl. No.',
       cell: ({ row, table }) => {
         const { pageIndex, pageSize } = table.getState().pagination;
-        const index = (pageIndex * pageSize) + row.index + 1;
+        // `row.index` is the index of the row in the original data array.
+        // We need to find the index of the row in the paginated and filtered view.
+        const paginatedRowIndex = table.getRowModel().rows.findIndex(
+            paginatedRow => paginatedRow.id === row.id
+        );
+        const index = (pageIndex * pageSize) + paginatedRowIndex + 1;
         return <span>{index}</span>;
       },
     },
