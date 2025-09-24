@@ -68,11 +68,25 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
         }
         
         candidates.sort((a, b) => {
+          // 1. Primary Sort: Status
           const statusA = toTitleCase(a.status as string) as CandidateStatus;
           const statusB = toTitleCase(b.status as string) as CandidateStatus;
           const orderA = statusOrder[statusA] ?? 99;
           const orderB = statusOrder[statusB] ?? 99;
-          return orderA - orderB;
+          if (orderA !== orderB) {
+            return orderA - orderB;
+          }
+          
+          // 2. Secondary Sort: Position (alphabetical)
+          const positionCompare = a.position.localeCompare(b.position);
+          if (positionCompare !== 0) {
+            return positionCompare;
+          }
+
+          // 3. Tertiary Sort: Submission Date (newest first)
+          const dateA = a.submittedAt?.toDate ? a.submittedAt.toDate() : new Date(0);
+          const dateB = b.submittedAt?.toDate ? b.submittedAt.toDate() : new Date(0);
+          return dateB.getTime() - dateA.getTime();
         });
 
         setData(candidates.map(c => ({
