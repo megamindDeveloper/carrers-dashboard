@@ -318,12 +318,23 @@ export function CandidateDetailsModal({
                 )}
               />
             </div>
-             <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-end pt-6">
-                <Button type="button" variant="outline" onClick={onClose} disabled={isProcessing}>Cancel</Button>
-                <Button type="submit" disabled={isProcessing}>
-                {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Changes
+             <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-between items-center pt-6">
+                <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={() => onDelete(candidate.id, candidate.fullName)}
+                    disabled={isProcessing}
+                >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Candidate
                 </Button>
+                <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                    <Button type="button" variant="outline" onClick={onClose} disabled={isProcessing}>Cancel</Button>
+                    <Button type="submit" disabled={isProcessing}>
+                    {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Save Changes
+                    </Button>
+                </div>
             </DialogFooter>
           </form>
         </Form>

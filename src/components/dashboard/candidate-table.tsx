@@ -12,6 +12,8 @@ import { CandidateDetailsModal } from './candidate-details-modal';
 import { ConfirmationDialog } from './confirmation-dialog';
 import { Button } from '../ui/button';
 import { Download } from 'lucide-react';
+import { useAuth } from '@/context/auth-context';
+
 
 interface CandidateTableProps {
   title: string;
@@ -37,6 +39,8 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
     description: '',
     onConfirm: () => {},
   });
+  const { firebaseUser } = useAuth();
+
 
   useEffect(() => {
     const colRef = collection(db, 'applications');
@@ -134,9 +138,48 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
     });
   };
 
-  const handleDeleteCandidate = (candidateId: string, candidateName: string) => {
-    // This function is now a placeholder as requested by the user revert
-    console.log("Delete functionality has been reverted.");
+    const handleDeleteCandidate = (candidateId: string, candidateName: string) => {
+    setConfirmation({
+      isOpen: true,
+      title: 'Are you sure?',
+      description: `This will permanently delete ${candidateName}'s application. This action cannot be undone.`,
+      onConfirm: async () => {
+        const originalData = [...data];
+        setData(prev => prev.filter(c => c.id !== candidateId));
+        handleCloseModal();
+        setConfirmation({ ...confirmation, isOpen: false });
+
+        try {
+          const token = await firebaseUser?.getIdToken();
+
+          const response = await fetch('/api/candidate/delete', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              ...(token && {'Authorization': `Bearer ${token}`})
+            },
+            body: JSON.stringify({ id: candidateId }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to delete candidate');
+          }
+
+          toast({
+            title: 'Candidate Deleted',
+            description: `${candidateName}'s application has been successfully deleted.`,
+          });
+        } catch (error) {
+          setData(originalData); // Revert UI
+          toast({
+            variant: 'destructive',
+            title: 'Deletion Failed',
+            description: error instanceof Error ? error.message : 'An unknown error occurred.',
+          });
+        }
+      },
+    });
   };
 
   const proceedWithStatusUpdate = async (candidateId: string, updates: Partial<Candidate>) => {
