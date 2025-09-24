@@ -164,8 +164,8 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
               title: "Status Updated",
               description: `${updates.fullName || candidateToUpdate.fullName}'s status is now ${status}.`,
             });
-            if (status === 'Shortlisted') {
-              await fetch('/api/shortlisted', {
+             if (status === 'Shortlisted') {
+              const response = await fetch('/api/shortlisted', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -174,13 +174,21 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
                   position: updates.position || candidateToUpdate.position,
                 }),
               });
-              toast({
-                title: "Email Sent",
-                description: `An email has been sent to ${updates.fullName || candidateToUpdate.fullName}.`,
-
-              });
+              const result = await response.json();
+              if (response.ok && result.success) {
+                toast({
+                  title: "Email Sent",
+                  description: `An email has been sent to ${updates.fullName || candidateToUpdate.fullName}.`,
+                });
+              } else {
+                 toast({
+                  variant: "destructive",
+                  title: "Email Failed",
+                  description: result.message || `Failed to send email to ${updates.fullName || candidateToUpdate.fullName}.`,
+                });
+              }
             } else if (status === 'Rejected' && rejectionReason) {
-               await fetch('/api/rejected', {
+               const response = await fetch('/api/rejected', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -190,10 +198,19 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
                   reason: rejectionReason,
                 }),
               });
-               toast({
-                title: "Rejection Email Sent",
-                description: `An email has been sent to ${updates.fullName || candidateToUpdate.fullName}.`,
-              });
+              const result = await response.json();
+              if (response.ok && result.success) {
+                toast({
+                  title: "Rejection Email Sent",
+                  description: `An email has been sent to ${updates.fullName || candidateToUpdate.fullName}.`,
+                });
+              } else {
+                 toast({
+                  variant: "destructive",
+                  title: "Email Failed",
+                  description: result.message || `Failed to send rejection email.`,
+                });
+              }
             }
         }
       } catch (err) {
