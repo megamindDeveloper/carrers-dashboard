@@ -135,6 +135,50 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
     });
   };
 
+    const handleDeleteCandidate = (candidateId: string, candidateName: string) => {
+    setConfirmation({
+      isOpen: true,
+      title: 'Are you absolutely sure?',
+      description: `This will permanently delete the record for ${candidateName}. This action cannot be undone.`,
+      onConfirm: async () => {
+        const originalData = [...data];
+        
+        // Optimistically remove from UI
+        setData(prev => prev.filter(c => c.id !== candidateId));
+        if (selectedCandidate?.id === candidateId) {
+            handleCloseModal();
+        }
+
+        try {
+          const response = await fetch(`/api/candidate/${candidateId}`, {
+            method: 'DELETE',
+          });
+
+          const result = await response.json();
+
+          if (!response.ok || !result.success) {
+            throw new Error(result.message || 'Failed to delete candidate.');
+          }
+
+          toast({
+            title: 'Candidate Deleted',
+            description: `${candidateName}'s record has been permanently removed.`,
+          });
+        } catch (error) {
+          // Revert UI on error
+          setData(originalData);
+          toast({
+            variant: 'destructive',
+            title: 'Deletion Failed',
+            description: error instanceof Error ? error.message : 'Could not delete candidate.',
+          });
+        } finally {
+          setConfirmation({ ...confirmation, isOpen: false });
+        }
+      },
+    });
+  };
+
   const proceedWithStatusUpdate = async (candidateId: string, updates: Partial<Candidate>) => {
       const originalData = [...data];
       const candidateToUpdate = originalData.find(c => c.id === candidateId);
@@ -174,8 +218,9 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
                   position: updates.position || candidateToUpdate.position,
                 }),
               });
+              if (!response.ok) throw new Error('Failed to send shortlisting email.');
               const result = await response.json();
-              if (response.ok && result.success) {
+              if (result.success) {
                 toast({
                   title: "Email Sent",
                   description: `An email has been sent to ${updates.fullName || candidateToUpdate.fullName}.`,
@@ -198,8 +243,9 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
                   reason: rejectionReason,
                 }),
               });
+              if (!response.ok) throw new Error('Failed to send rejection email.');
               const result = await response.json();
-              if (response.ok && result.success) {
+              if (result.success) {
                 toast({
                   title: "Rejection Email Sent",
                   description: `An email has been sent to ${updates.fullName || candidateToUpdate.fullName}.`,
@@ -269,8 +315,8 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
 
 
   const columns = useMemo(
-    () => getColumns({ onStatusChange: handleStatusChangeFromDropdown, filterType }),
-    [handleStatusChangeFromDropdown, filterType]
+    () => getColumns({ onStatusChange: handleStatusChangeFromDropdown, filterType, onDelete: handleDeleteCandidate }),
+    [handleStatusChangeFromDropdown, filterType, handleDeleteCandidate]
   );
 
   if (loading) return <p className="p-4">Loading candidates...</p>;
@@ -300,6 +346,7 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
         onClose={handleCloseModal}
         candidate={selectedCandidate}
         onSaveChanges={handleSaveChanges}
+        onDelete={handleDeleteCandidate}
       />
       <ConfirmationDialog
         isOpen={confirmation.isOpen}

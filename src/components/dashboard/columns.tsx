@@ -25,6 +25,7 @@ import {
   ExternalLink,
   Video,
   Share2,
+  Trash2,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
@@ -32,6 +33,7 @@ import { useToast } from '@/hooks/use-toast';
 
 type GetColumnsProps = {
   onStatusChange: (candidateId: string, status: CandidateStatus) => void;
+  onDelete: (candidateId: string, candidateName: string) => void;
   filterType?: CandidateType;
 };
 
@@ -63,6 +65,7 @@ const ShareActionItem = ({ candidateId }: { candidateId: string }) => {
 
 export const getColumns = ({
   onStatusChange,
+  onDelete,
   filterType,
 }: GetColumnsProps): ColumnDef<Candidate>[] => {
   const baseColumns: ColumnDef<Candidate>[] = [
@@ -284,6 +287,14 @@ export const getColumns = ({
                 </DropdownMenuRadioGroup>
               </DropdownMenuSubContent>
             </DropdownMenuSub>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={() => onDelete(candidate.id, candidate.fullName)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete Candidate
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );

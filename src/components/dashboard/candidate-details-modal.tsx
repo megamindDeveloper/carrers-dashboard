@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -23,8 +24,7 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { ExternalLink, FileText, Video, Share2, Loader2 } from 'lucide-react';
+import { ExternalLink, FileText, Share2, Loader2, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
@@ -35,6 +35,7 @@ interface CandidateDetailsModalProps {
   onClose: () => void;
   candidate: Candidate | null;
   onSaveChanges: (candidateId: string, updates: Partial<Candidate>) => void;
+  onDelete: (candidateId: string, candidateName: string) => void;
 }
 
 type CandidateUpdateForm = z.infer<typeof CandidateUpdateSchema>;
@@ -49,6 +50,7 @@ export function CandidateDetailsModal({
   onClose,
   candidate,
   onSaveChanges,
+  onDelete,
 }: CandidateDetailsModalProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
@@ -91,7 +93,8 @@ export function CandidateDetailsModal({
     });
   };
 
-  const onSubmit = (data: CandidateUpdateForm) => {
+  const onSubmit = async (data: CandidateUpdateForm) => {
+    setIsProcessing(true);
     if (data.status === 'Rejected' && !data.rejectionReason?.trim()) {
       toast({
         variant: "destructive",
@@ -99,6 +102,7 @@ export function CandidateDetailsModal({
         description: "Please provide a reason for rejection.",
       });
       form.setFocus('rejectionReason');
+      setIsProcessing(false);
       return;
     }
 
@@ -107,7 +111,8 @@ export function CandidateDetailsModal({
       updates.rejectionReason = '';
     }
 
-    onSaveChanges(candidate.id, updates);
+    await onSaveChanges(candidate.id, updates);
+    setIsProcessing(false);
     // The parent component will handle closing the modal after save.
   };
 
@@ -314,12 +319,23 @@ export function CandidateDetailsModal({
                 )}
               />
             </div>
-             <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-6">
-                <Button type="button" variant="outline" onClick={onClose} disabled={isProcessing}>Cancel</Button>
-                <Button type="submit" disabled={isProcessing}>
-                  {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Save Changes
+             <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-between pt-6">
+                <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={() => onDelete(candidate.id, candidate.fullName)}
+                    disabled={isProcessing}
+                >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Candidate
                 </Button>
+                <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
+                    <Button type="button" variant="outline" onClick={onClose} disabled={isProcessing}>Cancel</Button>
+                    <Button type="submit" disabled={isProcessing}>
+                    {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Save Changes
+                    </Button>
+                </div>
               </DialogFooter>
           </form>
         </Form>
