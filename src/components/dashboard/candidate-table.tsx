@@ -4,7 +4,7 @@ import type { Candidate, CandidateStatus, CandidateType } from '@/lib/types';
 import { DataTable } from './data-table';
 import { getColumns } from './columns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { collection, onSnapshot, updateDoc, doc } from 'firebase/firestore';
+import { collection, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/app/utils/firebase/firebaseConfig';
 import { AddCandidateSheet } from './add-candidate-sheet';
 import { useToast } from '@/hooks/use-toast';
@@ -148,34 +148,21 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
         setData(prev => prev.filter(c => c.id !== candidateId));
         handleCloseModal();
         setConfirmation({ ...confirmation, isOpen: false });
-
+  
         try {
-          const token = await firebaseUser?.getIdToken();
-
-          const response = await fetch('/api/candidate/delete', {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json',
-              ...(token && {'Authorization': `Bearer ${token}`})
-            },
-            body: JSON.stringify({ id: candidateId }),
-          });
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to delete candidate');
-          }
-
+          // Directly delete document from Firestore
+          await deleteDoc(doc(db, "applications", candidateId));
+  
           toast({
             title: 'Candidate Deleted',
             description: `${candidateName}'s application has been successfully deleted.`,
           });
-        } catch (error) {
-          setData(originalData); // Revert UI
+        } catch (error: any) {
+          setData(originalData); // revert UI
           toast({
             variant: 'destructive',
             title: 'Deletion Failed',
-            description: error instanceof Error ? error.message : 'An unknown error occurred.',
+            description: error.message || 'An unknown error occurred.',
           });
         }
       },

@@ -4,6 +4,7 @@ import fs from "fs/promises";
 import { sendEmail } from "@/lib/mail";
 
 export async function POST(req: Request) {
+  console.log("email")
   try {
     const { fullName, email, position } = await req.json();
     

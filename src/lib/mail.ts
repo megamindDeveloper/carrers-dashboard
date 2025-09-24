@@ -1,6 +1,22 @@
+// File: lib/mail.ts
+
 import { SendMailClient } from "zeptomail";
 
-// Define the structure for the function's arguments using an interface
+// 1. Get credentials
+const url = "https://api.zeptomail.in/";
+// 👇 FIX: Load the token securely from the environment variable
+const token = process.env.ZEPTOMAIL_TOKEN;
+console.log("ZEPTOMAIL TOKEN LOADED:", token);
+
+if (!token) {
+  throw new Error("ZeptoMail token is not defined in environment variables. The application cannot send emails.");
+}
+
+// 2. Initialize the client ONCE and reuse it
+const client = new SendMailClient({ url, token });
+
+// ... (the rest of your sendEmail function does not need to change) ...
+
 export interface SendEmailOptions {
   to: {
     email: string;
@@ -10,26 +26,12 @@ export interface SendEmailOptions {
   htmlBody: string;
 }
 
-// Create the generic, reusable email function
 export async function sendEmail({ to, subject, htmlBody }: SendEmailOptions) {
-  // Get credentials from environment variables for security
-  const url = "https://api.zeptomail.in/";
-  const token = process.env.ZEPTOMAIL_TOKEN;
-
-  // Check for the token on each call
-  if (!token) {
-    const errorMessage = "Email could not be sent. The ZeptoMail token is not configured on the server.";
-    console.error(errorMessage);
-    return { success: false, message: errorMessage };
-  }
-
-  // Initialize the client inside the function for reliability in serverless environments
-  const client = new SendMailClient({ url, token });
-
   try {
     const response = await client.sendMail({
+      bounce_address: "no-reply@megamind.studio",
       from: {
-        address: "no-reply@megamind.studio", // This can also be an environment variable
+        address: "no-reply@megamind.studio",
         name: "megamind",
       },
       to: [
@@ -44,11 +46,11 @@ export async function sendEmail({ to, subject, htmlBody }: SendEmailOptions) {
       htmlbody: htmlBody,
     });
     
+    console.log("Email sent successfully:", response);
     return { success: true, data: response };
 
   } catch (error) {
-    console.error("ZeptoMail send error:", error);
-    // Return a structured error
-    return { success: false, error: (error as Error).message || "An unknown error occurred while sending the email." };
+    console.error("Error sending email:", error);
+    return { success: false, error: error };
   }
 }
