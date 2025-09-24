@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { Candidate, CandidateStatus } from '@/lib/types';
-import { CANDIDATE_STATUSES, CandidateUpdateSchema } from '@/lib/types';
+import type { Candidate, CandidateStatus, CandidateType } from '@/lib/types';
+import { CANDIDATE_STATUSES, CANDIDATE_TYPES, CandidateUpdateSchema } from '@/lib/types';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type * as z from 'zod';
@@ -75,6 +75,7 @@ export function CandidateDetailsModal({
         portfolio: candidate.portfolio || '',
         introductionVideoIntern: candidate.introductionVideoIntern || '',
         status: candidate.status ? toTitleCase(candidate.status as string) as CandidateStatus : 'Applied',
+        type: candidate.type || 'full-time',
         rejectionReason: candidate.rejectionReason || '',
         comments: candidate.comments || '',
       });
@@ -227,14 +228,36 @@ export function CandidateDetailsModal({
                     <FormMessage />
                   </FormItem>
                 )} />
-                 <FormField control={form.control} name="portfolio" render={({ field }) => (
+                <FormField control={form.control} name="type" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Portfolio/Link</FormLabel>
-                    <FormControl><Input {...field} /></FormControl>
+                    <FormLabel>Candidate Type</FormLabel>
+                     <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {CANDIDATE_TYPES.map(type => (
+                          <SelectItem key={type} value={type} className="capitalize">
+                            {type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )} />
             </div>
+
+            <FormField control={form.control} name="portfolio" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Portfolio/Link</FormLabel>
+                  <FormControl><Input {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+            )} />
+
              {candidate.type === 'internship' && (
               <FormField control={form.control} name="introductionVideoIntern" render={({ field }) => (
                   <FormItem>

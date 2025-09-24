@@ -11,8 +11,10 @@ export const CANDIDATE_STATUSES = [
   'Rejected',
 ] as const;
 
+export const CANDIDATE_TYPES = ['full-time', 'internship'] as const;
+
 export type CandidateStatus = (typeof CANDIDATE_STATUSES)[number];
-export type CandidateType = 'internship' | 'full-time';
+export type CandidateType = (typeof CANDIDATE_TYPES)[number];
 
 export type Candidate = {
   id: string;
@@ -55,6 +57,7 @@ export const CandidateUpdateSchema = z.object({
   portfolio: z.string().url('Invalid URL').or(z.literal('')),
   introductionVideoIntern: z.string().url('Invalid URL').or(z.literal('')),
   status: z.enum(CANDIDATE_STATUSES),
+  type: z.enum(CANDIDATE_TYPES),
   rejectionReason: z.string().optional(),
   comments: z.string().optional(),
 });
