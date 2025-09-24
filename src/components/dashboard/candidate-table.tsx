@@ -136,14 +136,11 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
     });
   };
 
-    const handleDeleteCandidate = (candidateId: string, candidateName: string) => {
-    const candidateToDelete = data.find(c => c.id === candidateId);
-    if (!candidateToDelete) return;
-
+  const handleDeleteCandidate = (candidateId: string, candidateName: string) => {
     setConfirmation({
       isOpen: true,
       title: 'Are you absolutely sure?',
-      description: `This will permanently delete the record for ${candidateName}. This action cannot be undone.`,
+      description: `This will permanently delete the record for ${candidateName} and their resume file. This action cannot be undone.`,
       onConfirm: async () => {
         const originalData = [...data];
         
@@ -154,19 +151,16 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
         }
 
         try {
-            // Delete the document from Firestore
-            await deleteDoc(doc(db, "applications", candidateId));
-
-            // If there's a resume URL, try to delete the file from Storage
-            if (candidateToDelete.resumeUrl) {
-                try {
-                    const storageRef = ref(storage, candidateToDelete.resumeUrl);
-                    await deleteObject(storageRef);
-                } catch (storageError: any) {
-                    // Log storage error but don't fail the toast, as the main record is gone
-                    console.warn(`Failed to delete resume from storage: ${storageError.message}`);
-                }
-            }
+          const response = await fetch('/api/candidate/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: candidateId }),
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to delete candidate');
+          }
 
           toast({
             title: 'Candidate Deleted',
@@ -178,7 +172,7 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
           toast({
             variant: 'destructive',
             title: 'Deletion Failed',
-            description: error instanceof Error ? error.message : 'Could not delete candidate. Check permissions.',
+            description: error instanceof Error ? error.message : 'Could not delete candidate.',
           });
            console.error("Deletion error:", error);
         } finally {
@@ -227,9 +221,8 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
                   position: updates.position || candidateToUpdate.position,
                 }),
               });
-              if (!response.ok) throw new Error('Failed to send shortlisting email.');
               const result = await response.json();
-              if (result.success) {
+              if (response.ok && result.success) {
                 toast({
                   title: "Email Sent",
                   description: `An email has been sent to ${updates.fullName || candidateToUpdate.fullName}.`,
@@ -252,9 +245,8 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
                   reason: rejectionReason,
                 }),
               });
-              if (!response.ok) throw new Error('Failed to send rejection email.');
               const result = await response.json();
-              if (result.success) {
+              if (response.ok && result.success) {
                 toast({
                   title: "Rejection Email Sent",
                   description: `An email has been sent to ${updates.fullName || candidateToUpdate.fullName}.`,
