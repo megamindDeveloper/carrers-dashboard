@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -109,10 +110,15 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
     try {
        const assessmentData = {
         ...data,
-        questions: data.questions.map(q => ({
-          ...q,
-          options: q.type === 'multiple-choice' ? q.options?.map(opt => opt.value) : undefined,
-        })),
+        questions: data.questions.map(q => {
+          const newQ: any = { ...q };
+          if (q.type === 'multiple-choice') {
+            newQ.options = q.options?.map(opt => opt.value);
+          } else {
+            delete newQ.options;
+          }
+          return newQ;
+        }),
       };
       await onSave(assessmentData, assessment?.id);
     } catch (error) {
