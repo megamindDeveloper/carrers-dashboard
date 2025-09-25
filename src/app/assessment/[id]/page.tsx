@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { doc, getDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
 import { db, storage } from '@/app/utils/firebase/firebaseConfig';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import type { Assessment, AssessmentQuestion } from '@/lib/types';
@@ -252,6 +252,23 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     const timeTaken = startTimeRef.current ? Math.floor((Date.now() - startTimeRef.current) / 1000) : 0;
 
     try {
+      // Check for existing submission with the same email
+      const submissionsRef = collection(db, 'assessmentSubmissions');
+      const q = query(submissionsRef, 
+        where('assessmentId', '==', assessment.id), 
+        where('candidateEmail', '==', data.candidateEmail)
+      );
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        toast({
+          variant: 'destructive',
+          title: 'Submission Failed',
+          description: 'You have already submitted this assessment with this email address.',
+        });
+        return;
+      }
+
       await addDoc(collection(db, 'assessmentSubmissions'), {
         assessmentId: assessment.id,
         assessmentTitle: assessment.title,
@@ -497,3 +514,5 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
+
+    
