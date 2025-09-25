@@ -17,6 +17,7 @@ import {
 import { format } from 'date-fns';
 
 const formatTime = (seconds: number) => {
+    if (isNaN(seconds) || seconds < 0) return '0m 0s';
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}m ${secs}s`;

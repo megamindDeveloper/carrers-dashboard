@@ -113,6 +113,8 @@ export type AssessmentSubmission = {
   assessmentTitle: string;
   candidateName: string;
   candidateEmail: string;
+  candidateContact: string;
+  candidateResumeUrl: string;
   answers: {
     questionId: string;
     questionText: string;
