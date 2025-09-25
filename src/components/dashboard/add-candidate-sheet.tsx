@@ -31,8 +31,8 @@ import { parseResumeAction } from '@/app/actions';
 import type { Candidate, CandidateType } from '@/lib/types';
 import { Loader2, PlusCircle } from 'lucide-react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/app/utils/firebase/firebaseConfig';
-import { getStorage, ref, uploadString, getDownloadURL } from "firebase/storage";
+import { db, storage } from '@/app/utils/firebase/firebaseConfig';
+import { ref, uploadString, getDownloadURL } from "firebase/storage";
 
 interface AddCandidateSheetProps {
 }
@@ -145,7 +145,6 @@ export function AddCandidateSheet({}: AddCandidateSheetProps) {
   const onSubmit = async (data: z.infer<typeof candidateSchema>) => {
     setIsProcessing(true);
     try {
-      const storage = getStorage();
       const storageRef = ref(storage, `resumes/${Date.now()}-${data.email}`);
       
       const uploadResult = await uploadString(storageRef, data.resumeDataUri, 'data_url');
