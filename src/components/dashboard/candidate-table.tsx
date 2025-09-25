@@ -187,32 +187,25 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
         setConfirmation({ ...confirmation, isOpen: false });
   
         try {
-          const idToken = await firebaseUser?.getIdToken();
-          const response = await fetch('/api/candidate/delete', {
-              method: 'POST',
-              headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${idToken}`,
-              },
-              body: JSON.stringify({ id: candidateId }),
-          });
+            const docRef = doc(db, 'applications', candidateId);
+            await deleteDoc(docRef);
 
-          if (!response.ok) {
-              let errorMessage = 'Failed to delete candidate';
-              try {
-                const errorData = await response.json();
-                errorMessage = errorData.message || errorMessage;
-              } catch (jsonError) {
-                // If parsing JSON fails, use the response text
-                errorMessage = await response.text();
-              }
-              throw new Error(errorMessage);
-          }
-  
-          toast({
-            title: 'Candidate Deleted',
-            description: `${candidateName}'s application has been successfully deleted.`,
-          });
+            // If there's a resume URL, delete the file from Storage
+            if (candidateToDelete.resumeUrl) {
+                try {
+                    const resumeRef = ref(storage, candidateToDelete.resumeUrl);
+                    await deleteObject(resumeRef);
+                } catch (storageError: any) {
+                    // Log if storage deletion fails, but don't fail the entire request
+                    // as the primary record (Firestore doc) is already deleted.
+                    console.warn(`Failed to delete resume from storage: ${storageError.message}`);
+                }
+            }
+
+            toast({
+                title: 'Candidate Deleted',
+                description: `${candidateName}'s application has been successfully deleted.`,
+            });
         } catch (error: any) {
           setData(originalData); // revert UI
           toast({
@@ -405,3 +398,5 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
     </>
   );
 }
+
+    
