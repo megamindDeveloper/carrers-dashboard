@@ -87,7 +87,7 @@ export type Job = {
 };
 
 // Assessment Types
-export const QUESTION_TYPES = ['text', 'multiple-choice'] as const;
+export const QUESTION_TYPES = ['text', 'multiple-choice', 'file-upload'] as const;
 export type QuestionType = (typeof QUESTION_TYPES)[number];
 
 export type AssessmentQuestion = {

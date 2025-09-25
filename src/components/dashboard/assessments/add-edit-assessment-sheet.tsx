@@ -214,6 +214,7 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
                                     <SelectContent>
                                         <SelectItem value="text">Text Answer</SelectItem>
                                         <SelectItem value="multiple-choice">Multiple Choice</SelectItem>
+                                        <SelectItem value="file-upload">File Upload</SelectItem>
                                     </SelectContent>
                                     </Select>
                                     <FormMessage />

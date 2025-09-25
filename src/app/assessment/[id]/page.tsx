@@ -2,9 +2,10 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { doc, getDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/app/utils/firebase/firebaseConfig';
+import { db, storage } from '@/app/utils/firebase/firebaseConfig';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import type { Assessment, AssessmentQuestion } from '@/lib/types';
-import { Loader2, Lock, Timer } from 'lucide-react';
+import { Loader2, Lock, Timer, UploadCloud, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -16,6 +17,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Progress } from '@/components/ui/progress';
 
 const passcodeSchema = z.object({
   passcode: z.string().min(1, 'Passcode is required'),
@@ -42,6 +44,91 @@ const PasteDisabledTextarea = (props: React.ComponentProps<typeof Textarea>) => 
   return <Textarea onPaste={handlePaste} {...props} />;
 };
 
+type UploadState = {
+  progress: number;
+  status: 'idle' | 'uploading' | 'success' | 'error';
+  url: string | null;
+  error: string | null;
+};
+
+const FileUploadInput = ({
+  questionId,
+  assessmentId,
+  candidateEmail,
+  onUploadComplete,
+}: {
+  questionId: string;
+  assessmentId: string;
+  candidateEmail: string;
+  onUploadComplete: (url: string) => void;
+}) => {
+  const [uploadState, setUploadState] = useState<UploadState>({
+    progress: 0,
+    status: 'idle',
+    url: null,
+    error: null,
+  });
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!candidateEmail) {
+      alert("Please enter your email address before uploading a file.");
+      e.target.value = ''; // Reset file input
+      return;
+    }
+    
+    setUploadState({ progress: 0, status: 'uploading', url: null, error: null });
+
+    const storageRef = ref(storage, `assessment-uploads/${assessmentId}/${candidateEmail}/${questionId}-${file.name}`);
+    const uploadTask = uploadBytesResumable(storageRef, file);
+
+    uploadTask.on('state_changed',
+      (snapshot) => {
+        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        setUploadState(prev => ({ ...prev, progress }));
+      },
+      (error) => {
+        console.error("Upload error:", error);
+        setUploadState({ progress: 0, status: 'error', url: null, error: error.message });
+      },
+      () => {
+        getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+          setUploadState({ progress: 100, status: 'success', url: downloadURL, error: null });
+          onUploadComplete(downloadURL);
+        });
+      }
+    );
+  };
+
+  return (
+    <div className="space-y-2">
+      <Input type="file" onChange={handleFileChange} disabled={uploadState.status === 'uploading' || uploadState.status === 'success'} />
+      {uploadState.status === 'uploading' && (
+        <div className="flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span className="text-sm text-muted-foreground">Uploading...</span>
+            <Progress value={uploadState.progress} className="w-full" />
+        </div>
+      )}
+      {uploadState.status === 'success' && (
+        <div className="flex items-center gap-2 text-green-600">
+          <CheckCircle2 className="h-5 w-5" />
+          <span className="text-sm font-medium">File uploaded successfully.</span>
+        </div>
+      )}
+      {uploadState.status === 'error' && (
+        <div className="flex items-center gap-2 text-red-600">
+            <AlertCircle className="h-5 w-5" />
+            <span className="text-sm font-medium">Upload failed: {uploadState.error}</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
+
 export default function AssessmentPage({ params }: { params: { id: string } }) {
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [loading, setLoading] = useState(true);
@@ -67,6 +154,8 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
       control: answersForm.control,
       name: 'answers'
   });
+  
+  const candidateEmailForUpload = answersForm.watch('candidateEmail');
 
   useEffect(() => {
     if (params.id) {
@@ -315,6 +404,15 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                                                         </FormItem>
                                                     ))}
                                                 </RadioGroup>
+                                            ) : question.type === 'file-upload' ? (
+                                                <FileUploadInput
+                                                  questionId={question.id}
+                                                  assessmentId={assessment.id}
+                                                  candidateEmail={candidateEmailForUpload}
+                                                  onUploadComplete={(url) => {
+                                                    field.onChange(url);
+                                                  }}
+                                                />
                                             ) : (
                                                 <PasteDisabledTextarea
                                                     {...field}
