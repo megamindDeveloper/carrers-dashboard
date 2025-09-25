@@ -17,6 +17,7 @@ export default function SubmissionsPage({ params }: { params: { assessmentId: st
   const router = useRouter();
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [assessmentLoading, setAssessmentLoading] = useState(true);
+  const { assessmentId } = params;
 
   useEffect(() => {
     if (!loading && !user) {
@@ -25,9 +26,10 @@ export default function SubmissionsPage({ params }: { params: { assessmentId: st
   }, [user, loading, router]);
 
    useEffect(() => {
+    if (!assessmentId) return;
     const fetchAssessment = async () => {
       try {
-        const docRef = doc(db, 'assessments', params.assessmentId);
+        const docRef = doc(db, 'assessments', assessmentId);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           setAssessment({ id: docSnap.id, ...docSnap.data() } as Assessment);
@@ -42,7 +44,7 @@ export default function SubmissionsPage({ params }: { params: { assessmentId: st
     };
 
     fetchAssessment();
-  }, [params.assessmentId]);
+  }, [assessmentId]);
 
   if (loading || !user || assessmentLoading) {
     return (
@@ -62,7 +64,7 @@ export default function SubmissionsPage({ params }: { params: { assessmentId: st
             </Button>
             <h1 className="text-2xl font-bold">{assessment?.title || 'Assessment'} Submissions</h1>
         </div>
-        <SubmissionTable assessmentId={params.assessmentId} />
+        <SubmissionTable assessmentId={assessmentId} />
       </main>
   );
 }
