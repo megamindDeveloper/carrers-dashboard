@@ -104,11 +104,13 @@ export type Assessment = {
   timeLimit: number; // in minutes
   questions: AssessmentQuestion[];
   createdAt: any;
+  submissionCount?: number;
 };
 
 export type AssessmentSubmission = {
   id: string;
   assessmentId: string;
+  assessmentTitle: string;
   candidateName: string;
   candidateEmail: string;
   answers: {

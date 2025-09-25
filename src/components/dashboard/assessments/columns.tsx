@@ -1,7 +1,7 @@
 'use client';
 
 import type { ColumnDef } from '@tanstack/react-table';
-import type { Assessment } from '@/lib/types';
+import type { Assessment, AssessmentSubmission } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -16,10 +16,12 @@ import {
   MoreHorizontal,
   Share2,
   Trash2,
-  Copy
+  Copy,
+  ClipboardList,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
 
 type GetColumnsProps = {
   onDelete: (assessmentId: string, title: string) => void;
@@ -70,6 +72,22 @@ export const getColumns = ({ onDelete }: GetColumnsProps): ColumnDef<Assessment>
         cell: ({ row }) => (
             <div className="text-center">{row.original.questions?.length || 0}</div>
         ),
+    },
+     {
+      accessorKey: 'submissions',
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Submissions
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => (
+            <div className="text-center">{row.original.submissionCount || 0}</div>
+        ),
+      sortingFn: 'basic',
     },
     {
         accessorKey: 'timeLimit',
@@ -136,6 +154,13 @@ export const getColumns = ({ onDelete }: GetColumnsProps): ColumnDef<Assessment>
             }}>
                 View/Edit Details
             </DropdownMenuItem>
+             <DropdownMenuItem asChild>
+              <Link href={`/dashboard/submissions/${assessment.id}`}>
+                <ClipboardList className="mr-2 h-4 w-4" />
+                View Submissions
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => {
                 navigator.clipboard.writeText(shareUrl);
                 toast({ title: 'Link Copied!', description: 'Assessment URL copied to clipboard.' });

@@ -1,10 +1,10 @@
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
-import type { Assessment } from '@/lib/types';
+import type { Assessment, AssessmentSubmission } from '@/lib/types';
 import { DataTable } from '@/components/dashboard/data-table';
 import { getColumns } from './columns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { collection, onSnapshot, doc, addDoc, updateDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, addDoc, updateDoc, serverTimestamp, deleteDoc, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/app/utils/firebase/firebaseConfig';
 import { useToast } from '@/hooks/use-toast';
 import { AddEditAssessmentSheet } from './add-edit-assessment-sheet';
@@ -34,12 +34,29 @@ export function AssessmentTable() {
     const colRef = collection(db, 'assessments');
     const unsub = onSnapshot(
       colRef,
-      snapshot => {
+      async (snapshot) => {
         const assessments = snapshot.docs.map(d => ({
           id: d.id,
           ...(d.data() as Omit<Assessment, 'id'>),
-        })).sort((a, b) => (b.createdAt?.toDate() ?? 0) - (a.createdAt?.toDate() ?? 0));
-        setData(assessments);
+        }));
+
+        // Fetch submission counts for each assessment
+        const assessmentsWithCounts = await Promise.all(
+          assessments.map(async (assessment) => {
+            const submissionsQuery = query(
+              collection(db, 'assessmentSubmissions'),
+              where('assessmentId', '==', assessment.id)
+            );
+            const submissionsSnapshot = await getDocs(submissionsQuery);
+            return {
+              ...assessment,
+              submissionCount: submissionsSnapshot.size,
+            };
+          })
+        );
+        
+        const sortedAssessments = assessmentsWithCounts.sort((a, b) => (b.createdAt?.toDate() ?? 0) - (a.createdAt?.toDate() ?? 0));
+        setData(sortedAssessments);
         setLoading(false);
       },
       error => {
