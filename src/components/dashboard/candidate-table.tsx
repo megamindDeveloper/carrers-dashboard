@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Candidate, CandidateStatus, CandidateType } from '@/lib/types';
@@ -197,8 +198,15 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
           });
 
           if (!response.ok) {
-              const errorData = await response.json();
-              throw new Error(errorData.message || 'Failed to delete candidate');
+              let errorMessage = 'Failed to delete candidate';
+              try {
+                const errorData = await response.json();
+                errorMessage = errorData.message || errorMessage;
+              } catch (jsonError) {
+                // If parsing JSON fails, use the response text
+                errorMessage = await response.text();
+              }
+              throw new Error(errorMessage);
           }
   
           toast({
