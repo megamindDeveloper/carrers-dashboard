@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
@@ -34,7 +35,7 @@ const answersSchema = z.object({
     answers: z.array(z.object({
         questionId: z.string(),
         questionText: z.string(),
-        answer: z.string().min(1, 'An answer is required for this question.'),
+        answer: z.string(), // Removed .min(1) to allow empty answers
     })),
 });
 
@@ -514,5 +515,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
+
+    
 
     
