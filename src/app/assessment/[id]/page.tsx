@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
@@ -16,6 +15,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const passcodeSchema = z.object({
   passcode: z.string().min(1, 'Passcode is required'),
@@ -250,7 +250,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                         <Timer className="h-4 w-4" />
                         <AlertTitle>Time Limit: {assessment?.timeLimit} minutes</AlertTitle>
                         <AlertDescription>
-                            The timer will start as soon as you click the button below. The form will be submitted automatically when the time runs out. Make sure you are in a quiet environment before you begin. Pasting is disabled.
+                            The timer will start as soon as you click the button below. The form will be submitted automatically when the time runs out. Make sure you are in a quiet environment before you begin. Pasting is disabled for text fields.
                         </AlertDescription>
                     </Alert>
                     <p>Number of questions: {assessment?.questions.length}</p>
@@ -289,22 +289,39 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                             )} />
                         </div>
                         <div className="space-y-8 pt-4 border-t">
-                            {fields.map((field, index) => (
+                            {assessment?.questions.map((question, index) => (
                                 <FormField
-                                    key={field.id}
+                                    key={question.id}
                                     control={answersForm.control}
                                     name={`answers.${index}.answer`}
-                                    render={({ field: answerField }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-base">
-                                            {index + 1}. {field.questionText}
+                                    render={({ field }) => (
+                                    <FormItem className="space-y-3">
+                                        <FormLabel className="text-base font-semibold">
+                                            {index + 1}. {question.text}
                                         </FormLabel>
                                         <FormControl>
-                                            <PasteDisabledTextarea
-                                                {...answerField}
-                                                className="min-h-[120px] text-base"
-                                                placeholder="Type your answer here..."
-                                            />
+                                            {question.type === 'multiple-choice' ? (
+                                                <RadioGroup
+                                                    onValueChange={field.onChange}
+                                                    defaultValue={field.value}
+                                                    className="flex flex-col space-y-2"
+                                                >
+                                                    {question.options?.map((option, optionIndex) => (
+                                                        <FormItem key={optionIndex} className="flex items-center space-x-3 space-y-0">
+                                                            <FormControl>
+                                                                <RadioGroupItem value={option} />
+                                                            </FormControl>
+                                                            <FormLabel className="font-normal">{option}</FormLabel>
+                                                        </FormItem>
+                                                    ))}
+                                                </RadioGroup>
+                                            ) : (
+                                                <PasteDisabledTextarea
+                                                    {...field}
+                                                    className="min-h-[120px] text-base"
+                                                    placeholder="Type your answer here..."
+                                                />
+                                            )}
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>

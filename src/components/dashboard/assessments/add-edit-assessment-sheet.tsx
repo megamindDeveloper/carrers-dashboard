@@ -26,9 +26,11 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import type { Assessment } from '@/lib/types';
-import { Loader2, PlusCircle, Trash2, Wand2 } from 'lucide-react';
+import type { Assessment, QuestionType } from '@/lib/types';
+import { QUESTION_TYPES } from '@/lib/types';
+import { Loader2, PlusCircle, Trash2, Wand2, X } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface AddEditAssessmentSheetProps {
   isOpen: boolean;
@@ -37,14 +39,26 @@ interface AddEditAssessmentSheetProps {
   onSave: (assessmentData: Omit<Assessment, 'id' | 'createdAt'>, existingId?: string) => Promise<void>;
 }
 
+const questionSchema = z.object({
+  id: z.string(),
+  text: z.string().min(1, "Question text cannot be empty"),
+  type: z.enum(QUESTION_TYPES),
+  options: z.array(z.object({ value: z.string().min(1, "Option cannot be empty") })).optional(),
+}).superRefine((data, ctx) => {
+    if (data.type === 'multiple-choice' && (!data.options || data.options.length < 2)) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['options'],
+            message: 'Multiple choice questions must have at least 2 options.',
+        });
+    }
+});
+
 const assessmentSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   passcode: z.string().min(4, 'Passcode must be at least 4 characters long'),
   timeLimit: z.coerce.number().min(1, 'Time limit must be at least 1 minute'),
-  questions: z.array(z.object({
-    id: z.string(),
-    text: z.string().min(1, "Question text cannot be empty"),
-  })).min(1, "At least one question is required"),
+  questions: z.array(questionSchema).min(1, "At least one question is required"),
 });
 
 const generatePasscode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -60,7 +74,7 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
       title: '',
       passcode: generatePasscode(),
       timeLimit: 30,
-      questions: [{ id: uuidv4(), text: '' }],
+      questions: [{ id: uuidv4(), text: '', type: 'text' }],
     },
   });
 
@@ -73,14 +87,18 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
     if (isOpen) {
       if (assessment) {
         form.reset({
-          ...assessment
+          ...assessment,
+          questions: assessment.questions.map(q => ({
+              ...q,
+              options: q.options?.map(opt => ({ value: opt }))
+          }))
         });
       } else {
         form.reset({
           title: '',
           passcode: generatePasscode(),
           timeLimit: 30,
-          questions: [{ id: uuidv4(), text: 'Please introduce yourself and walk us through your resume.' }],
+          questions: [{ id: uuidv4(), text: 'Please introduce yourself and walk us through your resume.', type: 'text' }],
         });
       }
     }
@@ -89,7 +107,14 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
   const onSubmit = async (data: z.infer<typeof assessmentSchema>) => {
     setIsProcessing(true);
     try {
-      await onSave(data, assessment?.id);
+       const assessmentData = {
+        ...data,
+        questions: data.questions.map(q => ({
+          ...q,
+          options: q.type === 'multiple-choice' ? q.options?.map(opt => opt.value) : undefined,
+        })),
+      };
+      await onSave(assessmentData, assessment?.id);
     } catch (error) {
        // Error toast is handled in parent
     } finally {
@@ -152,37 +177,60 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
               <div className="space-y-4 pt-4 border-t">
                 <FormLabel>Questions</FormLabel>
                 {questionsFields.map((field, index) => (
-                  <FormField
-                    key={field.id}
-                    control={form.control}
-                    name={`questions.${index}.text`}
-                    render={({ field }) => (
-                      <FormItem>
-                        <div className="flex items-start gap-2">
-                           <FormLabel className="pt-3 text-sm text-muted-foreground">{index + 1}.</FormLabel>
-                            <FormControl>
-                                <Textarea {...field} placeholder={`Enter question ${index + 1}...`} className="min-h-[60px]" />
-                            </FormControl>
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => removeQuestion(index)}
-                                className="mt-1"
-                            >
-                                <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
-                        </div>
-                         <FormMessage className="ml-6" />
-                      </FormItem>
-                    )}
-                  />
+                    <div key={field.id} className="p-4 border rounded-lg space-y-4 bg-muted/50 relative">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeQuestion(index)}
+                            className="absolute top-2 right-2"
+                        >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+
+                        <FormField
+                            control={form.control}
+                            name={`questions.${index}.text`}
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Question {index + 1}</FormLabel>
+                                <FormControl>
+                                    <Textarea {...field} placeholder={`Enter question text...`} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name={`questions.${index}.type`}
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Answer Type</FormLabel>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger><SelectValue placeholder="Select an answer type" /></SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="text">Text Answer</SelectItem>
+                                        <SelectItem value="multiple-choice">Multiple Choice</SelectItem>
+                                    </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        {form.watch(`questions.${index}.type`) === 'multiple-choice' && (
+                            <OptionsField nestIndex={index} control={form.control} />
+                        )}
+                    </div>
                 ))}
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => appendQuestion({ id: uuidv4(), text: '' })}
+                  onClick={() => appendQuestion({ id: uuidv4(), text: '', type: 'text' })}
                 >
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Add Question
@@ -207,6 +255,44 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
   );
 }
 
-// Add this to your project if you don't have it, e.g., in a utils file
-// npm install uuid
-// npm install -D @types/uuid
+function OptionsField({ nestIndex, control }: { nestIndex: number, control: any }) {
+    const { fields, remove, append } = useFieldArray({
+        control,
+        name: `questions.${nestIndex}.options`
+    });
+
+    return (
+        <div className="space-y-2 pl-2 border-l-2">
+            <FormLabel>Options</FormLabel>
+            {fields.map((item, k) => (
+                <div key={item.id} className="flex items-center gap-2">
+                    <FormField
+                        control={control}
+                        name={`questions.${nestIndex}.options.${k}.value`}
+                        render={({ field }) => (
+                            <FormItem className="flex-grow">
+                                <FormControl>
+                                    <Input {...field} placeholder={`Option ${k + 1}`} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(k)}>
+                        <X className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                </div>
+            ))}
+             <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => append({ value: "" })}
+                >
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Option
+            </Button>
+             <FormMessage />
+        </div>
+    )
+}

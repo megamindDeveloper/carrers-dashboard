@@ -87,9 +87,14 @@ export type Job = {
 };
 
 // Assessment Types
+export const QUESTION_TYPES = ['text', 'multiple-choice'] as const;
+export type QuestionType = (typeof QUESTION_TYPES)[number];
+
 export type AssessmentQuestion = {
   id: string;
   text: string;
+  type: QuestionType;
+  options?: string[];
 };
 
 export type Assessment = {
@@ -106,7 +111,11 @@ export type AssessmentSubmission = {
   assessmentId: string;
   candidateName: string;
   candidateEmail: string;
-  answers: { questionId: string; answer: string }[];
+  answers: {
+    questionId: string;
+    questionText: string;
+    answer: string;
+  }[];
   submittedAt: any;
   timeTaken: number; // in seconds
 };
