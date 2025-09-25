@@ -16,6 +16,7 @@ import {
   GraduationCap,
   LayoutGrid,
   FileText,
+  ClipboardList,
 } from 'lucide-react';
 import mmLogoOpen from '../../../.idx/mmLogo.png';
 import mmLogoclose from '../../../public/icon.png';
@@ -28,6 +29,7 @@ interface SidebarProps {
 const navItems = [
   { href: '/dashboard', icon: LayoutGrid, label: 'Overview' },
   { href: '/dashboard/jobs', icon: FileText, label: 'Jobs' },
+  { href: '/dashboard/assessments', icon: ClipboardList, label: 'Assessments' },
   { href: '/dashboard/all', icon: Users, label: 'All Candidates' },
   { href: '/dashboard/full-time', icon: Briefcase, label: 'Full-time' },
   { href: '/dashboard/intern', icon: GraduationCap, label: 'Interns' },

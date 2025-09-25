@@ -85,3 +85,28 @@ export type Job = {
   type: JobType;
   duration?: string;
 };
+
+// Assessment Types
+export type AssessmentQuestion = {
+  id: string;
+  text: string;
+};
+
+export type Assessment = {
+  id: string;
+  title: string;
+  passcode: string;
+  timeLimit: number; // in minutes
+  questions: AssessmentQuestion[];
+  createdAt: any;
+};
+
+export type AssessmentSubmission = {
+  id: string;
+  assessmentId: string;
+  candidateName: string;
+  candidateEmail: string;
+  answers: { questionId: string; answer: string }[];
+  submittedAt: any;
+  timeTaken: number; // in seconds
+};

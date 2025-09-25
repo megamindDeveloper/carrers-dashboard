@@ -16,6 +16,7 @@ import {
   LayoutGrid,
   Menu,
   FileText,
+  ClipboardList,
 } from 'lucide-react';
 import mmLogo from '../../../.idx/mmLogo.png';
 import { usePathname } from 'next/navigation';
@@ -33,6 +34,7 @@ interface HeaderProps {
 const navItems = [
   { href: '/dashboard', icon: LayoutGrid, label: 'Overview' },
   { href: '/dashboard/jobs', icon: FileText, label: 'Jobs' },
+  { href: '/dashboard/assessments', icon: ClipboardList, label: 'Assessments' },
   { href: '/dashboard/all', icon: Users, label: 'All Candidates' },
   { href: '/dashboard/full-time', icon: Briefcase, label: 'Full-time' },
   { href: '/dashboard/intern', icon: GraduationCap, label: 'Interns' },
