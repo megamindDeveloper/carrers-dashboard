@@ -15,26 +15,7 @@ export async function POST(req: Request) {
     }
     
     // Use the htmlBody from the request instead of reading a file
-    let template = htmlBody;
-
-    // Pass collegeId and candidateId as query params in the assessment link
-    const assessmentLink = `${process.env.NEXT_PUBLIC_BASE_URL}/assessment/${assessmentId}?collegeId=${collegeId}`;
-
-
-    // Replace template-wide placeholders
-    template = template
-      .replace(/<<Assessment Name>>/g, assessmentTitle)
-      .replace(/<<Assessment Link>>/g, assessmentLink)
-      .replace(/<<Passcode>>/g, passcode || 'N/A');
-
-    // Conditionally show passcode section
-    if (passcode) {
-        template = template.replace(/<!-- IF passcode -->/g, '').replace(/<!-- ENDIF passcode -->/g, '');
-    } else {
-        const passcodeSectionRegex = /<!-- IF passcode -->(.|\n)*?<!-- ENDIF passcode -->/g;
-        template = template.replace(passcodeSectionRegex, '');
-    }
-
+    const baseTemplate = htmlBody;
 
     let sentCount = 0;
     let failedCount = 0;
@@ -42,9 +23,26 @@ export async function POST(req: Request) {
 
     for (const candidate of candidates) {
       try {
-        // Replace candidate-specific placeholders
-        let personalizedTemplate = template.replace(/<<Candidate Name>>/g, candidate.name)
-                                           .replace(/<<Candidate ID>>/g, candidate.id);
+        let personalizedTemplate = baseTemplate;
+
+        // Create a unique link for each candidate
+        const assessmentLink = `${process.env.NEXT_PUBLIC_BASE_URL}/assessment/${assessmentId}?collegeId=${collegeId}&candidateId=${candidate.id}`;
+
+        // Replace all placeholders for the specific candidate
+        personalizedTemplate = personalizedTemplate
+          .replace(/<<Candidate Name>>/g, candidate.name)
+          .replace(/<<Candidate ID>>/g, candidate.id)
+          .replace(/<<Assessment Name>>/g, assessmentTitle)
+          .replace(/<<Assessment Link>>/g, assessmentLink)
+          .replace(/<<Passcode>>/g, passcode || 'N/A');
+
+        // Conditionally show passcode section
+        if (passcode) {
+            personalizedTemplate = personalizedTemplate.replace(/<!-- IF passcode -->/g, '').replace(/<!-- ENDIF passcode -->/g, '');
+        } else {
+            const passcodeSectionRegex = /<!-- IF passcode -->(.|\n)*?<!-- ENDIF passcode -->/g;
+            personalizedTemplate = personalizedTemplate.replace(passcodeSectionRegex, '');
+        }
 
         await sendEmail({
             to: { email: candidate.email, name: candidate.name },
