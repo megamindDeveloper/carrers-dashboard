@@ -51,6 +51,16 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
     return () => unsub();
   }, [collegeId, toast]);
   
+  const getColumnData = (row: Record<string, string>, keys: string[]): string | undefined => {
+    for (const key of keys) {
+      if (row[key]) {
+        return row[key];
+      }
+    }
+    return undefined;
+  };
+
+
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -61,12 +71,39 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
     Papa.parse(file, {
         header: true,
         skipEmptyLines: true,
+        transformHeader: header => header.trim().toLowerCase(),
         complete: async (results) => {
-            const parsedData = results.data as { name?: string, email?: string }[];
-            const validCandidates = parsedData.filter(row => row.name && row.email);
+            const parsedData = results.data as Record<string, string>[];
+            
+            const nameKeys = {
+                first: ['first name', 'firstname'],
+                middle: ['middle name', 'middlename'],
+                last: ['last name', 'lastname'],
+                full: ['full name', 'name'],
+            };
+            const emailKeys = ['email', 'email address', 'personal email'];
+
+            const validCandidates = parsedData.map(row => {
+                const firstName = getColumnData(row, nameKeys.first);
+                const middleName = getColumnData(row, nameKeys.middle);
+                const lastName = getColumnData(row, nameKeys.last);
+                let fullName = getColumnData(row, nameKeys.full);
+                
+                if (!fullName) {
+                    fullName = [firstName, middleName, lastName].filter(Boolean).join(' ');
+                }
+
+                const email = getColumnData(row, emailKeys);
+
+                if (fullName && email) {
+                    return { name: fullName, email };
+                }
+                return null;
+            }).filter((c): c is { name: string; email: string } => c !== null);
+
 
             if (validCandidates.length === 0) {
-                toast({ variant: 'destructive', title: 'Import Failed', description: 'No valid rows with "name" and "email" found in the CSV.' });
+                toast({ variant: 'destructive', title: 'Import Failed', description: 'No valid rows with name and email information could be found in the CSV.' });
                 setIsUploading(false);
                 return;
             }
