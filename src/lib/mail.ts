@@ -28,27 +28,30 @@ export interface SendEmailOptions {
 
 export async function sendEmail({ to, subject, htmlBody }: SendEmailOptions) {
   try {
-    const response = await client.sendMail({
-      bounce_address: "no-reply@megamind.studio",
-      from: {
-        address: "no-reply@megamind.studio",
-        name: "megamind",
-      },
-      to: [
-        {
-          email_address: {
-            address: to.email,
-            name: to.name,
-          },
-        },
-      ],
-      subject: subject,
-      htmlbody: htmlBody,
+    var nodemailer = require('nodemailer');
+    var transport = nodemailer.createTransport({
+      host: "smtp.zeptomail.in",
+      port: 587,
+      auth: {
+        user: "emailapikey",
+        pass: "PHtE6r1bS+DjjmErpBkH5KC7HpOgMN59/b9jfVMUtIdBX/BRH01Qo48ulzS/+B54VKZGRvCcwYxtuOnKte2BJGy5YGYaWGqyqK3sx/VYSPOZsbq6x00btVQccELdVIDrdtNq1yzVudnZNA=="
+      }
     });
-    
-    console.log("Email sent successfully:", response);
-    return { success: true, data: response };
 
+    var mailOptions = {
+      from: '<no-reply@megamind.studio>',
+    
+      to: to.email,
+      subject: subject,
+      html:htmlBody,
+    };
+
+    transport.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        return console.log(error);
+      }
+      console.log('Successfully sent');
+    });
   } catch (error) {
     console.error("Error sending email:", error);
     return { success: false, error: error };
