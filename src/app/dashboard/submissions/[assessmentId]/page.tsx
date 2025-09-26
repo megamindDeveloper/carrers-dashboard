@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -12,12 +13,11 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 
-export default function SubmissionsPage({ params }: { params: { assessmentId: string } }) {
+export default function SubmissionsPage({ params: { assessmentId } }: { params: { assessmentId: string } }) {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [assessmentLoading, setAssessmentLoading] = useState(true);
-  const { assessmentId } = params;
 
   useEffect(() => {
     if (!loading && !user) {

@@ -39,19 +39,14 @@ export async function POST(req: Request) {
       .replace(/<<Position>>/g, position);
 
     // Send the email using centralized helper
-    const emailResult = await sendEmail({
+    await sendEmail({
       to: { email, name: fullName },
       subject: "Update on your application with MegaMind Careers",
       htmlBody: template,
     });
 
-    if (emailResult.success) {
-      return NextResponse.json({ success: true, message: "Email sent successfully" });
-    }
-
-    const message = (emailResult as any).message || "Failed to send email";
-    console.error("Error sending email:", (emailResult as any).error || message);
-    return NextResponse.json({ success: false, message }, { status: 500 });
+    return NextResponse.json({ success: true, message: "Email sent successfully" });
+    
   } catch (error: any) {
     console.error("Error sending email:", error);
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });

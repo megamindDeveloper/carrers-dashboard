@@ -100,8 +100,8 @@ export type AssessmentQuestion = {
 export type Assessment = {
   id: string;
   title: string;
-  passcode: string;
-  timeLimit: number; // in minutes
+  passcode?: string;
+  timeLimit?: number; // in minutes
   questions: AssessmentQuestion[];
   createdAt: any;
   submissionCount?: number;
@@ -122,4 +122,34 @@ export type AssessmentSubmission = {
   }[];
   submittedAt: any;
   timeTaken: number; // in seconds
+  collegeId?: string | null;
+  collegeCandidateId?: string | null;
 };
+
+// College Collaboration Types
+export type College = {
+    id: string;
+    name: string;
+    location: string;
+    collegeEmail?: string;
+    contactPerson: string;
+    contactEmail: string;
+    createdAt: any;
+    candidateCount?: number;
+};
+
+export type CollegeCandidate = {
+    id: string;
+    name: string;
+    email: string;
+    importedAt: any;
+    submission: AssessmentSubmission | null;
+};
+
+export const CollegeSchema = z.object({
+  name: z.string().min(1, "College name is required"),
+  location: z.string().min(1, "Location is required"),
+  collegeEmail: z.string().email("A valid email is required for the college.").optional().or(z.literal('')),
+  contactPerson: z.string().min(1, "Contact person's name is required"),
+  contactEmail: z.string().email("A valid email is required for the contact person"),
+});

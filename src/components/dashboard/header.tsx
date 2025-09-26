@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -17,6 +16,7 @@ import {
   Menu,
   FileText,
   ClipboardList,
+  Building2,
 } from 'lucide-react';
 import mmLogo from '../../../.idx/mmLogo.png';
 import { usePathname } from 'next/navigation';
@@ -26,6 +26,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '../ui/tooltip';
+import { cn } from '@/lib/utils';
 
 interface HeaderProps {
     onToggleSidebar: () => void;
@@ -35,6 +36,7 @@ const navItems = [
   { href: '/dashboard', icon: LayoutGrid, label: 'Overview' },
   { href: '/dashboard/jobs', icon: FileText, label: 'Jobs' },
   { href: '/dashboard/assessments', icon: ClipboardList, label: 'Assessments' },
+  { href: '/dashboard/colleges', icon: Building2, label: 'Colleges' },
   { href: '/dashboard/all', icon: Users, label: 'All Candidates' },
   { href: '/dashboard/full-time', icon: Briefcase, label: 'Full-time' },
   { href: '/dashboard/intern', icon: GraduationCap, label: 'Interns' },
@@ -67,20 +69,23 @@ export function Header({ onToggleSidebar }: HeaderProps) {
               <Image height={30} width={120} src={mmLogo} alt="MegaMind Careers Logo" />
               <span className="sr-only">MegaMind Careers</span>
             </Link>
-            {navItems.map(item => (
+            {navItems.map(item => {
+              const isActive = item.href === '/dashboard' ? pathname === item.href : pathname.startsWith(item.href);
+              return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-4 px-2.5 ${
-                  pathname === item.href
+                className={cn(
+                  'flex items-center gap-4 px-2.5',
+                  isActive
                     ? 'text-foreground'
                     : 'text-muted-foreground hover:text-foreground'
-                }`}
+                )}
               >
                 <item.icon className="h-5 w-5" />
                 {item.label}
               </Link>
-            ))}
+            )})}
           </nav>
         </SheetContent>
       </Sheet>
