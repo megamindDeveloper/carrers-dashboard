@@ -29,14 +29,14 @@ const passcodeSchema = z.object({
 });
 
 const answersSchema = z.object({
-    candidateName: z.string().min(1, 'Your name is required'),
-    candidateEmail: z.string().email('A valid email is required'),
-    candidateContact: z.string().min(1, 'Contact number is required'),
-    candidateResumeUrl: z.string().min(1, 'Resume is required'),
+    candidateName: z.string().optional(),
+    candidateEmail: z.string().email('A valid email is required').optional().or(z.literal('')),
+    candidateContact: z.string().optional(),
+    candidateResumeUrl: z.string().optional(),
     answers: z.array(z.object({
         questionId: z.string(),
         questionText: z.string(),
-        answer: z.string(), // Removed .min(1) to allow empty answers
+        answer: z.string(),
     })),
 });
 
@@ -266,7 +266,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
       );
       const querySnapshot = await getDocs(q);
       
-      if (!querySnapshot.empty) {
+      if (!querySnapshot.empty && data.candidateEmail) {
         toast({
           variant: 'destructive',
           title: 'Submission Failed',
@@ -447,7 +447,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                                             <FileUploadInput
                                                 questionId="candidate-resume"
                                                 assessmentId={assessment!.id}
-                                                candidateEmail={candidateEmailForUpload}
+                                                candidateEmail={candidateEmailForUpload || ''}
                                                 onUploadComplete={(url) => field.onChange(url)}
                                                 label="Upload Resume"
                                             />
@@ -489,7 +489,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                                                 <FileUploadInput
                                                   questionId={question.id}
                                                   assessmentId={assessment.id}
-                                                  candidateEmail={candidateEmailForUpload}
+                                                  candidateEmail={candidateEmailForUpload || ''}
                                                   onUploadComplete={(url) => {
                                                     field.onChange(url);
                                                   }}
@@ -522,3 +522,5 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
+
+    
