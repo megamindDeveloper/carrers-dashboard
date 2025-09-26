@@ -209,7 +209,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
     setSendAssessmentDialogOpen(true);
   }
 
-  const handleSendAssessment = async ({ subject, htmlBody }: { subject: string, htmlBody: string }) => {
+  const handleSendAssessment = async ({ subject, body }: { subject: string, body: string }) => {
     
     const candidatesToSend = data.filter(c => !c.submission);
     const selectedAssessment = assessments.find(a => a.id === selectedAssessmentId);
@@ -233,7 +233,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
                 passcode: selectedAssessment.passcode || null,
                 collegeId: collegeId,
                 subject,
-                htmlBody,
+                body,
             }),
         });
 

@@ -1,21 +1,25 @@
 
+
 import { NextResponse } from "next/server";
 import { sendEmail } from "@/lib/mail";
 import type { CollegeCandidate } from "@/lib/types";
+import path from "path";
+import fs from "fs/promises";
 
 export async function POST(req: Request) {
   try {
-    const { candidates, assessmentId, assessmentTitle, passcode, collegeId, subject, htmlBody } = await req.json();
+    const { candidates, assessmentId, assessmentTitle, passcode, collegeId, subject, body } = await req.json();
 
-    if (!candidates || !Array.isArray(candidates) || candidates.length === 0 || !assessmentId || !assessmentTitle || !collegeId || !subject || !htmlBody) {
+    if (!candidates || !Array.isArray(candidates) || candidates.length === 0 || !assessmentId || !assessmentTitle || !collegeId || !subject || !body) {
       return NextResponse.json(
         { success: false, message: "Invalid request body. Missing required fields." },
         { status: 400 }
       );
     }
     
-    // Use the htmlBody from the request instead of reading a file
-    const baseTemplate = htmlBody;
+    // Path to your template file
+    const templatePath = path.join(process.cwd(), "src", "email-templates", "assessment-invite-mail.html");
+    const baseTemplate = await fs.readFile(templatePath, "utf8");
 
     let sentCount = 0;
     let failedCount = 0;
@@ -34,7 +38,9 @@ export async function POST(req: Request) {
           .replace(/<<Candidate ID>>/g, candidate.id)
           .replace(/<<Assessment Name>>/g, assessmentTitle)
           .replace(/<<Assessment Link>>/g, assessmentLink)
-          .replace(/<<Passcode>>/g, passcode || 'N/A');
+          .replace(/<<Passcode>>/g, passcode || 'N/A')
+          .replace(/<<EMAIL_BODY>>/g, body.replace(/\n/g, '<br />')); // Replace custom body content
+
 
         // Conditionally show passcode section
         if (passcode) {
