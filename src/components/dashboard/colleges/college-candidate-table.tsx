@@ -1,17 +1,25 @@
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
 import Papa from 'papaparse';
-import type { CollegeCandidate } from '@/lib/types';
+import type { Assessment, CollegeCandidate } from '@/lib/types';
 import { DataTable } from '@/components/dashboard/data-table';
 import { getCandidateColumns } from './candidate-columns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { collection, onSnapshot, writeBatch, serverTimestamp, doc } from 'firebase/firestore';
+import { collection, onSnapshot, writeBatch, serverTimestamp, doc, getDocs, query } from 'firebase/firestore';
 import { db } from '@/app/utils/firebase/firebaseConfig';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Upload } from 'lucide-react';
+import { Upload, Send } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Loader2 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
 interface CollegeCandidateTableProps {
@@ -20,15 +28,18 @@ interface CollegeCandidateTableProps {
 
 export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps) {
   const [data, setData] = useState<CollegeCandidate[]>([]);
+  const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const [selectedAssessmentId, setSelectedAssessmentId] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const { toast } = useToast();
   
   useEffect(() => {
     if (!collegeId) return;
 
     const candidatesQuery = collection(db, `colleges/${collegeId}/candidates`);
-    const unsub = onSnapshot(
+    const unsubCandidates = onSnapshot(
       candidatesQuery,
       snapshot => {
         const candidates = snapshot.docs.map(d => ({
@@ -48,7 +59,17 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
         });
       }
     );
-    return () => unsub();
+
+    const assessmentsQuery = query(collection(db, 'assessments'));
+    const unsubAssessments = onSnapshot(assessmentsQuery, (snapshot) => {
+        const assessmentList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Assessment));
+        setAssessments(assessmentList);
+    });
+
+    return () => {
+        unsubCandidates();
+        unsubAssessments();
+    };
   }, [collegeId, toast]);
   
   const getColumnData = (row: Record<string, string>, keys: string[]): string | undefined => {
@@ -144,6 +165,52 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
     });
   }
 
+  const handleSendAssessment = async () => {
+    if (!selectedAssessmentId) {
+        toast({ variant: 'destructive', title: 'No Assessment Selected', description: 'Please select an assessment to send.' });
+        return;
+    }
+    if (data.length === 0) {
+        toast({ variant: 'destructive', title: 'No Candidates', description: 'There are no candidates to send the assessment to.' });
+        return;
+    }
+
+    const selectedAssessment = assessments.find(a => a.id === selectedAssessmentId);
+    if (!selectedAssessment) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Selected assessment could not be found.' });
+        return;
+    }
+
+    setIsSending(true);
+    toast({ title: 'Sending Emails...', description: `Preparing to send '${selectedAssessment.title}' to ${data.length} candidates.` });
+
+    try {
+        const response = await fetch('/api/send-assessment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                candidates: data,
+                assessmentId: selectedAssessment.id,
+                assessmentTitle: selectedAssessment.title,
+                passcode: selectedAssessment.passcode,
+            }),
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            toast({ title: 'Emails Sent!', description: result.message });
+        } else {
+            throw new Error(result.message || 'An unknown error occurred.');
+        }
+
+    } catch (error: any) {
+        toast({ variant: 'destructive', title: 'Failed to Send Emails', description: error.message });
+    } finally {
+        setIsSending(false);
+    }
+  }
+
 
   const columns = useMemo(() => getCandidateColumns(), []);
 
@@ -157,26 +224,62 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
                 <CardTitle>Imported Candidates</CardTitle>
                 <CardDescription>A list of all candidates imported for this college.</CardDescription>
             </div>
-            <Button asChild className="w-full sm:w-auto">
-                <label htmlFor="csv-upload">
-                    {isUploading ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                        <Upload className="mr-2 h-4 w-4" />
-                    )}
-                    {isUploading ? 'Importing...' : 'Import from CSV'}
-                </label>
-            </Button>
-            <Input 
-                id="csv-upload" 
-                type="file" 
-                accept=".csv" 
-                className="hidden"
-                onChange={handleFileUpload}
-                disabled={isUploading}
-            />
+            <div className="flex gap-2">
+                <Button asChild className="w-full sm:w-auto">
+                    <label htmlFor="csv-upload">
+                        {isUploading ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                            <Upload className="mr-2 h-4 w-4" />
+                        )}
+                        {isUploading ? 'Importing...' : 'Import from CSV'}
+                    </label>
+                </Button>
+                <Input 
+                    id="csv-upload" 
+                    type="file" 
+                    accept=".csv" 
+                    className="hidden"
+                    onChange={handleFileUpload}
+                    disabled={isUploading}
+                />
+            </div>
         </CardHeader>
         <CardContent>
+            {data.length > 0 && (
+                 <Card className="mb-6 bg-muted/40">
+                    <CardHeader>
+                        <CardTitle>Send Assessment</CardTitle>
+                        <CardDescription>Select an assessment and send it to all imported candidates below.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex flex-col sm:flex-row gap-4">
+                       <Select value={selectedAssessmentId} onValueChange={setSelectedAssessmentId}>
+                          <SelectTrigger className="w-full sm:w-[280px]">
+                            <SelectValue placeholder="Select an assessment..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {assessments.length > 0 ? (
+                                assessments.map(assessment => (
+                                    <SelectItem key={assessment.id} value={assessment.id}>
+                                        {assessment.title}
+                                    </SelectItem>
+                                ))
+                            ) : (
+                                <div className="p-4 text-sm text-muted-foreground">No assessments found.</div>
+                            )}
+                          </SelectContent>
+                        </Select>
+                        <Button onClick={handleSendAssessment} disabled={isSending || !selectedAssessmentId}>
+                            {isSending ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                                <Send className="mr-2 h-4 w-4" />
+                            )}
+                            {isSending ? 'Sending...' : `Send to ${data.length} Candidates`}
+                        </Button>
+                    </CardContent>
+                </Card>
+            )}
           <DataTable columns={columns} data={data} onRowClick={() => {}} />
         </CardContent>
       </Card>
