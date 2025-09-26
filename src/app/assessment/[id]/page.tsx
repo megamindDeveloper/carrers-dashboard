@@ -6,8 +6,8 @@ import { useSearchParams } from 'next/navigation';
 import { doc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
 import { db, storage } from '@/app/utils/firebase/firebaseConfig';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import type { Assessment, AssessmentQuestion } from '@/lib/types';
-import { Loader2, Lock, Timer, UploadCloud, CheckCircle2, AlertCircle } from 'lucide-react';
+import type { Assessment, AssessmentQuestion, CollegeCandidate } from '@/lib/types';
+import { Loader2, Lock, Timer, UploadCloud, CheckCircle2, AlertCircle, UserCheck } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -24,8 +24,9 @@ import Image from 'next/image';
 import mmLogo from '../../../../.idx/mmLogo.png';
 
 
-const passcodeSchema = z.object({
-  passcode: z.string().min(1, 'Passcode is required'),
+const verificationSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  email: z.string().email('A valid email is required'),
 });
 
 const answersSchema = z.object({
@@ -139,6 +140,7 @@ const FileUploadInput = ({
 
 export default function AssessmentPage({ params }: { params: { id: string } }) {
   const [assessment, setAssessment] = useState<Assessment | null>(null);
+  const [candidate, setCandidate] = useState<CollegeCandidate | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -153,9 +155,9 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
   const collegeCandidateId = searchParams.get('candidateId');
 
 
-  const passcodeForm = useForm<z.infer<typeof passcodeSchema>>({
-    resolver: zodResolver(passcodeSchema),
-    defaultValues: { passcode: '' },
+  const verificationForm = useForm<z.infer<typeof verificationSchema>>({
+    resolver: zodResolver(verificationSchema),
+    defaultValues: { name: '', email: '' },
   });
 
   const answersForm = useForm<AnswersFormValues>({
@@ -176,9 +178,8 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
       await addDoc(collection(db, 'assessmentSubmissions'), {
         assessmentId: assessment.id,
         assessmentTitle: assessment.title,
-        // The candidate info is no longer collected here, but from the college context
-        candidateName: 'N/A',
-        candidateEmail: 'N/A',
+        candidateName: candidate?.name || 'N/A',
+        candidateEmail: candidate?.email || 'N/A',
         candidateContact: 'N/A',
         candidateResumeUrl: 'N/A',
         answers: data.answers,
@@ -199,22 +200,20 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
         description: e.message || 'An unexpected error occurred.',
       });
     }
-  }, [assessment, collegeId, collegeCandidateId, toast]);
+  }, [assessment, collegeId, collegeCandidateId, toast, candidate]);
 
   useEffect(() => {
     if (params.id) {
-      const getAssessment = async () => {
+      const getAssessmentData = async () => {
         try {
-          const docRef = doc(db, 'assessments', params.id);
-          const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            const data = { id: docSnap.id, ...docSnap.data() } as Assessment;
+          // Fetch assessment details
+          const assessmentRef = doc(db, 'assessments', params.id);
+          const assessmentSnap = await getDoc(assessmentRef);
+          if (assessmentSnap.exists()) {
+            const data = { id: assessmentSnap.id, ...assessmentSnap.data() } as Assessment;
             setAssessment(data);
             if (data.timeLimit) {
               setTimeLeft(data.timeLimit * 60);
-            }
-            if (!data.passcode) {
-                setIsAuthenticated(true);
             }
 
             answersForm.reset({
@@ -225,18 +224,36 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                 }))
             });
 
+            // If it's not a college assessment, bypass individual verification
+            if (!collegeId || !collegeCandidateId) {
+                setIsAuthenticated(true);
+            }
+
           } else {
             setError('Assessment not found.');
+            return;
           }
+
+          // If it is a college assessment, fetch candidate details for verification
+          if (collegeId && collegeCandidateId) {
+            const candidateRef = doc(db, 'colleges', collegeId, 'candidates', collegeCandidateId);
+            const candidateSnap = await getDoc(candidateRef);
+            if (candidateSnap.exists()) {
+                setCandidate({ id: candidateSnap.id, ...candidateSnap.data() } as CollegeCandidate);
+            } else {
+                setError('Candidate profile not found.');
+            }
+          }
+
         } catch (e: any) {
-          setError('Failed to load assessment: ' + e.message);
+          setError('Failed to load assessment data: ' + e.message);
         } finally {
           setLoading(false);
         }
       };
-      getAssessment();
+      getAssessmentData();
     }
-  }, [params.id, answersForm]);
+  }, [params.id, collegeId, collegeCandidateId, answersForm]);
 
   useEffect(() => {
     if (!isStarted || isFinished || !assessment?.timeLimit) return;
@@ -255,13 +272,17 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
   }, [isStarted, isFinished, timeLeft, answersForm, onSubmit, assessment?.timeLimit]);
 
 
-  const handlePasscodeSubmit = (values: z.infer<typeof passcodeSchema>) => {
-    if (values.passcode === assessment?.passcode) {
+  const handleVerificationSubmit = (values: z.infer<typeof verificationSchema>) => {
+    if (
+      candidate &&
+      values.name.trim().toLowerCase() === candidate.name.toLowerCase() &&
+      values.email.trim().toLowerCase() === candidate.email.toLowerCase()
+    ) {
       setIsAuthenticated(true);
     } else {
-      passcodeForm.setError('passcode', {
+      verificationForm.setError('email', {
         type: 'manual',
-        message: 'Invalid passcode.',
+        message: 'The name or email you entered does not match our records for this assessment link.',
       });
     }
   };
@@ -316,20 +337,33 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
             <Card className="w-full max-w-sm">
                 <CardHeader>
                     <Image height={50} width={200} src={mmLogo} alt="MegaMind Careers Logo" className="mx-auto mb-4" />
-                    <CardTitle className="flex items-center gap-2 justify-center"><Lock /> Secure Assessment</CardTitle>
-                    <CardDescription className="text-center">{assessment?.title}</CardDescription>
+                    <CardTitle className="flex items-center gap-2 justify-center"><UserCheck /> Verify Your Identity</CardTitle>
+                    <CardDescription className="text-center pt-2">Please enter your name and email to access the "{assessment?.title}" assessment.</CardDescription>
                 </CardHeader>
-                <Form {...passcodeForm}>
-                    <form onSubmit={passcodeForm.handleSubmit(handlePasscodeSubmit)}>
+                <Form {...verificationForm}>
+                    <form onSubmit={verificationForm.handleSubmit(handleVerificationSubmit)}>
                         <CardContent className="space-y-4">
                              <FormField
-                                control={passcodeForm.control}
-                                name="passcode"
+                                control={verificationForm.control}
+                                name="name"
                                 render={({ field }) => (
                                     <FormItem>
-                                    <FormLabel>Enter Passcode</FormLabel>
+                                    <FormLabel>Full Name</FormLabel>
                                     <FormControl>
-                                        <Input type="password" {...field} />
+                                        <Input placeholder="Your full name" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                                />
+                             <FormField
+                                control={verificationForm.control}
+                                name="email"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Email Address</FormLabel>
+                                    <FormControl>
+                                        <Input type="email" placeholder="your.email@example.com" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                     </FormItem>
@@ -338,7 +372,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                         </CardContent>
                         <CardFooter>
                             <Button type="submit" className="w-full">
-                                Unlock Assessment
+                                Continue
                             </Button>
                         </CardFooter>
                     </form>
