@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -17,6 +16,7 @@ import {
   Menu,
   FileText,
   ClipboardList,
+  Building2,
 } from 'lucide-react';
 import mmLogo from '../../../.idx/mmLogo.png';
 import { usePathname } from 'next/navigation';
@@ -35,6 +35,7 @@ const navItems = [
   { href: '/dashboard', icon: LayoutGrid, label: 'Overview' },
   { href: '/dashboard/jobs', icon: FileText, label: 'Jobs' },
   { href: '/dashboard/assessments', icon: ClipboardList, label: 'Assessments' },
+  { href: '/dashboard/colleges', icon: Building2, label: 'Colleges' },
   { href: '/dashboard/all', icon: Users, label: 'All Candidates' },
   { href: '/dashboard/full-time', icon: Briefcase, label: 'Full-time' },
   { href: '/dashboard/intern', icon: GraduationCap, label: 'Interns' },
@@ -72,7 +73,7 @@ export function Header({ onToggleSidebar }: HeaderProps) {
                 key={item.href}
                 href={item.href}
                 className={`flex items-center gap-4 px-2.5 ${
-                  pathname === item.href
+                  pathname.startsWith(item.href)
                     ? 'text-foreground'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}

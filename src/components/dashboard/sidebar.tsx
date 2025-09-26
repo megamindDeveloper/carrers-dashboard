@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -17,6 +16,7 @@ import {
   LayoutGrid,
   FileText,
   ClipboardList,
+  Building2,
 } from 'lucide-react';
 import mmLogoOpen from '../../../.idx/mmLogo.png';
 import mmLogoclose from '../../../public/icon.png';
@@ -30,6 +30,7 @@ const navItems = [
   { href: '/dashboard', icon: LayoutGrid, label: 'Overview' },
   { href: '/dashboard/jobs', icon: FileText, label: 'Jobs' },
   { href: '/dashboard/assessments', icon: ClipboardList, label: 'Assessments' },
+  { href: '/dashboard/colleges', icon: Building2, label: 'Colleges'},
   { href: '/dashboard/all', icon: Users, label: 'All Candidates' },
   { href: '/dashboard/full-time', icon: Briefcase, label: 'Full-time' },
   { href: '/dashboard/intern', icon: GraduationCap, label: 'Interns' },
@@ -73,7 +74,7 @@ export function Sidebar({ isSidebarOpen }: SidebarProps) {
                 href={item.href}
                 className={cn(
                   'flex w-full items-center gap-3 rounded-lg px-3 py-2 transition-all hover:text-primary',
-                  pathname === item.href
+                  pathname.startsWith(item.href)
                     ? 'bg-accent text-accent-foreground'
                     : 'text-muted-foreground'
                 )}
@@ -88,7 +89,7 @@ export function Sidebar({ isSidebarOpen }: SidebarProps) {
                     href={item.href}
                     className={cn(
                       'flex h-9 w-9 items-center justify-center rounded-lg transition-colors md:h-8 md:w-8',
-                      pathname === item.href
+                      pathname.startsWith(item.href)
                         ? 'bg-accent text-accent-foreground'
                         : 'text-muted-foreground hover:text-foreground'
                     )}
