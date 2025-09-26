@@ -1,5 +1,21 @@
 // File: lib/mail.ts
-import nodemailer from 'nodemailer';
+
+import { SendMailClient } from "zeptomail";
+
+// 1. Get credentials
+const url = "https://api.zeptomail.in/";
+// 👇 FIX: Load the token securely from the environment variable
+const token = process.env.ZEPTOMAIL_TOKEN;
+console.log("ZEPTOMAIL TOKEN LOADED:", token);
+
+if (!token) {
+  throw new Error("ZeptoMail token is not defined in environment variables. The application cannot send emails.");
+}
+
+// 2. Initialize the client ONCE and reuse it
+const client = new SendMailClient({ url, token });
+
+// ... (the rest of your sendEmail function does not need to change) ...
 
 export interface SendEmailOptions {
   to: {
@@ -11,47 +27,33 @@ export interface SendEmailOptions {
 }
 
 export async function sendEmail({ to, subject, htmlBody }: SendEmailOptions) {
-  // 1. Get credentials from environment variables
-  const smtpHost = process.env.SMTP_HOST;
-  const smtpPort = process.env.SMTP_PORT;
-  const smtpUser = process.env.SMTP_USER;
-  const smtpPass = process.env.SMTP_PASS;
-  const smtpFrom = process.env.SMTP_FROM;
-
-  if (!smtpHost || !smtpPort || !smtpUser || !smtpPass || !smtpFrom) {
-    const errorMessage = "Email environment variables (SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM) are not configured. Cannot send email.";
-    console.error(errorMessage);
-    // Throw an error to be caught by the calling API route
-    throw new Error(errorMessage);
-  }
-
-  // 2. Create a transporter object
-  const transport = nodemailer.createTransport({
-    host: smtpHost,
-    port: parseInt(smtpPort, 10),
-    secure: parseInt(smtpPort, 10) === 465, // true for 465, false for other ports
-    auth: {
-      user: smtpUser,
-      pass: smtpPass,
-    },
-  });
-
-  // 3. Define mail options
-  const mailOptions = {
-    from: `"MegaMind Careers" <${smtpFrom}>`,
-    to: to.email,
-    subject: subject,
-    html: htmlBody,
-  };
-
-  // 4. Send the email
   try {
-    await transport.sendMail(mailOptions);
-    console.log(`Email sent successfully to ${to.email}`);
-    return { success: true };
+    var nodemailer = require('nodemailer');
+    var transport = nodemailer.createTransport({
+      host: "smtp.zeptomail.in",
+      port: 587,
+      auth: {
+        user: "emailapikey",
+        pass: "PHtE6r1bS+DjjmErpBkH5KC7HpOgMN59/b9jfVMUtIdBX/BRH01Qo48ulzS/+B54VKZGRvCcwYxtuOnKte2BJGy5YGYaWGqyqK3sx/VYSPOZsbq6x00btVQccELdVIDrdtNq1yzVudnZNA=="
+      }
+    });
+
+    var mailOptions = {
+      from: '<no-reply@megamind.studio>',
+    
+      to: to.email,
+      subject: subject,
+      html:htmlBody,
+    };
+
+    transport.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        return console.log(error);
+      }
+      console.log('Successfully sent');
+    });
   } catch (error) {
-    console.error(`Error sending email to ${to.email}:`, error);
-    // Throw a generic error to be caught by the API route
-    throw new Error('An error occurred while sending the email.');
+    console.error("Error sending email:", error);
+    return { success: false, error: error };
   }
 }
