@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -110,6 +111,7 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
     try {
        const assessmentData = {
         ...data,
+        timeLimit: data.timeLimit || null,
         questions: data.questions.map(q => {
           const newQ: any = { ...q };
           if (q.type === 'multiple-choice') {
