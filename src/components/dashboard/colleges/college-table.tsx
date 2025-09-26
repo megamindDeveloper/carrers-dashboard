@@ -148,7 +148,7 @@ export function CollegeTable() {
     }
   };
 
-  const columns = useMemo(() => getColumns({ onDelete: handleDelete }), []);
+  const columns = useMemo(() => getColumns({ onEdit: handleRowClick, onDelete: handleDelete }), [handleDelete]);
 
   if (loading) return <p className="p-4">Loading colleges...</p>;
 

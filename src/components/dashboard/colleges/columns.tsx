@@ -21,11 +21,12 @@ import { format } from 'date-fns';
 import Link from 'next/link';
 
 type GetColumnsProps = {
+  onEdit: (college: College) => void;
   onDelete: (collegeId: string, name: string) => void;
 };
 
 
-export const getColumns = ({ onDelete }: GetColumnsProps): ColumnDef<College>[] => {
+export const getColumns = ({ onEdit, onDelete }: GetColumnsProps): ColumnDef<College>[] => {
   const columns: ColumnDef<College>[] = [
     {
       accessorKey: 'name',
@@ -119,13 +120,7 @@ export const getColumns = ({ onDelete }: GetColumnsProps): ColumnDef<College>[] 
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => {
-                const table = row.table;
-                const onRowClick = table.options.meta?.onRowClick;
-                 if (onRowClick) {
-                    (onRowClick as (row: any) => void)(row);
-                }
-            }}>
+            <DropdownMenuItem onClick={() => onEdit(college)}>
                 View/Edit Details
             </DropdownMenuItem>
              <DropdownMenuItem asChild>
