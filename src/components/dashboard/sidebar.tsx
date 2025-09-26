@@ -67,14 +67,15 @@ export function Sidebar({ isSidebarOpen }: SidebarProps) {
 </Link>
 
         <TooltipProvider>
-          {navItems.map(item =>
-            isSidebarOpen ? (
+          {navItems.map(item => {
+            const isActive = item.href === '/dashboard' ? pathname === item.href : pathname.startsWith(item.href);
+            return isSidebarOpen ? (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
                   'flex w-full items-center gap-3 rounded-lg px-3 py-2 transition-all hover:text-primary',
-                  pathname.startsWith(item.href)
+                  isActive
                     ? 'bg-accent text-accent-foreground'
                     : 'text-muted-foreground'
                 )}
@@ -89,7 +90,7 @@ export function Sidebar({ isSidebarOpen }: SidebarProps) {
                     href={item.href}
                     className={cn(
                       'flex h-9 w-9 items-center justify-center rounded-lg transition-colors md:h-8 md:w-8',
-                      pathname.startsWith(item.href)
+                      isActive
                         ? 'bg-accent text-accent-foreground'
                         : 'text-muted-foreground hover:text-foreground'
                     )}
@@ -101,7 +102,7 @@ export function Sidebar({ isSidebarOpen }: SidebarProps) {
                 <TooltipContent side="right">{item.label}</TooltipContent>
               </Tooltip>
             )
-          )}
+          })}
         </TooltipProvider>
       </nav>
     </aside>
