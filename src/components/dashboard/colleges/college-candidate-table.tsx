@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
 import Papa from 'papaparse';
@@ -20,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { SubmissionDetailsModal } from '../submissions/submission-details-modal';
+import { SendAssessmentDialog } from './send-assessment-dialog';
 
 
 interface CollegeCandidateTableProps {
@@ -34,6 +36,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
   const [isUploading, setIsUploading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<AssessmentSubmission | null>(null);
+  const [isSendAssessmentDialogOpen, setSendAssessmentDialogOpen] = useState(false);
   const { toast } = useToast();
   
   useEffect(() => {
@@ -74,7 +77,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
             }
         }
 
-        setData(candidatesWithSubmissions);
+        setData(candidatesWithSubmissions.sort((a, b) => (b.importedAt?.toDate() ?? 0) - (a.importedAt?.toDate() ?? 0)));
         setLoading(false);
       },
       error => {
@@ -193,17 +196,22 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
     });
   }
 
-  const handleSendAssessment = async () => {
+  const handleOpenSendDialog = () => {
     if (!selectedAssessmentId) {
         toast({ variant: 'destructive', title: 'No Assessment Selected', description: 'Please select an assessment to send.' });
         return;
     }
     const candidatesToSend = data.filter(c => !c.submission);
     if (candidatesToSend.length === 0) {
-        toast({ variant: 'destructive', title: 'No Candidates', description: 'There are no candidates who have not yet submitted an assessment.' });
+        toast({ title: 'All Candidates Have Submitted', description: 'There are no pending submissions for this assessment.' });
         return;
     }
+    setSendAssessmentDialogOpen(true);
+  }
 
+  const handleSendAssessment = async ({ subject, htmlBody }: { subject: string, htmlBody: string }) => {
+    
+    const candidatesToSend = data.filter(c => !c.submission);
     const selectedAssessment = assessments.find(a => a.id === selectedAssessmentId);
     if (!selectedAssessment) {
         toast({ variant: 'destructive', title: 'Error', description: 'Selected assessment could not be found.' });
@@ -211,6 +219,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
     }
 
     setIsSending(true);
+    setSendAssessmentDialogOpen(false);
     toast({ title: 'Sending Emails...', description: `Preparing to send '${selectedAssessment.title}' to ${candidatesToSend.length} candidates.` });
 
     try {
@@ -221,8 +230,10 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
                 candidates: candidatesToSend.map(c => ({ id: c.id, name: c.name, email: c.email })),
                 assessmentId: selectedAssessment.id,
                 assessmentTitle: selectedAssessment.title,
-                passcode: selectedAssessment.passcode || '',
+                passcode: selectedAssessment.passcode || null,
                 collegeId: collegeId,
+                subject,
+                htmlBody,
             }),
         });
 
@@ -243,6 +254,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
 
 
   const columns = useMemo(() => getCandidateColumns({ onViewSubmission: (sub) => setSelectedSubmission(sub) }), []);
+  const candidatesToReceive = useMemo(() => data.filter(c => !c.submission).length, [data]);
 
   if (loading) return <p className="p-4">Loading candidates...</p>;
 
@@ -299,13 +311,9 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
                             )}
                           </SelectContent>
                         </Select>
-                        <Button onClick={handleSendAssessment} disabled={isSending || !selectedAssessmentId || data.every(c => c.submission)}>
-                            {isSending ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                                <Send className="mr-2 h-4 w-4" />
-                            )}
-                            {isSending ? 'Sending...' : `Send to ${data.filter(c => !c.submission).length} Candidates`}
+                        <Button onClick={handleOpenSendDialog} disabled={isSending || !selectedAssessmentId || candidatesToReceive === 0}>
+                            <Send className="mr-2 h-4 w-4" />
+                            {`Send to ${candidatesToReceive} Candidates`}
                         </Button>
                     </CardContent>
                 </Card>
@@ -318,8 +326,13 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
         onClose={() => setSelectedSubmission(null)}
         submission={selectedSubmission}
       />
+      <SendAssessmentDialog
+        isOpen={isSendAssessmentDialogOpen}
+        onClose={() => setSendAssessmentDialogOpen(false)}
+        onSend={handleSendAssessment}
+        isSending={isSending}
+        assessment={assessments.find(a => a.id === selectedAssessmentId)}
+      />
     </>
   );
 }
-
-    

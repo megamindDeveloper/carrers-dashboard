@@ -1,28 +1,23 @@
 
 import { NextResponse } from "next/server";
-import path from "path";
-import fs from "fs/promises";
 import { sendEmail } from "@/lib/mail";
 import type { CollegeCandidate } from "@/lib/types";
 
 export async function POST(req: Request) {
   try {
-    const { candidates, assessmentId, assessmentTitle, passcode, collegeId } = await req.json();
+    const { candidates, assessmentId, assessmentTitle, passcode, collegeId, subject, htmlBody } = await req.json();
 
-    if (!candidates || !Array.isArray(candidates) || candidates.length === 0 || !assessmentId || !assessmentTitle || !collegeId) {
+    if (!candidates || !Array.isArray(candidates) || candidates.length === 0 || !assessmentId || !assessmentTitle || !collegeId || !subject || !htmlBody) {
       return NextResponse.json(
         { success: false, message: "Invalid request body. Missing required fields." },
         { status: 400 }
       );
     }
     
-    // Path to your template file
-    const templatePath = path.join(process.cwd(), "src", "email-templates", "assessment-invite-mail.html");
-    
-    // Read the template
-    let template = await fs.readFile(templatePath, "utf8");
+    // Use the htmlBody from the request instead of reading a file
+    let template = htmlBody;
 
-    // Pass collegeId as a query param in the assessment link
+    // Pass collegeId and candidateId as query params in the assessment link
     const assessmentLink = `${process.env.NEXT_PUBLIC_BASE_URL}/assessment/${assessmentId}?collegeId=${collegeId}`;
 
 
@@ -34,9 +29,9 @@ export async function POST(req: Request) {
 
     // Conditionally show passcode section
     if (passcode) {
-        template = template.replace('<!-- IF passcode -->', '').replace('<!-- ENDIF passcode -->', '');
+        template = template.replace(/<!-- IF passcode -->/g, '').replace(/<!-- ENDIF passcode -->/g, '');
     } else {
-        const passcodeSectionRegex = /<!-- IF passcode -->(.|\n)*?<!-- ENDIF passcode -->/;
+        const passcodeSectionRegex = /<!-- IF passcode -->(.|\n)*?<!-- ENDIF passcode -->/g;
         template = template.replace(passcodeSectionRegex, '');
     }
 
@@ -53,7 +48,7 @@ export async function POST(req: Request) {
 
         await sendEmail({
             to: { email: candidate.email, name: candidate.name },
-            subject: `Invitation to complete assessment for ${assessmentTitle}`,
+            subject: subject,
             htmlBody: personalizedTemplate,
         });
         sentCount++;
