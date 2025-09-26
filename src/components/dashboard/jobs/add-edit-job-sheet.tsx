@@ -257,7 +257,7 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
                         >
                           lucide.dev/icons
                         </a>{' '}
-                        and pick an icon name that matches the job, or connect with a designer/developer.
+                        and pick an icon name.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
