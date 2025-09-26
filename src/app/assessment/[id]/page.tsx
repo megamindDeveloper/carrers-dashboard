@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { doc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
 import { db, storage } from '@/app/utils/firebase/firebaseConfig';
@@ -36,7 +36,7 @@ const answersSchema = z.object({
     answers: z.array(z.object({
         questionId: z.string(),
         questionText: z.string(),
-        answer: z.string(),
+        answer: z.string().optional(),
     })),
 });
 
@@ -219,6 +219,58 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     }
   }, [params.id, answersForm]);
 
+  const onSubmit = useCallback(async (data: AnswersFormValues) => {
+    if (!assessment) return;
+
+    const timeTaken = startTimeRef.current ? Math.floor((Date.now() - startTimeRef.current) / 1000) : 0;
+
+    try {
+      // Check for existing submission with the same email
+      if (data.candidateEmail) {
+        const submissionsRef = collection(db, 'assessmentSubmissions');
+        const q = query(submissionsRef, 
+          where('assessmentId', '==', assessment.id), 
+          where('candidateEmail', '==', data.candidateEmail)
+        );
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+          toast({
+            variant: 'destructive',
+            title: 'Submission Failed',
+            description: 'You have already submitted this assessment with this email address.',
+          });
+          return;
+        }
+      }
+
+      await addDoc(collection(db, 'assessmentSubmissions'), {
+        assessmentId: assessment.id,
+        assessmentTitle: assessment.title,
+        candidateName: data.candidateName,
+        candidateEmail: data.candidateEmail,
+        candidateContact: data.candidateContact,
+        candidateResumeUrl: data.candidateResumeUrl,
+        answers: data.answers,
+        submittedAt: serverTimestamp(),
+        timeTaken,
+        collegeId: collegeId || null,
+        collegeCandidateId: collegeCandidateId || null,
+      });
+      setIsFinished(true);
+      toast({
+        title: 'Submission Successful!',
+        description: 'Your answers have been recorded.',
+      });
+    } catch (e: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Submission Failed',
+        description: e.message || 'An unexpected error occurred.',
+      });
+    }
+  }, [assessment, collegeId, collegeCandidateId, toast]);
+
   useEffect(() => {
     if (!isStarted || isFinished) return;
 
@@ -251,56 +303,6 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
       setIsStarted(true);
       startTimeRef.current = Date.now();
   }
-
-  const onSubmit = async (data: AnswersFormValues) => {
-    if (!assessment) return;
-
-    const timeTaken = startTimeRef.current ? Math.floor((Date.now() - startTimeRef.current) / 1000) : 0;
-
-    try {
-      // Check for existing submission with the same email
-      const submissionsRef = collection(db, 'assessmentSubmissions');
-      const q = query(submissionsRef, 
-        where('assessmentId', '==', assessment.id), 
-        where('candidateEmail', '==', data.candidateEmail)
-      );
-      const querySnapshot = await getDocs(q);
-      
-      if (!querySnapshot.empty && data.candidateEmail) {
-        toast({
-          variant: 'destructive',
-          title: 'Submission Failed',
-          description: 'You have already submitted this assessment with this email address.',
-        });
-        return;
-      }
-
-      await addDoc(collection(db, 'assessmentSubmissions'), {
-        assessmentId: assessment.id,
-        assessmentTitle: assessment.title,
-        candidateName: data.candidateName,
-        candidateEmail: data.candidateEmail,
-        candidateContact: data.candidateContact,
-        candidateResumeUrl: data.candidateResumeUrl,
-        answers: data.answers,
-        submittedAt: serverTimestamp(),
-        timeTaken,
-        collegeId: collegeId || null,
-        collegeCandidateId: collegeCandidateId || null,
-      });
-      setIsFinished(true);
-      toast({
-        title: 'Submission Successful!',
-        description: 'Your answers have been recorded.',
-      });
-    } catch (e: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Submission Failed',
-        description: e.message || 'An unexpected error occurred.',
-      });
-    }
-  };
   
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -522,5 +524,3 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
-
-    
