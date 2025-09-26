@@ -15,11 +15,11 @@ export async function POST(req: Request) {
 
     // Replace placeholders with actual values
     template = template
-      .replace(/&lt;&lt;Candidate Name&gt;&gt;/g, fullName)
-      .replace(/&lt;&lt;Position&gt;&gt;/g, position)
-      .replace(/&lt;&lt;Reason&gt;&gt;/g, reason);
+      .replace(/<<Candidate Name>>/g, fullName)
+      .replace(/<<Position>>/g, position)
+      .replace(/<<Reason>>/g, reason);
 
-    // Send email using zeptomail
+    // Send email using the updated mail library
     const emailResult = await sendEmail({
         to: { email, name: fullName },
         subject: "Update on your application with MegaMind Careers",
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     if (emailResult.success) {
         return NextResponse.json({ success: true, message: "Email sent successfully" });
     } else {
-        // If there was a message from sendEmail (like token not configured), use it.
+        // If there was a message from sendEmail, use it.
         const message = (emailResult as any).message || "Failed to send email";
         console.error("Error sending email:", (emailResult as any).error || message);
         return NextResponse.json({ success: false, message }, { status: 500 });
