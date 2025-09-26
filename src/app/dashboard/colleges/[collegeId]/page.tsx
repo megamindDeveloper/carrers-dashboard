@@ -12,10 +12,9 @@ import type { College } from '@/lib/types';
 import { CollegeCandidateTable } from '@/components/dashboard/colleges/college-candidate-table';
 import { Button } from '@/components/ui/button';
 
-export default function CollegeDetailPage({ params }: { params: { collegeId: string } }) {
+export default function CollegeDetailPage({ params: { collegeId } }: { params: { collegeId: string } }) {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const { collegeId } = params;
 
   const [college, setCollege] = useState<College | null>(null);
   const [collegeLoading, setCollegeLoading] = useState(true);
