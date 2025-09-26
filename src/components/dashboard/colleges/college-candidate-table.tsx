@@ -1,11 +1,11 @@
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
 import Papa from 'papaparse';
-import type { Assessment, CollegeCandidate } from '@/lib/types';
+import type { Assessment, CollegeCandidate, AssessmentSubmission } from '@/lib/types';
 import { DataTable } from '@/components/dashboard/data-table';
 import { getCandidateColumns } from './candidate-columns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { collection, onSnapshot, writeBatch, serverTimestamp, doc, getDocs, query } from 'firebase/firestore';
+import { collection, onSnapshot, writeBatch, serverTimestamp, doc, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/app/utils/firebase/firebaseConfig';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { SubmissionDetailsModal } from '../submissions/submission-details-modal';
 
 
 interface CollegeCandidateTableProps {
@@ -33,24 +33,38 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
   const [loading, setLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [selectedSubmission, setSelectedSubmission] = useState<AssessmentSubmission | null>(null);
   const { toast } = useToast();
   
   useEffect(() => {
     if (!collegeId) return;
 
-    const candidatesQuery = collection(db, `colleges/${collegeId}/candidates`);
+    const candidatesQuery = query(collection(db, `colleges/${collegeId}/candidates`));
     const unsubCandidates = onSnapshot(
       candidatesQuery,
-      snapshot => {
-        const candidates = snapshot.docs.map(d => ({
+      async (candidatesSnapshot) => {
+        const candidates = candidatesSnapshot.docs.map(d => ({
           id: d.id,
           ...(d.data() as Omit<CollegeCandidate, 'id'>),
         }));
-        setData(candidates);
+
+        // Fetch all submissions related to this college
+        const submissionsQuery = query(collection(db, 'assessmentSubmissions'), where('collegeId', '==', collegeId));
+        const submissionsSnapshot = await getDocs(submissionsQuery);
+        const submissions = submissionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AssessmentSubmission));
+        const submissionsMap = new Map(submissions.map(s => [s.collegeCandidateId, s]));
+
+        // Merge submission data into candidates
+        const candidatesWithSubmissions = candidates.map(candidate => ({
+            ...candidate,
+            submission: submissionsMap.get(candidate.id) || null
+        }));
+
+        setData(candidatesWithSubmissions);
         setLoading(false);
       },
       error => {
-        console.error('onSnapshot error:', error);
+        console.error('onSnapshot error fetching candidates:', error);
         setLoading(false);
          toast({
             variant: 'destructive',
@@ -170,8 +184,9 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
         toast({ variant: 'destructive', title: 'No Assessment Selected', description: 'Please select an assessment to send.' });
         return;
     }
-    if (data.length === 0) {
-        toast({ variant: 'destructive', title: 'No Candidates', description: 'There are no candidates to send the assessment to.' });
+    const candidatesToSend = data.filter(c => !c.submission);
+    if (candidatesToSend.length === 0) {
+        toast({ variant: 'destructive', title: 'No Candidates', description: 'There are no candidates who have not yet submitted an assessment.' });
         return;
     }
 
@@ -182,24 +197,25 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
     }
 
     setIsSending(true);
-    toast({ title: 'Sending Emails...', description: `Preparing to send '${selectedAssessment.title}' to ${data.length} candidates.` });
+    toast({ title: 'Sending Emails...', description: `Preparing to send '${selectedAssessment.title}' to ${candidatesToSend.length} candidates.` });
 
     try {
         const response = await fetch('/api/send-assessment', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                candidates: data,
+                candidates: candidatesToSend,
                 assessmentId: selectedAssessment.id,
                 assessmentTitle: selectedAssessment.title,
                 passcode: selectedAssessment.passcode,
+                collegeId: collegeId,
             }),
         });
 
         const result = await response.json();
 
-        if (response.ok) {
-            toast({ title: 'Emails Sent!', description: result.message });
+        if (response.ok || response.status === 207) {
+            toast({ title: result.success ? 'Emails Sent!' : 'Partial Success', description: result.message });
         } else {
             throw new Error(result.message || 'An unknown error occurred.');
         }
@@ -212,7 +228,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
   }
 
 
-  const columns = useMemo(() => getCandidateColumns(), []);
+  const columns = useMemo(() => getCandidateColumns({ onViewSubmission: (sub) => setSelectedSubmission(sub) }), []);
 
   if (loading) return <p className="p-4">Loading candidates...</p>;
 
@@ -250,7 +266,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
                  <Card className="mb-6 bg-muted/40">
                     <CardHeader>
                         <CardTitle>Send Assessment</CardTitle>
-                        <CardDescription>Select an assessment and send it to all imported candidates below.</CardDescription>
+                        <CardDescription>Select an assessment and send it to all candidates who haven't submitted yet.</CardDescription>
                     </CardHeader>
                     <CardContent className="flex flex-col sm:flex-row gap-4">
                        <Select value={selectedAssessmentId} onValueChange={setSelectedAssessmentId}>
@@ -269,13 +285,13 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
                             )}
                           </SelectContent>
                         </Select>
-                        <Button onClick={handleSendAssessment} disabled={isSending || !selectedAssessmentId}>
+                        <Button onClick={handleSendAssessment} disabled={isSending || !selectedAssessmentId || data.every(c => c.submission)}>
                             {isSending ? (
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                             ) : (
                                 <Send className="mr-2 h-4 w-4" />
                             )}
-                            {isSending ? 'Sending...' : `Send to ${data.length} Candidates`}
+                            {isSending ? 'Sending...' : `Send to ${data.filter(c => !c.submission).length} Candidates`}
                         </Button>
                     </CardContent>
                 </Card>
@@ -283,6 +299,11 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
           <DataTable columns={columns} data={data} onRowClick={() => {}} />
         </CardContent>
       </Card>
+      <SubmissionDetailsModal
+        isOpen={!!selectedSubmission}
+        onClose={() => setSelectedSubmission(null)}
+        submission={selectedSubmission}
+      />
     </>
   );
 }

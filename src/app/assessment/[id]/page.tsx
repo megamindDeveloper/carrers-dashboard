@@ -2,6 +2,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { doc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
 import { db, storage } from '@/app/utils/firebase/firebaseConfig';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
@@ -161,6 +162,10 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
 
   const { toast } = useToast();
   const startTimeRef = useRef<number | null>(null);
+  const searchParams = useSearchParams();
+  const collegeId = searchParams.get('collegeId');
+  const collegeCandidateId = searchParams.get('candidateId');
+
 
   const passcodeForm = useForm<z.infer<typeof passcodeSchema>>({
     resolver: zodResolver(passcodeSchema),
@@ -228,7 +233,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isStarted, isFinished, timeLeft, answersForm]);
+  }, [isStarted, isFinished, timeLeft, answersForm, onSubmit]);
 
 
   const handlePasscodeSubmit = (values: z.infer<typeof passcodeSchema>) => {
@@ -280,6 +285,8 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
         answers: data.answers,
         submittedAt: serverTimestamp(),
         timeTaken,
+        collegeId: collegeId || null,
+        collegeCandidateId: collegeCandidateId || null,
       });
       setIsFinished(true);
       toast({
@@ -515,7 +522,3 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
-
-    
-
-    

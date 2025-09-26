@@ -122,6 +122,8 @@ export type AssessmentSubmission = {
   }[];
   submittedAt: any;
   timeTaken: number; // in seconds
+  collegeId?: string | null;
+  collegeCandidateId?: string | null;
 };
 
 // College Collaboration Types
@@ -139,6 +141,8 @@ export type CollegeCandidate = {
     id: string;
     name: string;
     email: string;
+    importedAt: any;
+    submission: AssessmentSubmission | null;
 };
 
 export const CollegeSchema = z.object({

@@ -1,15 +1,17 @@
 'use client';
 
 import type { ColumnDef } from '@tanstack/react-table';
-import type { CollegeCandidate } from '@/lib/types';
+import type { CollegeCandidate, AssessmentSubmission } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
   ArrowUpDown,
+  ClipboardList,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
 
 
-export const getCandidateColumns = (): ColumnDef<CollegeCandidate>[] => {
+export const getCandidateColumns = ({ onViewSubmission }: { onViewSubmission: (submission: AssessmentSubmission) => void }): ColumnDef<CollegeCandidate>[] => {
   const columns: ColumnDef<CollegeCandidate>[] = [
     {
       accessorKey: 'name',
@@ -33,6 +35,24 @@ export const getCandidateColumns = (): ColumnDef<CollegeCandidate>[] => {
           </div>
         );
       },
+    },
+    {
+      accessorKey: 'submissionStatus',
+      header: 'Submission Status',
+      cell: ({ row }) => {
+          const submission = row.original.submission;
+          if (submission) {
+              return (
+                  <div className="flex flex-col">
+                      <Badge variant="default" className="bg-green-500 hover:bg-green-600 mb-1 w-fit">Submitted</Badge>
+                      <span className="text-xs text-muted-foreground">
+                          {format(submission.submittedAt.toDate(), 'MMM d, yyyy')}
+                      </span>
+                  </div>
+              );
+          }
+          return <Badge variant="secondary">Not Submitted</Badge>;
+      }
     },
     {
       accessorKey: 'importedAt',
@@ -59,6 +79,20 @@ export const getCandidateColumns = (): ColumnDef<CollegeCandidate>[] => {
         }
       },
     },
+    {
+        id: 'actions',
+        cell: ({ row }) => {
+            const submission = row.original.submission;
+            if (!submission) return null;
+
+            return (
+                <Button variant="outline" size="sm" onClick={() => onViewSubmission(submission)}>
+                    <ClipboardList className="mr-2 h-4 w-4" />
+                    View Submission
+                </Button>
+            );
+        }
+    }
   ];
 
   return columns;

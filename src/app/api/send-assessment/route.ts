@@ -7,9 +7,9 @@ import type { CollegeCandidate } from "@/lib/types";
 
 export async function POST(req: Request) {
   try {
-    const { candidates, assessmentId, assessmentTitle, passcode } = await req.json();
+    const { candidates, assessmentId, assessmentTitle, passcode, collegeId } = await req.json();
 
-    if (!candidates || !Array.isArray(candidates) || candidates.length === 0 || !assessmentId || !assessmentTitle || !passcode) {
+    if (!candidates || !Array.isArray(candidates) || candidates.length === 0 || !assessmentId || !assessmentTitle || !passcode || !collegeId) {
       return NextResponse.json(
         { success: false, message: "Invalid request body. Missing required fields." },
         { status: 400 }
@@ -21,7 +21,9 @@ export async function POST(req: Request) {
     
     // Read the template
     let template = await fs.readFile(templatePath, "utf8");
-    const assessmentLink = `${process.env.NEXT_PUBLIC_BASE_URL}/assessment/${assessmentId}`;
+
+    // Pass collegeId as a query param in the assessment link
+    const assessmentLink = `${process.env.NEXT_PUBLIC_BASE_URL}/assessment/${assessmentId}?collegeId=${collegeId}`;
 
 
     // Replace template-wide placeholders
@@ -35,7 +37,8 @@ export async function POST(req: Request) {
 
     for (const candidate of candidates) {
         // Replace candidate-specific placeholders
-        let personalizedTemplate = template.replace(/<<Candidate Name>>/g, candidate.name);
+        let personalizedTemplate = template.replace(/<<Candidate Name>>/g, candidate.name)
+                                           .replace(/<<Candidate ID>>/g, candidate.id); // Add candidate ID to the template
 
         const emailResult = await sendEmail({
             to: { email: candidate.email, name: candidate.name },
