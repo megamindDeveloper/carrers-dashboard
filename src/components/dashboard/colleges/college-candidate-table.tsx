@@ -221,7 +221,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
                 candidates: candidatesToSend.map(c => ({ id: c.id, name: c.name, email: c.email })),
                 assessmentId: selectedAssessment.id,
                 assessmentTitle: selectedAssessment.title,
-                passcode: selectedAssessment.passcode,
+                passcode: selectedAssessment.passcode || '',
                 collegeId: collegeId,
             }),
         });

@@ -9,7 +9,7 @@ export async function POST(req: Request) {
   try {
     const { candidates, assessmentId, assessmentTitle, passcode, collegeId } = await req.json();
 
-    if (!candidates || !Array.isArray(candidates) || candidates.length === 0 || !assessmentId || !assessmentTitle || !passcode || !collegeId) {
+    if (!candidates || !Array.isArray(candidates) || candidates.length === 0 || !assessmentId || !assessmentTitle || !collegeId) {
       return NextResponse.json(
         { success: false, message: "Invalid request body. Missing required fields." },
         { status: 400 }
@@ -30,7 +30,16 @@ export async function POST(req: Request) {
     template = template
       .replace(/<<Assessment Name>>/g, assessmentTitle)
       .replace(/<<Assessment Link>>/g, assessmentLink)
-      .replace(/<<Passcode>>/g, passcode);
+      .replace(/<<Passcode>>/g, passcode || 'N/A');
+
+    // Conditionally show passcode section
+    if (passcode) {
+        template = template.replace('<!-- IF passcode -->', '').replace('<!-- ENDIF passcode -->', '');
+    } else {
+        const passcodeSectionRegex = /<!-- IF passcode -->(.|\n)*?<!-- ENDIF passcode -->/;
+        template = template.replace(passcodeSectionRegex, '');
+    }
+
 
     let sentCount = 0;
     let failedCount = 0;
@@ -40,7 +49,7 @@ export async function POST(req: Request) {
       try {
         // Replace candidate-specific placeholders
         let personalizedTemplate = template.replace(/<<Candidate Name>>/g, candidate.name)
-                                           .replace(/<<Candidate ID>>/g, candidate.id); // Add candidate ID to the template
+                                           .replace(/<<Candidate ID>>/g, candidate.id);
 
         await sendEmail({
             to: { email: candidate.email, name: candidate.name },
