@@ -28,24 +28,24 @@ type GetColumnsProps = {
 };
 
 
-const ShareActionItem = ({ assessmentId, passcode }: { assessmentId: string, passcode: string }) => {
+const ShareActionItem = ({ assessmentId, passcode }: { assessmentId: string, passcode?: string }) => {
     const { toast } = useToast();
     
     const handleShare = (e: React.MouseEvent) => {
         e.stopPropagation();
         const shareUrl = `${window.location.origin}/assessment/${assessmentId}`;
-        const textToCopy = `Assessment URL: ${shareUrl}\nPasscode: ${passcode}`;
+        const textToCopy = `Assessment URL: ${shareUrl}${passcode ? `\nPasscode: ${passcode}`: ''}`;
         navigator.clipboard.writeText(textToCopy);
         toast({
           title: 'Details Copied!',
-          description: "Shareable link and passcode copied to clipboard.",
+          description: `Shareable link ${passcode ? 'and passcode ' : ''}copied to clipboard.`,
         });
     }
 
     return (
         <DropdownMenuItem onClick={handleShare}>
             <Share2 className="mr-2 h-4 w-4" />
-            Copy Link & Passcode
+            Copy Link {passcode && '& Passcode'}
         </DropdownMenuItem>
     )
 }
@@ -92,15 +92,16 @@ export const getColumns = ({ onDelete }: GetColumnsProps): ColumnDef<Assessment>
     {
         accessorKey: 'timeLimit',
         header: 'Time Limit',
-        cell: ({ row }) => (
-            <div className="text-center">{row.original.timeLimit} mins</div>
-        ),
+        cell: ({ row }) => {
+            const timeLimit = row.original.timeLimit;
+            return <div className="text-center">{timeLimit ? `${timeLimit} mins` : 'N/A'}</div>;
+        },
     },
     {
         accessorKey: 'passcode',
         header: 'Passcode',
         cell: ({ row }) => (
-            <div className="font-mono">{row.original.passcode}</div>
+            <div className="font-mono">{row.original.passcode || 'N/A'}</div>
         ),
     },
     {

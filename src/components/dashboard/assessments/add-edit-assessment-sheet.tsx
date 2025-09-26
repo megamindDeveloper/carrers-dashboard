@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -57,8 +56,8 @@ const questionSchema = z.object({
 
 const assessmentSchema = z.object({
   title: z.string().min(1, 'Title is required'),
-  passcode: z.string().min(4, 'Passcode must be at least 4 characters long'),
-  timeLimit: z.coerce.number().min(1, 'Time limit must be at least 1 minute'),
+  passcode: z.string().optional(),
+  timeLimit: z.coerce.number().optional(),
   questions: z.array(questionSchema).min(1, "At least one question is required"),
 });
 
@@ -73,7 +72,7 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
     resolver: zodResolver(assessmentSchema),
     defaultValues: {
       title: '',
-      passcode: generatePasscode(),
+      passcode: '',
       timeLimit: 30,
       questions: [{ id: uuidv4(), text: '', type: 'text' }],
     },
@@ -89,6 +88,7 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
       if (assessment) {
         form.reset({
           ...assessment,
+          timeLimit: assessment.timeLimit || undefined,
           questions: assessment.questions.map(q => ({
               ...q,
               options: q.options?.map(opt => ({ value: opt }))
@@ -97,7 +97,7 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
       } else {
         form.reset({
           title: '',
-          passcode: generatePasscode(),
+          passcode: '',
           timeLimit: 30,
           questions: [{ id: uuidv4(), text: 'Please introduce yourself and walk us through your resume.', type: 'text' }],
         });
@@ -158,23 +158,23 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField control={form.control} name="passcode" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Passcode</FormLabel>
+                    <FormLabel>Passcode (Optional)</FormLabel>
                     <div className="flex items-center gap-2">
                         <FormControl><Input placeholder="e.g., FDEV24" {...field} /></FormControl>
                         <Button type="button" variant="outline" size="icon" onClick={handleGeneratePasscode}>
                             <Wand2 className="h-4 w-4" />
                         </Button>
                     </div>
-                    <FormDescription>Candidates must enter this to start.</FormDescription>
+                    <FormDescription>Leave blank for no passcode.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )} />
 
                 <FormField control={form.control} name="timeLimit" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Time Limit (minutes)</FormLabel>
+                    <FormLabel>Time Limit in Minutes (Optional)</FormLabel>
                     <FormControl><Input type="number" {...field} /></FormControl>
-                    <FormDescription>The total time for the assessment.</FormDescription>
+                    <FormDescription>Leave blank for no time limit.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )} />

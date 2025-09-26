@@ -100,8 +100,8 @@ export type AssessmentQuestion = {
 export type Assessment = {
   id: string;
   title: string;
-  passcode: string;
-  timeLimit: number; // in minutes
+  passcode?: string;
+  timeLimit?: number; // in minutes
   questions: AssessmentQuestion[];
   createdAt: any;
   submissionCount?: number;

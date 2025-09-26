@@ -210,7 +210,12 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
           if (docSnap.exists()) {
             const data = { id: docSnap.id, ...docSnap.data() } as Assessment;
             setAssessment(data);
-            setTimeLeft(data.timeLimit * 60);
+            if (data.timeLimit) {
+              setTimeLeft(data.timeLimit * 60);
+            }
+            if (!data.passcode) {
+                setIsAuthenticated(true);
+            }
 
             answersForm.reset({
                 answers: data.questions.map(q => ({
@@ -234,7 +239,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
   }, [params.id, answersForm]);
 
   useEffect(() => {
-    if (!isStarted || isFinished) return;
+    if (!isStarted || isFinished || !assessment?.timeLimit) return;
 
     if (timeLeft <= 0) {
       setIsFinished(true);
@@ -247,7 +252,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isStarted, isFinished, timeLeft, answersForm, onSubmit]);
+  }, [isStarted, isFinished, timeLeft, answersForm, onSubmit, assessment?.timeLimit]);
 
 
   const handlePasscodeSubmit = (values: z.infer<typeof passcodeSchema>) => {
@@ -353,13 +358,15 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                     <CardDescription>Ready to begin?</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <Alert>
-                        <Timer className="h-4 w-4" />
-                        <AlertTitle>Time Limit: {assessment?.timeLimit} minutes</AlertTitle>
-                        <AlertDescription>
-                            The timer will start as soon as you click the button below. The form will be submitted automatically when the time runs out. Make sure you are in a quiet environment before you begin. Pasting is disabled for text fields.
-                        </AlertDescription>
-                    </Alert>
+                    {assessment?.timeLimit && (
+                        <Alert>
+                            <Timer className="h-4 w-4" />
+                            <AlertTitle>Time Limit: {assessment?.timeLimit} minutes</AlertTitle>
+                            <AlertDescription>
+                                The timer will start as soon as you click the button below. The form will be submitted automatically when the time runs out. Make sure you are in a quiet environment before you begin. Pasting is disabled for text fields.
+                            </AlertDescription>
+                        </Alert>
+                    )}
                     <p>Number of questions: {assessment?.questions.length}</p>
                 </CardContent>
                 <CardFooter>
@@ -381,10 +388,12 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                             <Image height={40} width={180} src={mmLogo} alt="MegaMind Careers Logo" className="mb-4" />
                             <CardTitle>{assessment?.title}</CardTitle>
                         </div>
-                        <div className="flex items-center gap-2 rounded-full bg-destructive px-4 py-2 text-destructive-foreground">
-                            <Timer className="h-5 w-5" />
-                            <span className="font-mono text-lg">{formatTime(timeLeft)}</span>
-                        </div>
+                        {assessment?.timeLimit && (
+                            <div className="flex items-center gap-2 rounded-full bg-destructive px-4 py-2 text-destructive-foreground">
+                                <Timer className="h-5 w-5" />
+                                <span className="font-mono text-lg">{formatTime(timeLeft)}</span>
+                            </div>
+                        )}
                     </div>
                 </CardHeader>
                 <Form {...answersForm}>

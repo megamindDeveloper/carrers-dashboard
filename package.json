@@ -72,6 +72,9 @@
     "typescript": "^5"
   },
   "overrides": {
-    "@aws-sdk/core": "3.616.0"
+    "@aws-sdk/core": "3.616.0",
+    "@aws-sdk/credential-provider-node": "3.616.0",
+    "@aws-sdk/middleware-host-header": "3.616.0",
+    "@aws-sdk/middleware-logger": "3.616.0"
   }
 }
