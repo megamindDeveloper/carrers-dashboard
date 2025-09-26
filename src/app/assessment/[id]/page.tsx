@@ -29,10 +29,6 @@ const passcodeSchema = z.object({
 });
 
 const answersSchema = z.object({
-    candidateName: z.string().optional(),
-    candidateEmail: z.string().email('A valid email is required').optional().or(z.literal('')),
-    candidateContact: z.string().optional(),
-    candidateResumeUrl: z.string().optional(),
     answers: z.array(z.object({
         questionId: z.string(),
         questionText: z.string(),
@@ -61,13 +57,11 @@ type UploadState = {
 const FileUploadInput = ({
   questionId,
   assessmentId,
-  candidateEmail,
   onUploadComplete,
   label = "Upload File"
 }: {
   questionId: string;
   assessmentId: string;
-  candidateEmail: string;
   onUploadComplete: (url: string) => void;
   label?: string;
 }) => {
@@ -83,18 +77,10 @@ const FileUploadInput = ({
     const file = e.target.files?.[0];
     if (!file) return;
     setFileName(file.name);
-
-    if (!candidateEmail) {
-      alert("Please enter your email address before uploading a file.");
-      e.target.value = ''; // Reset file input
-      return;
-    }
     
     setUploadState({ progress: 0, status: 'uploading', url: null, error: null });
 
-    const storagePath = questionId === 'candidate-resume'
-        ? `assessment-resumes/${assessmentId}/${candidateEmail}-${file.name}`
-        : `assessment-uploads/${assessmentId}/${candidateEmail}/${questionId}-${file.name}`;
+    const storagePath = `assessment-uploads/${assessmentId}/${questionId}-${Date.now()}-${file.name}`;
 
     const storageRef = ref(storage, storagePath);
     const uploadTask = uploadBytesResumable(storageRef, file);
@@ -180,44 +166,6 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
       control: answersForm.control,
       name: 'answers'
   });
-  
-  const candidateEmailForUpload = answersForm.watch('candidateEmail');
-
-  useEffect(() => {
-    if (params.id) {
-      const getAssessment = async () => {
-        try {
-          const docRef = doc(db, 'assessments', params.id);
-          const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            const data = { id: docSnap.id, ...docSnap.data() } as Assessment;
-            setAssessment(data);
-            setTimeLeft(data.timeLimit * 60);
-
-            answersForm.reset({
-                candidateName: '',
-                candidateEmail: '',
-                candidateContact: '',
-                candidateResumeUrl: '',
-                answers: data.questions.map(q => ({
-                    questionId: q.id,
-                    questionText: q.text,
-                    answer: ''
-                }))
-            });
-
-          } else {
-            setError('Assessment not found.');
-          }
-        } catch (e: any) {
-          setError('Failed to load assessment: ' + e.message);
-        } finally {
-          setLoading(false);
-        }
-      };
-      getAssessment();
-    }
-  }, [params.id, answersForm]);
 
   const onSubmit = useCallback(async (data: AnswersFormValues) => {
     if (!assessment) return;
@@ -225,32 +173,14 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     const timeTaken = startTimeRef.current ? Math.floor((Date.now() - startTimeRef.current) / 1000) : 0;
 
     try {
-      // Check for existing submission with the same email
-      if (data.candidateEmail) {
-        const submissionsRef = collection(db, 'assessmentSubmissions');
-        const q = query(submissionsRef, 
-          where('assessmentId', '==', assessment.id), 
-          where('candidateEmail', '==', data.candidateEmail)
-        );
-        const querySnapshot = await getDocs(q);
-        
-        if (!querySnapshot.empty) {
-          toast({
-            variant: 'destructive',
-            title: 'Submission Failed',
-            description: 'You have already submitted this assessment with this email address.',
-          });
-          return;
-        }
-      }
-
       await addDoc(collection(db, 'assessmentSubmissions'), {
         assessmentId: assessment.id,
         assessmentTitle: assessment.title,
-        candidateName: data.candidateName,
-        candidateEmail: data.candidateEmail,
-        candidateContact: data.candidateContact,
-        candidateResumeUrl: data.candidateResumeUrl,
+        // The candidate info is no longer collected here, but from the college context
+        candidateName: 'N/A',
+        candidateEmail: 'N/A',
+        candidateContact: 'N/A',
+        candidateResumeUrl: 'N/A',
         answers: data.answers,
         submittedAt: serverTimestamp(),
         timeTaken,
@@ -270,6 +200,38 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
       });
     }
   }, [assessment, collegeId, collegeCandidateId, toast]);
+
+  useEffect(() => {
+    if (params.id) {
+      const getAssessment = async () => {
+        try {
+          const docRef = doc(db, 'assessments', params.id);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            const data = { id: docSnap.id, ...docSnap.data() } as Assessment;
+            setAssessment(data);
+            setTimeLeft(data.timeLimit * 60);
+
+            answersForm.reset({
+                answers: data.questions.map(q => ({
+                    questionId: q.id,
+                    questionText: q.text,
+                    answer: ''
+                }))
+            });
+
+          } else {
+            setError('Assessment not found.');
+          }
+        } catch (e: any) {
+          setError('Failed to load assessment: ' + e.message);
+        } finally {
+          setLoading(false);
+        }
+      };
+      getAssessment();
+    }
+  }, [params.id, answersForm]);
 
   useEffect(() => {
     if (!isStarted || isFinished) return;
@@ -427,89 +389,55 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                 </CardHeader>
                 <Form {...answersForm}>
                 <form onSubmit={answersForm.handleSubmit(onSubmit)}>
-                    <CardContent className="space-y-6">
-                        <div className="space-y-4 border-b pb-6">
-                            <h3 className="text-lg font-medium">Basic Information</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField control={answersForm.control} name="candidateName" render={({ field }) => (
-                                    <FormItem><FormLabel>Your Full Name</FormLabel><FormControl><Input {...field} placeholder="e.g. Jane Doe" /></FormControl><FormMessage /></FormItem>
-                                )} />
-                                <FormField control={answersForm.control} name="candidateEmail" render={({ field }) => (
-                                    <FormItem><FormLabel>Your Email</FormLabel><FormControl><Input {...field} type="email" placeholder="e.g. jane.doe@example.com"/></FormControl><FormMessage /></FormItem>
-                                )} />
-                            </div>
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField control={answersForm.control} name="candidateContact" render={({ field }) => (
-                                    <FormItem><FormLabel>Contact Number</FormLabel><FormControl><Input {...field} placeholder="+1 234 567 890" /></FormControl><FormMessage /></FormItem>
-                                )} />
-                                <FormField control={answersForm.control} name="candidateResumeUrl" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Upload Your Resume (PDF/Doc)</FormLabel>
-                                        <FormControl>
+                    <CardContent className="space-y-8 pt-4">
+                        <h3 className="text-lg font-medium">Questions</h3>
+                        {assessment?.questions.map((question, index) => (
+                            <FormField
+                                key={question.id}
+                                control={answersForm.control}
+                                name={`answers.${index}.answer`}
+                                render={({ field }) => (
+                                <FormItem className="space-y-3">
+                                    <FormLabel className="text-base font-semibold">
+                                        {index + 1}. {question.text}
+                                    </FormLabel>
+                                    <FormControl>
+                                        {question.type === 'multiple-choice' ? (
+                                            <RadioGroup
+                                                onValueChange={field.onChange}
+                                                defaultValue={field.value}
+                                                className="flex flex-col space-y-2"
+                                            >
+                                                {question.options?.map((option, optionIndex) => (
+                                                    <FormItem key={optionIndex} className="flex items-center space-x-3 space-y-0">
+                                                        <FormControl>
+                                                            <RadioGroupItem value={option} />
+                                                        </FormControl>
+                                                        <FormLabel className="font-normal">{option}</FormLabel>
+                                                    </FormItem>
+                                                ))}
+                                            </RadioGroup>
+                                        ) : question.type === 'file-upload' ? (
                                             <FileUploadInput
-                                                questionId="candidate-resume"
-                                                assessmentId={assessment!.id}
-                                                candidateEmail={candidateEmailForUpload || ''}
-                                                onUploadComplete={(url) => field.onChange(url)}
-                                                label="Upload Resume"
+                                              questionId={question.id}
+                                              assessmentId={assessment.id}
+                                              onUploadComplete={(url) => {
+                                                field.onChange(url);
+                                              }}
                                             />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )} />
-                            </div>
-                        </div>
-                        <div className="space-y-8 pt-4">
-                            <h3 className="text-lg font-medium">Questions</h3>
-                            {assessment?.questions.map((question, index) => (
-                                <FormField
-                                    key={question.id}
-                                    control={answersForm.control}
-                                    name={`answers.${index}.answer`}
-                                    render={({ field }) => (
-                                    <FormItem className="space-y-3">
-                                        <FormLabel className="text-base font-semibold">
-                                            {index + 1}. {question.text}
-                                        </FormLabel>
-                                        <FormControl>
-                                            {question.type === 'multiple-choice' ? (
-                                                <RadioGroup
-                                                    onValueChange={field.onChange}
-                                                    defaultValue={field.value}
-                                                    className="flex flex-col space-y-2"
-                                                >
-                                                    {question.options?.map((option, optionIndex) => (
-                                                        <FormItem key={optionIndex} className="flex items-center space-x-3 space-y-0">
-                                                            <FormControl>
-                                                                <RadioGroupItem value={option} />
-                                                            </FormControl>
-                                                            <FormLabel className="font-normal">{option}</FormLabel>
-                                                        </FormItem>
-                                                    ))}
-                                                </RadioGroup>
-                                            ) : question.type === 'file-upload' ? (
-                                                <FileUploadInput
-                                                  questionId={question.id}
-                                                  assessmentId={assessment.id}
-                                                  candidateEmail={candidateEmailForUpload || ''}
-                                                  onUploadComplete={(url) => {
-                                                    field.onChange(url);
-                                                  }}
-                                                />
-                                            ) : (
-                                                <PasteDisabledTextarea
-                                                    {...field}
-                                                    className="min-h-[120px] text-base"
-                                                    placeholder="Type your answer here..."
-                                                />
-                                            )}
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                    )}
-                                />
-                            ))}
-                        </div>
+                                        ) : (
+                                            <PasteDisabledTextarea
+                                                {...field}
+                                                className="min-h-[120px] text-base"
+                                                placeholder="Type your answer here..."
+                                            />
+                                        )}
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                        ))}
                     </CardContent>
                     <CardFooter>
                         <Button type="submit" className="w-full" disabled={answersForm.formState.isSubmitting}>
@@ -524,3 +452,5 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
+
+    

@@ -5,7 +5,7 @@ import type { Assessment, CollegeCandidate, AssessmentSubmission } from '@/lib/t
 import { DataTable } from '@/components/dashboard/data-table';
 import { getCandidateColumns } from './candidate-columns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { collection, onSnapshot, writeBatch, serverTimestamp, doc, getDocs, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, writeBatch, serverTimestamp, doc, getDocs, query, where, updateDoc } from 'firebase/firestore';
 import { db } from '@/app/utils/firebase/firebaseConfig';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -43,7 +43,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
     const unsubCandidates = onSnapshot(
       candidatesQuery,
       async (candidatesSnapshot) => {
-        const candidates = candidatesSnapshot.docs.map(d => ({
+        const candidatesData = candidatesSnapshot.docs.map(d => ({
           id: d.id,
           ...(d.data() as Omit<CollegeCandidate, 'id'>),
         }));
@@ -53,12 +53,26 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
         const submissionsSnapshot = await getDocs(submissionsQuery);
         const submissions = submissionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AssessmentSubmission));
         const submissionsMap = new Map(submissions.map(s => [s.collegeCandidateId, s]));
-
-        // Merge submission data into candidates
-        const candidatesWithSubmissions = candidates.map(candidate => ({
+        
+        // Match submissions to candidates
+        const candidatesWithSubmissions = candidatesData.map(candidate => ({
             ...candidate,
             submission: submissionsMap.get(candidate.id) || null
         }));
+
+        // Populate submission with candidate details if not already present
+        for (const sub of submissions) {
+            if (sub.collegeCandidateId && (sub.candidateName === 'N/A' || sub.candidateEmail === 'N/A')) {
+                const matchingCandidate = candidatesWithSubmissions.find(c => c.id === sub.collegeCandidateId);
+                if (matchingCandidate) {
+                    const submissionDocRef = doc(db, 'assessmentSubmissions', sub.id);
+                    await updateDoc(submissionDocRef, {
+                        candidateName: matchingCandidate.name,
+                        candidateEmail: matchingCandidate.email,
+                    });
+                }
+            }
+        }
 
         setData(candidatesWithSubmissions);
         setLoading(false);
@@ -204,7 +218,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                candidates: candidatesToSend,
+                candidates: candidatesToSend.map(c => ({ id: c.id, name: c.name, email: c.email })),
                 assessmentId: selectedAssessment.id,
                 assessmentTitle: selectedAssessment.title,
                 passcode: selectedAssessment.passcode,
@@ -307,3 +321,5 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
     </>
   );
 }
+
+    
