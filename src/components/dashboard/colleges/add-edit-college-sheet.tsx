@@ -43,6 +43,7 @@ export function AddEditCollegeSheet({ isOpen, onClose, college, onSave }: AddEdi
     defaultValues: {
       name: '',
       location: '',
+      collegeEmail: '',
       contactPerson: '',
       contactEmail: '',
     },
@@ -56,6 +57,7 @@ export function AddEditCollegeSheet({ isOpen, onClose, college, onSave }: AddEdi
         form.reset({
           name: '',
           location: '',
+          collegeEmail: '',
           contactPerson: '',
           contactEmail: '',
         });
@@ -100,6 +102,13 @@ export function AddEditCollegeSheet({ isOpen, onClose, college, onSave }: AddEdi
                 <FormItem>
                   <FormLabel>Location</FormLabel>
                   <FormControl><Input placeholder="e.g., City, Country" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+               <FormField control={form.control} name="collegeEmail" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>College Email (Optional)</FormLabel>
+                  <FormControl><Input type="email" placeholder="e.g., admissions@university.edu" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />

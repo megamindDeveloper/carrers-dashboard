@@ -38,12 +38,20 @@ export const getColumns = ({ onDelete }: GetColumnsProps): ColumnDef<College>[] 
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
-      cell: ({ row }) => <div className="font-medium">{row.original.name}</div>,
+      cell: ({ row }) => {
+        const college = row.original;
+        return (
+          <div>
+            <div className="font-medium">{college.name}</div>
+            <div className="text-sm text-muted-foreground">{college.location}</div>
+          </div>
+        )
+      },
     },
     {
-        accessorKey: 'location',
-        header: 'Location',
-        cell: ({ row }) => <div>{row.original.location}</div>,
+        accessorKey: 'collegeEmail',
+        header: 'College Email',
+        cell: ({ row }) => <div>{row.original.collegeEmail || 'N/A'}</div>,
     },
     {
         accessorKey: 'contactPerson',
