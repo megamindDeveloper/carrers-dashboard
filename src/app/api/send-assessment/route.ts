@@ -34,31 +34,36 @@ export async function POST(req: Request) {
 
     let sentCount = 0;
     let failedCount = 0;
+    const failedReasons: string[] = [];
 
     for (const candidate of candidates) {
+      try {
         // Replace candidate-specific placeholders
         let personalizedTemplate = template.replace(/<<Candidate Name>>/g, candidate.name)
                                            .replace(/<<Candidate ID>>/g, candidate.id); // Add candidate ID to the template
 
-        const emailResult = await sendEmail({
+        await sendEmail({
             to: { email: candidate.email, name: candidate.name },
             subject: `Invitation to complete assessment for ${assessmentTitle}`,
             htmlBody: personalizedTemplate,
         });
-
-        if (emailResult.success) {
-            sentCount++;
-        } else {
-            failedCount++;
-            console.error(`Failed to send email to ${candidate.email}:`, (emailResult as any).message);
-        }
+        sentCount++;
+      } catch (emailError: any) {
+        failedCount++;
+        const reason = `Failed to send to ${candidate.email}: ${emailError.message}`;
+        console.error(reason);
+        failedReasons.push(reason);
+      }
     }
 
     if (failedCount > 0) {
-        return NextResponse.json({ 
-            success: false, 
-            message: `Process completed with errors. Sent: ${sentCount}, Failed: ${failedCount}. Check server logs for details.` 
-        }, { status: 207 }); // 207 Multi-Status
+      const errorMessage = `Process completed with errors. Sent: ${sentCount}, Failed: ${failedCount}. Reasons: ${failedReasons.join(', ')}`;
+      // If all emails failed, it's a server error. If only some, it's a multi-status.
+      const status = sentCount === 0 ? 500 : 207;
+      return NextResponse.json({ 
+          success: false, 
+          message: errorMessage
+      }, { status });
     }
 
     return NextResponse.json({ success: true, message: `Assessment invitations sent to ${sentCount} candidates successfully.` });

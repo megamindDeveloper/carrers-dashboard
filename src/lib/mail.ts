@@ -21,7 +21,8 @@ export async function sendEmail({ to, subject, htmlBody }: SendEmailOptions) {
   if (!smtpHost || !smtpPort || !smtpUser || !smtpPass || !smtpFrom) {
     const errorMessage = "Email environment variables (SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM) are not configured. Cannot send email.";
     console.error(errorMessage);
-    return { success: false, message: errorMessage };
+    // Throw an error to be caught by the calling API route
+    throw new Error(errorMessage);
   }
 
   // 2. Create a transporter object
@@ -50,7 +51,7 @@ export async function sendEmail({ to, subject, htmlBody }: SendEmailOptions) {
     return { success: true };
   } catch (error) {
     console.error(`Error sending email to ${to.email}:`, error);
-    // Return a generic error to the client for security
-    return { success: false, message: 'An error occurred while sending the email.' };
+    // Throw a generic error to be caught by the API route
+    throw new Error('An error occurred while sending the email.');
   }
 }
