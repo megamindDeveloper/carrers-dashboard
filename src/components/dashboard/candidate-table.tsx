@@ -142,7 +142,7 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
         `"${(c.state || '').trim().replace(/"/g, '""')}"`,
         c.pincode,
         `"${(c.education || '').replace(/"/g, '""')}"`,
-        `"${(c.experience || '').replace(/"/g, '""')}"`,
+        `"${(c.experience || c.workExperience || '').replace(/"/g, '""')}"`,
         `"${c.position.replace(/"/g, '""')}"`,
         c.portfolio,
         c.resumeUrl,
@@ -336,7 +336,7 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
 
       await proceedWithStatusUpdate(candidateId, updates);
     },
-    [data, toast]
+    [data, toast, confirmation]
   );
   
   const handleStatusChangeFromDropdown = (candidateId: string, status: CandidateStatus) => {

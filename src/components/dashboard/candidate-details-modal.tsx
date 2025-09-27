@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -23,7 +24,7 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { ExternalLink, FileText, Share2, Loader2, Trash2 } from 'lucide-react';
+import { ExternalLink, FileText, Share2, Loader2, Trash2, Video } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
@@ -273,6 +274,20 @@ export function CandidateDetailsModal({
                 <Button variant="outline" asChild>
                   <a href={candidate.resumeUrl} target="_blank" rel="noopener noreferrer">
                     <FileText className="mr-2 h-4 w-4" /> View Resume
+                  </a>
+                </Button>
+              )}
+               {candidate.portfolio && (
+                <Button variant="outline" asChild>
+                  <a href={candidate.portfolio} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="mr-2 h-4 w-4" /> View Portfolio
+                  </a>
+                </Button>
+              )}
+               {candidate.introductionVideoIntern && (
+                <Button variant="outline" asChild>
+                  <a href={candidate.introductionVideoIntern} target="_blank" rel="noopener noreferrer">
+                    <Video className="mr-2 h-4 w-4" /> View Intro Video
                   </a>
                 </Button>
               )}

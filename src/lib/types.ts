@@ -53,7 +53,7 @@ export const CandidateUpdateSchema = z.object({
   state: z.string().min(1, 'State is required'),
   pincode: z.string().min(1, 'Pincode is required'),
   education: z.string().optional(),
-  experience: z.string().min(1, 'Experience is required'),
+  experience: z.string().optional(), // Can be optional now
   position: z.string().min(1, 'Position is required'),
   portfolio: z.string().url('Invalid URL').or(z.literal('')),
   introductionVideoIntern: z.string().url('Invalid URL').or(z.literal('')),
