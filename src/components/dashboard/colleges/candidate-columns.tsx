@@ -4,14 +4,24 @@ import type { ColumnDef } from '@tanstack/react-table';
 import type { CollegeCandidate, AssessmentSubmission } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   ArrowUpDown,
   ClipboardList,
+  MoreHorizontal,
+  Trash2,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 
 
-export const getCandidateColumns = ({ onViewSubmission }: { onViewSubmission: (submission: AssessmentSubmission) => void }): ColumnDef<CollegeCandidate>[] => {
+export const getCandidateColumns = ({ onViewSubmission, onDelete }: { onViewSubmission: (submission: AssessmentSubmission) => void, onDelete: (candidateId: string, candidateName: string) => void; }): ColumnDef<CollegeCandidate>[] => {
   const columns: ColumnDef<CollegeCandidate>[] = [
     {
       accessorKey: 'name',
@@ -82,14 +92,35 @@ export const getCandidateColumns = ({ onViewSubmission }: { onViewSubmission: (s
     {
         id: 'actions',
         cell: ({ row }) => {
-            const submission = row.original.submission;
-            if (!submission) return null;
+            const candidate = row.original;
+            const submission = candidate.submission;
 
             return (
-                <Button variant="outline" size="sm" onClick={() => onViewSubmission(submission)}>
-                    <ClipboardList className="mr-2 h-4 w-4" />
-                    View Submission
-                </Button>
+               <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="h-8 w-8 p-0">
+                      <span className="sr-only">Open menu</span>
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                    {submission && (
+                      <DropdownMenuItem onClick={() => onViewSubmission(submission)}>
+                        <ClipboardList className="mr-2 h-4 w-4" />
+                        View Submission
+                      </DropdownMenuItem>
+                    )}
+                     <DropdownMenuSeparator />
+                     <DropdownMenuItem
+                        onClick={() => onDelete(candidate.id, candidate.name)}
+                        className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                        >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete Candidate
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
             );
         }
     }

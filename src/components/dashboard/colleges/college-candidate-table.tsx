@@ -6,7 +6,7 @@ import type { Assessment, CollegeCandidate, AssessmentSubmission } from '@/lib/t
 import { DataTable } from '@/components/dashboard/data-table';
 import { getCandidateColumns } from './candidate-columns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { collection, onSnapshot, writeBatch, serverTimestamp, doc, getDocs, query, where, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, writeBatch, serverTimestamp, doc, getDocs, query, where, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/app/utils/firebase/firebaseConfig';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select';
 import { SubmissionDetailsModal } from '../submissions/submission-details-modal';
 import { SendAssessmentDialog } from './send-assessment-dialog';
+import { ConfirmationDialog } from '../confirmation-dialog';
 
 
 interface CollegeCandidateTableProps {
@@ -38,6 +39,17 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
   const [selectedSubmission, setSelectedSubmission] = useState<AssessmentSubmission | null>(null);
   const [isSendAssessmentDialogOpen, setSendAssessmentDialogOpen] = useState(false);
   const { toast } = useToast();
+  const [confirmation, setConfirmation] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    description: '',
+    onConfirm: () => {},
+  });
   
   useEffect(() => {
     if (!collegeId) return;
@@ -252,8 +264,37 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
     }
   }
 
+ const handleDelete = (candidateId: string, name: string) => {
+    setConfirmation({
+        isOpen: true,
+        title: `Delete "${name}"?`,
+        description: "Are you sure you want to delete this candidate? This action cannot be undone.",
+        onConfirm: async () => {
+            try {
+                await deleteDoc(doc(db, `colleges/${collegeId}/candidates`, candidateId));
+                
+                toast({
+                    title: "Candidate Deleted",
+                    description: `"${name}" has been successfully deleted.`,
+                });
+            } catch (error) {
+                console.error("Error deleting candidate:", error);
+                toast({
+                    variant: 'destructive',
+                    title: 'Deletion Failed',
+                    description: 'Could not delete the candidate.',
+                });
+            } finally {
+                setConfirmation({ ...confirmation, isOpen: false });
+            }
+        },
+    });
+  }
 
-  const columns = useMemo(() => getCandidateColumns({ onViewSubmission: (sub) => setSelectedSubmission(sub) }), []);
+  const columns = useMemo(() => getCandidateColumns({ 
+      onViewSubmission: (sub) => setSelectedSubmission(sub),
+      onDelete: handleDelete,
+    }), []);
   const candidatesToReceive = useMemo(() => data.filter(c => !c.submission).length, [data]);
 
   if (loading) return <p className="p-4">Loading candidates...</p>;
@@ -332,6 +373,14 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
         onSend={handleSendAssessment}
         isSending={isSending}
         assessment={assessments.find(a => a.id === selectedAssessmentId)}
+      />
+      <ConfirmationDialog
+        isOpen={confirmation.isOpen}
+        onOpenChange={(isOpen) => setConfirmation({ ...confirmation, isOpen })}
+        title={confirmation.title}
+        description={confirmation.description}
+        onConfirm={confirmation.onConfirm}
+        onCancel={() => setConfirmation({ ...confirmation, isOpen: false })}
       />
     </>
   );
