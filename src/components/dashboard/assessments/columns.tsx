@@ -69,9 +69,10 @@ export const getColumns = ({ onDelete }: GetColumnsProps): ColumnDef<Assessment>
     {
         accessorKey: 'questions',
         header: 'Questions',
-        cell: ({ row }) => (
-            <div className="text-center">{row.original.questions?.length || 0}</div>
-        ),
+        cell: ({ row }) => {
+            const questionCount = row.original.sections?.reduce((acc, section) => acc + section.questions.length, 0) || 0;
+            return <div className="text-center">{questionCount}</div>
+        },
     },
      {
       accessorKey: 'submissions',

@@ -97,12 +97,18 @@ export type AssessmentQuestion = {
   options?: string[];
 };
 
+export type AssessmentSection = {
+  id: string;
+  title: string;
+  questions: AssessmentQuestion[];
+};
+
 export type Assessment = {
   id: string;
   title: string;
   passcode?: string;
   timeLimit?: number; // in minutes
-  questions: AssessmentQuestion[];
+  sections: AssessmentSection[];
   createdAt: any;
   submissionCount?: number;
 };
