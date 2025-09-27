@@ -183,7 +183,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     return assessment?.sections?.flatMap(section => section.questions) || [];
   }, [assessment]);
 
-  const onSubmit = useCallback(async (data: AnswersFormValues) => {
+ const onSubmit = useCallback(async (data: AnswersFormValues) => {
     if (!assessment) return;
 
     const timeTaken = startTimeRef.current ? Math.floor((Date.now() - startTimeRef.current) / 1000) : 0;
@@ -214,62 +214,65 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     }
   }, [assessment, collegeId, collegeCandidateId, candidate, toast]);
 
+  // Effect for fetching the assessment and candidate data
   useEffect(() => {
-    if (params.id) {
-      const getAssessment = async () => {
-        try {
-          const docRef = doc(db, 'assessments', params.id);
-          const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            const data = { id: docSnap.id, ...docSnap.data() } as Assessment;
-            setAssessment(data);
+    if (!params.id) return;
 
-            if (data.timeLimit) {
-              setTimeLeft(data.timeLimit * 60);
-            }
+    const getAssessmentData = async () => {
+      setLoading(true);
+      try {
+        const docRef = doc(db, 'assessments', params.id);
+        const docSnap = await getDoc(docRef);
 
-            if (collegeId && collegeCandidateId) {
-                // College candidate flow, no passcode needed upfront
-                const candidateDocRef = doc(db, `colleges/${collegeId}/candidates/${collegeCandidateId}`);
-                const candidateSnap = await getDoc(candidateDocRef);
-                if (candidateSnap.exists()) {
-                    setCandidate({ id: candidateSnap.id, ...candidateSnap.data() } as CollegeCandidate);
-                } else {
-                    setError("Candidate not found for this assessment link.");
-                }
-            } else if (!data.passcode) {
-                // Public assessment with no passcode
-                setIsAuthenticated(true);
-            }
-            
-            const questions = data.sections?.flatMap(section => section.questions) || [];
-
-            answersForm.reset({
-                answers: questions.map(q => ({
-                    questionId: q.id,
-                    questionText: q.text,
-                    answer: ''
-                }))
-            });
-
-          } else {
-            setError('Assessment not found.');
-          }
-        } catch (e: any) {
-          setError('Failed to load assessment: ' + e.message);
-        } finally {
-          setLoading(false);
+        if (!docSnap.exists()) {
+          setError('Assessment not found.');
+          return;
         }
-      };
-      getAssessment();
-    }
+
+        const data = { id: docSnap.id, ...docSnap.data() } as Assessment;
+        setAssessment(data);
+
+        // Pre-fill form answers
+        const questions = data.sections?.flatMap(s => s.questions) || [];
+        answersForm.reset({
+          answers: questions.map(q => ({
+            questionId: q.id,
+            questionText: q.text,
+            answer: ''
+          }))
+        });
+
+        if (data.timeLimit) {
+          setTimeLeft(data.timeLimit * 60);
+        }
+
+        // Handle authentication logic
+        if (collegeId && collegeCandidateId) {
+          const candidateDocRef = doc(db, `colleges/${collegeId}/candidates/${collegeCandidateId}`);
+          const candidateSnap = await getDoc(candidateDocRef);
+          if (candidateSnap.exists()) {
+            setCandidate({ id: candidateSnap.id, ...candidateSnap.data() } as CollegeCandidate);
+          } else {
+            setError("Candidate not found for this assessment link.");
+          }
+        } else if (!data.passcode) {
+          setIsAuthenticated(true);
+        }
+      } catch (e: any) {
+        setError('Failed to load assessment: ' + e.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    getAssessmentData();
   }, [params.id, collegeId, collegeCandidateId, answersForm]);
 
+
+  // Effect for the countdown timer
   useEffect(() => {
     if (!isStarted || isFinished || !assessment?.timeLimit) return;
     
-    let timer: NodeJS.Timeout;
-
     if (timeLeft <= 0) {
       toast({
         title: "Time's up!",
@@ -277,11 +280,12 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
         variant: "destructive"
       });
       answersForm.handleSubmit(onSubmit)();
-    } else {
-      timer = setInterval(() => {
-        setTimeLeft(prev => prev - 1);
-      }, 1000);
+      return;
     }
+
+    const timer = setInterval(() => {
+      setTimeLeft(prev => prev - 1);
+    }, 1000);
 
     return () => clearInterval(timer);
   }, [isStarted, isFinished, timeLeft, assessment?.timeLimit, answersForm, onSubmit, toast]);
