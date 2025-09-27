@@ -78,7 +78,7 @@ export async function sendEmail({ to, subject, htmlBody }: SendEmailOptions) {
   });
 
   const mailOptions = {
-    from: 'Your Name <no-reply@yourdomain.com>', // Use a proper "from" name
+    from: 'megamind <no-reply@megamind.studio>', // Use a proper "from" name
     to: to.email,
     subject: subject,
     html: htmlBody,
