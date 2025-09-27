@@ -5,7 +5,7 @@ import { sendEmail } from "@/lib/mail";
 
 export async function POST(req: Request) {
   try {
-    const { fullName, email, position, reason } = await req.json();
+    const { fullName, email, position } = await req.json();
     
     // Path to your template file
     const templatePath = path.join(process.cwd(), "src", "email-templates", "rejection-mail.html");
@@ -16,13 +16,12 @@ export async function POST(req: Request) {
     // Replace placeholders with actual values
     template = template
       .replace(/<<Candidate Name>>/g, fullName)
-      .replace(/<<Position>>/g, position)
-      .replace(/<<Reason>>/g, reason);
+      .replace(/<<Position>>/g, position);
 
     // Send email using the updated mail library
     await sendEmail({
         to: { email, name: fullName },
-        subject: "Update on your application with MegaMind Careers",
+        subject: `Update on your application with megamind`,
         htmlBody: template,
     });
 
