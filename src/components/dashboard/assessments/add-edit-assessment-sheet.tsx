@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -201,7 +200,19 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
               </div>
 
               <div className="space-y-6 pt-4 border-t">
-                <FormLabel className="text-lg font-semibold">Sections</FormLabel>
+                <div className="flex justify-between items-center">
+                    <FormLabel className="text-lg font-semibold">Sections</FormLabel>
+                     <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => appendSection({ id: uuidv4(), title: '', questions: [{ id: uuidv4(), text: '', type: 'text' }] })}
+                        >
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Add Section
+                    </Button>
+                </div>
+
                 {sectionFields.map((section, sectionIndex) => (
                     <div key={section.id} className="p-4 border rounded-lg space-y-4 bg-muted/30 relative">
                         <div className="flex items-center justify-between">
@@ -218,28 +229,21 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
                                     </FormItem>
                                 )}
                             />
-                             <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => removeSection(sectionIndex)}
-                                className="ml-2 mt-8"
-                            >
-                                <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
+                            {sectionFields.length > 1 && (
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => removeSection(sectionIndex)}
+                                    className="ml-2 mt-8"
+                                >
+                                    <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
+                            )}
                         </div>
                         <QuestionsField sectionIndex={sectionIndex} control={form.control} />
                     </div>
                 ))}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => appendSection({ id: uuidv4(), title: '', questions: [{ id: uuidv4(), text: '', type: 'text' }] })}
-                >
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Add Section
-                </Button>
                  <FormMessage>{form.formState.errors.sections?.root?.message}</FormMessage>
               </div>
             </div>
@@ -269,7 +273,18 @@ function QuestionsField({ sectionIndex, control }: { sectionIndex: number, contr
 
     return (
         <div className="space-y-4 pl-2 border-l-2 ml-2">
-             <FormLabel>Questions</FormLabel>
+             <div className="flex justify-between items-center">
+                <FormLabel>Questions</FormLabel>
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => append({ id: uuidv4(), text: '', type: 'text' })}
+                >
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add Question
+                </Button>
+             </div>
             {fields.map((question, questionIndex) => (
                <QuestionItem
                   key={question.id}
@@ -277,22 +292,14 @@ function QuestionsField({ sectionIndex, control }: { sectionIndex: number, contr
                   questionIndex={questionIndex}
                   control={control}
                   onRemove={() => remove(questionIndex)}
+                  canRemove={fields.length > 1}
                 />
             ))}
-             <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => append({ id: uuidv4(), text: '', type: 'text' })}
-            >
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Question
-            </Button>
         </div>
     )
 }
 
-function QuestionItem({ sectionIndex, questionIndex, control, onRemove }: { sectionIndex: number, questionIndex: number, control: Control<AssessmentFormValues>, onRemove: () => void }) {
+function QuestionItem({ sectionIndex, questionIndex, control, onRemove, canRemove }: { sectionIndex: number, questionIndex: number, control: Control<AssessmentFormValues>, onRemove: () => void, canRemove: boolean }) {
   const questionType = useWatch({
     control,
     name: `sections.${sectionIndex}.questions.${questionIndex}.type`
@@ -300,15 +307,17 @@ function QuestionItem({ sectionIndex, questionIndex, control, onRemove }: { sect
 
   return (
     <div className="p-4 border rounded-lg space-y-4 bg-background relative">
-        <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={onRemove}
-            className="absolute top-2 right-2"
-        >
-            <X className="h-4 w-4 text-muted-foreground" />
-        </Button>
+        {canRemove && (
+            <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={onRemove}
+                className="absolute top-2 right-2"
+            >
+                <X className="h-4 w-4 text-muted-foreground" />
+            </Button>
+        )}
         <FormField
             control={control}
             name={`sections.${sectionIndex}.questions.${questionIndex}.text`}
@@ -358,7 +367,18 @@ function OptionsField({ sectionIndex, questionIndex, control }: { sectionIndex: 
 
     return (
         <div className="space-y-2 pl-2 border-l-2">
-            <FormLabel>Options</FormLabel>
+            <div className="flex justify-between items-center">
+                <FormLabel>Options</FormLabel>
+                 <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => append({ value: "" })}
+                    >
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add Option
+                </Button>
+            </div>
             {fields.map((item, k) => (
                 <div key={item.id} className="flex items-center gap-2">
                     <FormField
@@ -373,20 +393,13 @@ function OptionsField({ sectionIndex, questionIndex, control }: { sectionIndex: 
                             </FormItem>
                         )}
                     />
-                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(k)}>
-                        <X className="h-4 w-4 text-muted-foreground" />
-                    </Button>
+                    {fields.length > 2 && (
+                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(k)}>
+                            <X className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                    )}
                 </div>
             ))}
-             <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => append({ value: "" })}
-                >
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Option
-            </Button>
              <FormMessage />
         </div>
     )

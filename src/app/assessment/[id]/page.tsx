@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
@@ -437,7 +436,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                 <Form {...answersForm}>
                 <form onSubmit={answersForm.handleSubmit(onSubmit)}>
                     <CardContent className="space-y-8 pt-4">
-                        {assessment?.sections.map((section) => {
+                        {assessment?.sections.map((section, sectionIndex) => {
                             let questionCounter = 0;
                             return (
                                 <div key={section.id} className="space-y-6">
@@ -450,7 +449,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
 
                                         return (
                                             <FormField
-                                                key={question.id}
+                                                key={`${section.id}-${question.id}`}
                                                 control={answersForm.control}
                                                 name={`answers.${overallIndex}.answer`}
                                                 render={({ field }) => (
