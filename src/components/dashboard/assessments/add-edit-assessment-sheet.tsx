@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useForm, useFieldArray, Control } from 'react-hook-form';
+import { useForm, useFieldArray, Control, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
@@ -271,53 +271,13 @@ function QuestionsField({ sectionIndex, control }: { sectionIndex: number, contr
         <div className="space-y-4 pl-2 border-l-2 ml-2">
              <FormLabel>Questions</FormLabel>
             {fields.map((question, questionIndex) => (
-                <div key={question.id} className="p-4 border rounded-lg space-y-4 bg-background relative">
-                     <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => remove(questionIndex)}
-                        className="absolute top-2 right-2"
-                    >
-                        <X className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                    <FormField
-                        control={control}
-                        name={`sections.${sectionIndex}.questions.${questionIndex}.text`}
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Question {questionIndex + 1}</FormLabel>
-                            <FormControl>
-                                <Textarea {...field} placeholder={`Enter question text...`} />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={control}
-                        name={`sections.${sectionIndex}.questions.${questionIndex}.type`}
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Answer Type</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                    <SelectTrigger><SelectValue placeholder="Select an answer type" /></SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                    <SelectItem value="text">Text Answer</SelectItem>
-                                    <SelectItem value="multiple-choice">Multiple Choice</SelectItem>
-                                    <SelectItem value="file-upload">File Upload</SelectItem>
-                                </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                     {control.getValues(`sections.${sectionIndex}.questions.${questionIndex}.type`) === 'multiple-choice' && (
-                        <OptionsField sectionIndex={sectionIndex} questionIndex={questionIndex} control={control} />
-                    )}
-                </div>
+               <QuestionItem
+                  key={question.id}
+                  sectionIndex={sectionIndex}
+                  questionIndex={questionIndex}
+                  control={control}
+                  onRemove={() => remove(questionIndex)}
+                />
             ))}
              <Button
                 type="button"
@@ -330,6 +290,63 @@ function QuestionsField({ sectionIndex, control }: { sectionIndex: number, contr
             </Button>
         </div>
     )
+}
+
+function QuestionItem({ sectionIndex, questionIndex, control, onRemove }: { sectionIndex: number, questionIndex: number, control: Control<AssessmentFormValues>, onRemove: () => void }) {
+  const questionType = useWatch({
+    control,
+    name: `sections.${sectionIndex}.questions.${questionIndex}.type`
+  });
+
+  return (
+    <div className="p-4 border rounded-lg space-y-4 bg-background relative">
+        <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={onRemove}
+            className="absolute top-2 right-2"
+        >
+            <X className="h-4 w-4 text-muted-foreground" />
+        </Button>
+        <FormField
+            control={control}
+            name={`sections.${sectionIndex}.questions.${questionIndex}.text`}
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Question {questionIndex + 1}</FormLabel>
+                <FormControl>
+                    <Textarea {...field} placeholder={`Enter question text...`} />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
+        />
+        <FormField
+            control={control}
+            name={`sections.${sectionIndex}.questions.${questionIndex}.type`}
+            render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Answer Type</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                        <SelectTrigger><SelectValue placeholder="Select an answer type" /></SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                        <SelectItem value="text">Text Answer</SelectItem>
+                        <SelectItem value="multiple-choice">Multiple Choice</SelectItem>
+                        <SelectItem value="file-upload">File Upload</SelectItem>
+                    </SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+            )}
+        />
+        {questionType === 'multiple-choice' && (
+            <OptionsField sectionIndex={sectionIndex} questionIndex={questionIndex} control={control} />
+        )}
+    </div>
+  );
 }
 
 
