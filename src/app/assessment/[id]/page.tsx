@@ -266,29 +266,32 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     };
 
     getAssessmentData();
-  }, [params.id, collegeId, collegeCandidateId, answersForm]);
+  // We remove answersForm from dependency array to prevent re-fetching on form state change
+  }, [params.id, collegeId, collegeCandidateId]);
 
 
   // Effect for the countdown timer
   useEffect(() => {
     if (!isStarted || isFinished || !assessment?.timeLimit) return;
     
-    if (timeLeft <= 0) {
-      toast({
-        title: "Time's up!",
-        description: "Submitting your assessment now.",
-        variant: "destructive"
-      });
-      answersForm.handleSubmit(onSubmit)();
-      return;
-    }
-
     const timer = setInterval(() => {
-      setTimeLeft(prev => prev - 1);
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          toast({
+            title: "Time's up!",
+            description: "Submitting your assessment now.",
+            variant: "destructive"
+          });
+          answersForm.handleSubmit(onSubmit)();
+          return 0;
+        }
+        return prev - 1;
+      });
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isStarted, isFinished, timeLeft, assessment?.timeLimit, answersForm, onSubmit, toast]);
+  }, [isStarted, isFinished, assessment?.timeLimit, answersForm, onSubmit, toast]);
 
 
   const handlePasscodeSubmit = (values: z.infer<typeof passcodeSchema>) => {
