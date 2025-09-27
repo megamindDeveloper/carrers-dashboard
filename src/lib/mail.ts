@@ -27,7 +27,7 @@ export interface SendEmailOptions {
 }
 
 export async function sendEmail({ to, subject, htmlBody }: SendEmailOptions) {
-  console.log("email send")
+
   try {
     var nodemailer = require('nodemailer');
     var transport = nodemailer.createTransport({
@@ -54,7 +54,7 @@ export async function sendEmail({ to, subject, htmlBody }: SendEmailOptions) {
       console.log('Successfully sent');
     });
   } catch (error) {
-    console.error("Error sending email:", error);
+    console.log("Error sending email:", error);
     return { success: false, error: error };
   }
 }
