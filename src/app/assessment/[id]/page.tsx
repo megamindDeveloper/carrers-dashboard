@@ -267,18 +267,24 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     if (!isStarted || isFinished || !assessment?.timeLimit) return;
+    
+    let timer: NodeJS.Timeout;
 
     if (timeLeft <= 0) {
-      answersForm.handleSubmit(onSubmit)(); // Auto-submit when time is up
-      return;
+      toast({
+        title: "Time's up!",
+        description: "Submitting your assessment now.",
+        variant: "destructive"
+      });
+      answersForm.handleSubmit(onSubmit)();
+    } else {
+      timer = setInterval(() => {
+        setTimeLeft(prev => prev - 1);
+      }, 1000);
     }
 
-    const timer = setInterval(() => {
-      setTimeLeft(prev => prev - 1);
-    }, 1000);
-
     return () => clearInterval(timer);
-  }, [isStarted, isFinished, timeLeft, answersForm, onSubmit, assessment?.timeLimit]);
+  }, [isStarted, isFinished, timeLeft, assessment?.timeLimit, answersForm, onSubmit, toast]);
 
 
   const handlePasscodeSubmit = (values: z.infer<typeof passcodeSchema>) => {
@@ -560,6 +566,5 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
-
 
     
