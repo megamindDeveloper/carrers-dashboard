@@ -7,7 +7,7 @@ import { doc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs
 import { db, storage } from '@/app/utils/firebase/firebaseConfig';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import type { Assessment, AssessmentQuestion, CollegeCandidate } from '@/lib/types';
-import { Loader2, Lock, Timer, UploadCloud, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Loader2, Lock, Timer, UploadCloud, CheckCircle2, AlertCircle, ArrowLeft, ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -151,6 +151,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
   const [isStarted, setIsStarted] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
+  const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
 
   const { toast } = useToast();
   const startTimeRef = useRef<number | null>(null);
@@ -431,7 +432,8 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                             </AlertDescription>
                         </Alert>
                     )}
-                    <p>Number of questions: {allQuestions.length}</p>
+                    <p>Number of sections: {assessment?.sections?.length || 0}</p>
+                    <p>Total questions: {allQuestions.length}</p>
                 </CardContent>
                 <CardFooter>
                     <Button onClick={handleStart} className="w-full">Start Assessment</Button>
@@ -441,6 +443,10 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
       );
   }
 
+  const currentSection = assessment?.sections[currentSectionIndex];
+  const totalSections = assessment?.sections?.length || 0;
+  
+  const sectionQuestionStartIndex = assessment?.sections.slice(0, currentSectionIndex).reduce((acc, sec) => acc + (sec.questions?.length || 0), 0) || 0;
 
   return (
     <div className="min-h-screen bg-muted/40 p-4 sm:p-8">
@@ -451,6 +457,9 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                         <div>
                             <Image height={40} width={180} src={mmLogo} alt="MegaMind Careers Logo" className="mb-4" />
                             <CardTitle>{assessment?.title}</CardTitle>
+                            {totalSections > 1 && (
+                                <CardDescription>Section {currentSectionIndex + 1} of {totalSections}: {currentSection?.title}</CardDescription>
+                            )}
                         </div>
                         {assessment?.timeLimit && (
                             <div className="flex items-center gap-2 rounded-full bg-destructive px-4 py-2 text-destructive-foreground">
@@ -463,72 +472,86 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                 <Form {...answersForm}>
                 <form onSubmit={answersForm.handleSubmit(onSubmit)}>
                     <CardContent className="space-y-8 pt-4">
-                      {assessment?.sections?.map((section, sectionIndex) => {
-                          const sectionQuestionStartIndex = assessment.sections.slice(0, sectionIndex).reduce((acc, sec) => acc + (sec.questions?.length || 0), 0);
-
-                          return (
-                              <div key={section.id} className="space-y-6">
-                                  <h3 className="text-xl font-semibold border-b pb-2">{section.title}</h3>
-                                  {section.questions.map((question, questionInSectionIndex) => {
-                                      const overallQuestionIndex = sectionQuestionStartIndex + questionInSectionIndex;
-                                      return (
-                                          <FormField
-                                              key={question.id}
-                                              control={answersForm.control}
-                                              name={`answers.${overallQuestionIndex}.answer`}
-                                              render={({ field }) => (
-                                              <FormItem className="space-y-3">
-                                                  <FormLabel className="text-base font-semibold">
-                                                      {questionInSectionIndex + 1}. {question.text}
-                                                  </FormLabel>
-                                                  <FormControl>
-                                                      {question.type === 'multiple-choice' ? (
-                                                          <RadioGroup
-                                                              onValueChange={field.onChange}
-                                                              defaultValue={field.value as string}
-                                                              className="flex flex-col space-y-2"
-                                                          >
-                                                              {question.options?.map((option, optionIndex) => (
-                                                                  <FormItem key={optionIndex} className="flex items-center space-x-3 space-y-0">
-                                                                      <FormControl>
-                                                                          <RadioGroupItem value={option} />
-                                                                      </FormControl>
-                                                                      <FormLabel className="font-normal">{option}</FormLabel>
-                                                                  </FormItem>
-                                                              ))}
-                                                          </RadioGroup>
-                                                      ) : question.type === 'file-upload' ? (
-                                                          <FileUploadInput
-                                                            questionId={question.id}
-                                                            assessmentId={assessment.id}
-                                                            onUploadComplete={(url) => {
-                                                              field.onChange(url);
-                                                            }}
-                                                          />
-                                                      ) : (
-                                                          <PasteDisabledTextarea
-                                                              {...field}
-                                                              value={field.value as string || ''}
-                                                              className="min-h-[120px] text-base"
-                                                              placeholder="Type your answer here..."
-                                                          />
-                                                      )}
-                                                  </FormControl>
-                                                  <FormMessage />
-                                              </FormItem>
-                                              )}
-                                          />
-                                      );
-                                  })}
-                              </div>
-                          );
-                      })}
+                        {currentSection && (
+                            <div className="space-y-6">
+                                <h3 className="text-xl font-semibold border-b pb-2">{currentSection.title}</h3>
+                                {currentSection.questions.map((question, questionInSectionIndex) => {
+                                    const overallQuestionIndex = sectionQuestionStartIndex + questionInSectionIndex;
+                                    return (
+                                        <FormField
+                                            key={question.id}
+                                            control={answersForm.control}
+                                            name={`answers.${overallQuestionIndex}.answer`}
+                                            render={({ field }) => (
+                                            <FormItem className="space-y-3">
+                                                <FormLabel className="text-base font-semibold">
+                                                    {questionInSectionIndex + 1}. {question.text}
+                                                </FormLabel>
+                                                <FormControl>
+                                                    {question.type === 'multiple-choice' ? (
+                                                        <RadioGroup
+                                                            onValueChange={field.onChange}
+                                                            defaultValue={field.value as string}
+                                                            className="flex flex-col space-y-2"
+                                                        >
+                                                            {question.options?.map((option, optionIndex) => (
+                                                                <FormItem key={optionIndex} className="flex items-center space-x-3 space-y-0">
+                                                                    <FormControl>
+                                                                        <RadioGroupItem value={option} />
+                                                                    </FormControl>
+                                                                    <FormLabel className="font-normal">{option}</FormLabel>
+                                                                </FormItem>
+                                                            ))}
+                                                        </RadioGroup>
+                                                    ) : question.type === 'file-upload' ? (
+                                                        <FileUploadInput
+                                                          questionId={question.id}
+                                                          assessmentId={assessment.id}
+                                                          onUploadComplete={(url) => {
+                                                            field.onChange(url);
+                                                          }}
+                                                        />
+                                                    ) : (
+                                                        <PasteDisabledTextarea
+                                                            {...field}
+                                                            value={field.value as string || ''}
+                                                            className="min-h-[120px] text-base"
+                                                            placeholder="Type your answer here..."
+                                                        />
+                                                    )}
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                            )}
+                                        />
+                                    );
+                                })}
+                            </div>
+                        )}
                     </CardContent>
-                    <CardFooter>
-                        <Button type="submit" className="w-full" disabled={answersForm.formState.isSubmitting}>
-                            {answersForm.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                            Submit Assessment
-                        </Button>
+                    <CardFooter className="flex justify-between">
+                       <Button 
+                          type="button" 
+                          variant="outline" 
+                          onClick={() => setCurrentSectionIndex(prev => prev - 1)}
+                          disabled={currentSectionIndex === 0}
+                        >
+                            <ArrowLeft className="mr-2 h-4 w-4" /> Previous
+                       </Button>
+
+                       {currentSectionIndex < totalSections - 1 ? (
+                           <Button 
+                            type="button" 
+                            onClick={() => setCurrentSectionIndex(prev => prev + 1)}
+                           >
+                              Next <ArrowRight className="ml-2 h-4 w-4" />
+                           </Button>
+                       ) : (
+                           <Button type="submit" className="w-auto" disabled={answersForm.formState.isSubmitting}>
+                                {answersForm.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                Submit Assessment
+                            </Button>
+                       )}
                     </CardFooter>
                 </form>
                 </Form>
@@ -537,3 +560,6 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
+
+
+    
