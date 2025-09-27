@@ -27,6 +27,7 @@ export interface SendEmailOptions {
 }
 
 export async function sendEmail({ to, subject, htmlBody }: SendEmailOptions) {
+  console.log("email send")
   try {
     var nodemailer = require('nodemailer');
     var transport = nodemailer.createTransport({
