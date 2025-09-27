@@ -72,7 +72,6 @@ const generatePasscode = () => Math.random().toString(36).substring(2, 8).toUppe
 
 export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: AddEditAssessmentSheetProps) {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [currentStep, setCurrentStep] = useState(0);
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof assessmentSchema>>({
@@ -85,7 +84,6 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
     name: "sections"
   });
 
-  const totalSteps = (sectionsFields?.length ?? 0) + 2; // Details + Sections + Preview
 
   useEffect(() => {
     if (isOpen) {
@@ -113,7 +111,6 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
           }],
         });
       }
-       setCurrentStep(0);
     }
   }, [assessment, isOpen, form]);
 
@@ -146,30 +143,10 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
   
   const handleGeneratePasscode = () => form.setValue('passcode', generatePasscode());
 
-  const handleNext = async () => {
-    let isValid = false;
-    if (currentStep === 0) {
-        isValid = await form.trigger(['title', 'timeLimit', 'passcode']);
-    } else if (currentStep > 0 && currentStep <= sectionsFields.length) {
-        isValid = await form.trigger(`sections.${currentStep - 1}`);
-    } else {
-        isValid = true; // Preview step
-    }
-
-    if (isValid) {
-      setCurrentStep(prev => Math.min(prev + 1, totalSteps - 1));
-    }
-  };
-
-  const handlePrevious = () => setCurrentStep(prev => Math.max(prev - 1, 0));
-
   const addSection = () => appendSection({ id: uuidv4(), title: `New Section ${sectionsFields.length + 1}`, questions: [{ id: uuidv4(), text: '', type: 'text' }] });
 
   const deleteSection = (index: number) => {
       removeSection(index);
-      if (currentStep >= index + 1 && currentStep > 0) {
-          setCurrentStep(prev => prev - 1);
-      }
   };
 
 
@@ -184,60 +161,58 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
             <SheetHeader>
               <SheetTitle>{assessment ? 'Edit Assessment' : 'Create New Assessment'}</SheetTitle>
               <SheetDescription>
-                Step {currentStep + 1} of {totalSteps}: {
-                  currentStep === 0 ? 'Assessment Details' :
-                  currentStep === totalSteps - 1 ? 'Preview' :
-                  `Section ${currentStep}`
-                }
+                Fill in the details below. You can add multiple sections with questions.
               </SheetDescription>
             </SheetHeader>
-            <div className="flex-1 overflow-y-auto p-1 pr-6 space-y-4 py-4">
-                {currentStep === 0 && (
-                     <div className="space-y-4">
-                         <FormField control={form.control} name="title" render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Assessment Title</FormLabel>
-                            <FormControl><Input placeholder="e.g., Frontend Developer Screening" {...field} /></FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )} />
-                        
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <FormField control={form.control} name="passcode" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Passcode (Optional)</FormLabel>
-                                <div className="flex items-center gap-2">
-                                    <FormControl><Input placeholder="e.g., FDEV24" {...field} /></FormControl>
-                                    <Button type="button" variant="outline" size="icon" onClick={handleGeneratePasscode}>
-                                        <Wand2 className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                                <FormDescription>Leave blank for no passcode.</FormDescription>
-                                <FormMessage />
-                            </FormItem>
-                            )} />
+            <div className="flex-1 overflow-y-auto p-1 pr-6 space-y-6 py-4">
+              {/* Assessment Details */}
+              <div className="space-y-4 p-4 border rounded-lg">
+                  <FormField control={form.control} name="title" render={({ field }) => (
+                  <FormItem>
+                  <FormLabel>Assessment Title</FormLabel>
+                  <FormControl><Input placeholder="e.g., Frontend Developer Screening" {...field} /></FormControl>
+                  <FormMessage />
+                  </FormItem>
+              )} />
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormField control={form.control} name="passcode" render={({ field }) => (
+                  <FormItem>
+                      <FormLabel>Passcode (Optional)</FormLabel>
+                      <div className="flex items-center gap-2">
+                          <FormControl><Input placeholder="e.g., FDEV24" {...field} /></FormControl>
+                          <Button type="button" variant="outline" size="icon" onClick={handleGeneratePasscode}>
+                              <Wand2 className="h-4 w-4" />
+                          </Button>
+                      </div>
+                      <FormDescription>Leave blank for no passcode.</FormDescription>
+                      <FormMessage />
+                  </FormItem>
+                  )} />
 
-                            <FormField control={form.control} name="timeLimit" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Time Limit in Minutes (Optional)</FormLabel>
-                                <FormControl><Input type="number" {...field} /></FormControl>
-                                <FormDescription>Leave blank for no time limit.</FormDescription>
-                                <FormMessage />
-                            </FormItem>
-                            )} />
-                        </div>
-                     </div>
-                )}
+                  <FormField control={form.control} name="timeLimit" render={({ field }) => (
+                  <FormItem>
+                      <FormLabel>Time Limit in Minutes (Optional)</FormLabel>
+                      <FormControl><Input type="number" {...field} /></FormControl>
+                      <FormDescription>Leave blank for no time limit.</FormDescription>
+                      <FormMessage />
+                  </FormItem>
+                  )} />
+              </div>
+              </div>
+
+              {/* Sections */}
+              <div className="space-y-4">
                 {sectionsFields.map((section, sectionIndex) => (
-                    <div key={section.id} className={currentStep === sectionIndex + 1 ? 'block' : 'hidden'}>
+                    <div key={section.id}>
                         <div className="p-4 border rounded-lg space-y-4 bg-muted/50 relative">
-                             <div className="flex justify-between items-center">
+                              <div className="flex justify-between items-center">
                                 <FormField
                                     control={form.control}
                                     name={`sections.${sectionIndex}.title`}
                                     render={({ field }) => (
                                         <FormItem className="flex-grow">
-                                            <FormLabel>Section Title</FormLabel>
+                                            <FormLabel>Section {sectionIndex + 1} Title</FormLabel>
                                             <FormControl>
                                                 <Input {...field} className="text-lg font-semibold" />
                                             </FormControl>
@@ -246,8 +221,8 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
                                     )}
                                 />
                                 {sectionsFields.length > 1 && (
-                                    <Button type="button" variant="destructive" size="sm" onClick={() => deleteSection(sectionIndex)} className="ml-4">
-                                        <Trash2 className="h-4 w-4 mr-2" /> Delete Section
+                                    <Button type="button" variant="destructive" size="sm" onClick={() => deleteSection(sectionIndex)} className="ml-4 self-end mb-1">
+                                        <Trash2 className="h-4 w-4" />
                                     </Button>
                                 )}
                             </div>
@@ -255,34 +230,19 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
                         </div>
                     </div>
                 ))}
+              </div>
 
-                 {currentStep > 0 && currentStep <= sectionsFields.length && (
-                    <Button type="button" variant="outline" onClick={addSection}>
-                        <PlusCircle className="mr-2 h-4 w-4" /> Add Another Section
-                    </Button>
-                )}
-
-                {currentStep === totalSteps - 1 && (
-                    <PreviewComponent form={form} />
-                )}
+              <Button type="button" variant="outline" onClick={addSection}>
+                  <PlusCircle className="mr-2 h-4 w-4" /> Add Another Section
+              </Button>
             </div>
-            <SheetFooter className="pt-4 flex justify-between w-full">
-                <div>
-                   {currentStep > 0 && (
-                     <Button type="button" variant="outline" onClick={handlePrevious}>Previous</Button>
-                   )}
-                </div>
-                <div className="flex gap-2">
-                    <SheetClose asChild><Button type="button" variant="ghost" disabled={isProcessing}>Cancel</Button></SheetClose>
-                    {currentStep < totalSteps - 1 ? (
-                        <Button type="button" onClick={handleNext}>Next</Button>
-                    ) : (
-                        <Button type="submit" disabled={isProcessing}>
-                            {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                            Save Assessment
-                        </Button>
-                    )}
-                </div>
+
+            <SheetFooter className="pt-4">
+                <SheetClose asChild><Button type="button" variant="ghost" disabled={isProcessing}>Cancel</Button></SheetClose>
+                <Button type="submit" disabled={isProcessing}>
+                    {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Save Assessment
+                </Button>
             </SheetFooter>
           </form>
         </Form>
@@ -381,39 +341,5 @@ function OptionsField({ sectionIndex, questionIndex, control }: { sectionIndex: 
              <FormMessage />
         </div>
     )
-}
-
-function PreviewComponent({ form }: { form: any }) {
-    const formData = useWatch({ control: form.control });
-
-    return (
-        <div className="space-y-6">
-            <h2 className="text-2xl font-bold">{formData.title}</h2>
-            <div className="flex gap-4 text-sm text-muted-foreground">
-                {formData.timeLimit && <span>Time Limit: {formData.timeLimit} minutes</span>}
-                {formData.passcode && <span>Passcode: {formData.passcode}</span>}
-            </div>
-
-            <div className="space-y-8">
-                {formData.sections?.map((section: AssessmentSection, sectionIndex: number) => (
-                    <div key={section.id} className="space-y-4">
-                        <h3 className="text-xl font-semibold border-b pb-2">{section.title}</h3>
-                        {section.questions.map((question, questionIndex) => (
-                             <div key={question.id} className="ml-4">
-                                <p className="font-medium">{questionIndex + 1}. {question.text}</p>
-                                {question.type === 'text' && <div className="text-sm p-2 border rounded-md mt-2 bg-muted/50">Candidate will type their answer here.</div>}
-                                {question.type === 'file-upload' && <div className="text-sm p-2 border rounded-md mt-2 bg-muted/50">Candidate will upload a file here.</div>}
-                                {question.type === 'multiple-choice' && (
-                                    <ul className="list-disc list-inside mt-2 space-y-1 text-sm text-muted-foreground">
-                                        {question.options?.map((opt: any, i: number) => <li key={i}>{opt.value}</li>)}
-                                    </ul>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
 }
 
