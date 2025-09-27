@@ -3,15 +3,15 @@
 
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { doc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db, storage } from '@/app/utils/firebase/firebaseConfig';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import type { Assessment, AssessmentQuestion, CollegeCandidate } from '@/lib/types';
+import type { Assessment, CollegeCandidate } from '@/lib/types';
 import { Loader2, Lock, Timer, UploadCloud, CheckCircle2, AlertCircle, ArrowLeft, ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -149,6 +149,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isStarted, setIsStarted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
@@ -174,18 +175,14 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     resolver: zodResolver(answersSchema),
   });
 
-  const { fields } = useFieldArray({
-      control: answersForm.control,
-      name: 'answers'
-  });
-
   const allQuestions = useMemo(() => {
     return assessment?.sections?.flatMap(section => section.questions) || [];
   }, [assessment]);
 
  const onSubmit = useCallback(async (data: AnswersFormValues) => {
-    if (!assessment) return;
+    if (!assessment || isSubmitting) return;
 
+    setIsSubmitting(true);
     const timeTaken = startTimeRef.current ? Math.floor((Date.now() - startTimeRef.current) / 1000) : 0;
 
     try {
@@ -200,19 +197,23 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
         collegeId: collegeId || null,
         collegeCandidateId: collegeCandidateId || null,
       });
-      setIsFinished(true);
+      
       toast({
         title: 'Submission Successful!',
         description: 'Your answers have been recorded.',
       });
+      setIsFinished(true);
+
     } catch (e: any) {
       toast({
         variant: 'destructive',
         title: 'Submission Failed',
         description: e.message || 'An unexpected error occurred.',
       });
+    } finally {
+        setIsSubmitting(false);
     }
-  }, [assessment, collegeId, collegeCandidateId, candidate, toast]);
+  }, [assessment, collegeId, collegeCandidateId, candidate, toast, isSubmitting]);
 
   // Effect for fetching the assessment and candidate data
   useEffect(() => {
@@ -220,6 +221,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
 
     const getAssessmentData = async () => {
       setLoading(true);
+      setError(null);
       try {
         const docRef = doc(db, 'assessments', params.id);
         const docSnap = await getDoc(docRef);
@@ -260,13 +262,14 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
         }
       } catch (e: any) {
         setError('Failed to load assessment: ' + e.message);
+        console.error(e);
       } finally {
         setLoading(false);
       }
     };
 
     getAssessmentData();
-  // We remove answersForm from dependency array to prevent re-fetching on form state change
+  // DO NOT add answersForm to dependency array to prevent re-fetching on form state change
   }, [params.id, collegeId, collegeCandidateId]);
 
 
@@ -560,8 +563,8 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                               Next <ArrowRight className="ml-2 h-4 w-4" />
                            </Button>
                        ) : (
-                           <Button type="submit" className="w-auto" disabled={answersForm.formState.isSubmitting}>
-                                {answersForm.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                           <Button type="submit" className="w-auto" disabled={isSubmitting}>
+                                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                                 Submit Assessment
                             </Button>
                        )}
@@ -573,5 +576,3 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
-
-    
