@@ -97,15 +97,22 @@ export type AssessmentQuestion = {
   options?: string[];
 };
 
+export type AssessmentSection = {
+  id: string;
+  title: string;
+  questions: AssessmentQuestion[];
+};
+
 export type Assessment = {
   id: string;
   title: string;
   passcode?: string;
   timeLimit?: number; // in minutes
-  questions: AssessmentQuestion[];
+  sections: AssessmentSection[];
   createdAt: any;
   submissionCount?: number;
 };
+
 
 export type AssessmentSubmission = {
   id: string;
@@ -118,7 +125,7 @@ export type AssessmentSubmission = {
   answers: {
     questionId: string;
     questionText: string;
-    answer: string;
+    answer: string | string[];
   }[];
   submittedAt: any;
   timeTaken: number; // in seconds
@@ -142,8 +149,8 @@ export type CollegeCandidate = {
     id: string;
     name: string;
     email: string;
-    importedAt: any;
-    submission: AssessmentSubmission | null;
+    importedAt?: any;
+    submission?: AssessmentSubmission | null;
 };
 
 export const CollegeSchema = z.object({
