@@ -37,7 +37,6 @@ export type Candidate = {
   status: CandidateStatus | string; // Allow for lowercase from db
   type: CandidateType;
   submittedAt: any; // Allow for Firestore timestamp object
-  rejectionReason?: string;
   whatsappNumber: string;
   introductionVideoIntern?: string;
   comments?: string;
@@ -59,7 +58,6 @@ export const CandidateUpdateSchema = z.object({
   introductionVideoIntern: z.string().url('Invalid URL').or(z.literal('')),
   status: z.enum(CANDIDATE_STATUSES),
   type: z.enum(CANDIDATE_TYPES),
-  rejectionReason: z.string().optional(),
   comments: z.string().optional(),
 });
 

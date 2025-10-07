@@ -225,7 +225,7 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
 
       if (!candidateToUpdate) return;
 
-      const { status, rejectionReason } = updates;
+      const { status } = updates;
       
       // Optimistically update UI
       setData(prev => prev.map(c => (c.id === candidateId ? { ...c, ...updates } : c)));
@@ -268,7 +268,7 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
                   description: result.message || `Failed to send email to ${updates.fullName || candidateToUpdate.fullName}.`,
                 });
               }
-            } else if (status === 'Rejected' && rejectionReason) {
+            } else if (status === 'Rejected') {
                const response = await fetch('/api/rejected', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -276,7 +276,6 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
                   fullName: updates.fullName || candidateToUpdate.fullName,
                   email: updates.email || candidateToUpdate.email,
                   position: updates.position || candidateToUpdate.position,
-                  reason: rejectionReason,
                 }),
               });
               const result = await response.json();
@@ -321,11 +320,14 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
       
       const { status } = updates;
       
-      if (status === 'Shortlisted' && status !== candidateToUpdate.status) {
+      if (status && status !== candidateToUpdate.status && (status === 'Shortlisted' || status === 'Rejected')) {
+        const action = status === 'Shortlisted' ? 'shortlist' : 'reject';
+        const emailType = status === 'Shortlisted' ? 'a "shortlisted"' : 'a "rejection"';
+        
         setConfirmation({
           isOpen: true,
-          title: 'Are you sure you want to shortlist this candidate?',
-          description: `This will send a "shortlisted" email to ${updates.fullName || candidateToUpdate.fullName}. Do you want to proceed?`,
+          title: `Are you sure you want to ${action} this candidate?`,
+          description: `This will send ${emailType} email to ${updates.fullName || candidateToUpdate.fullName}. Do you want to proceed?`,
           onConfirm: () => {
             proceedWithStatusUpdate(candidateId, updates);
             setConfirmation({ ...confirmation, isOpen: false });
@@ -342,14 +344,8 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
   const handleStatusChangeFromDropdown = (candidateId: string, status: CandidateStatus) => {
     const candidate = data.find(c => c.id === candidateId);
     if (!candidate) return;
-
-    if (status === 'Rejected') {
-      // If 'Rejected' is selected from dropdown, open modal to get reason
-      setSelectedCandidate(candidate);
-    } else {
-      // For other statuses, update directly (or show confirmation)
-      handleSaveChanges(candidateId, { status });
-    }
+    
+    handleSaveChanges(candidateId, { ...candidate, status });
   }
 
 
