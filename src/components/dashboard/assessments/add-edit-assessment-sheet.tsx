@@ -88,10 +88,15 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
   useEffect(() => {
     if (isOpen) {
       if (assessment) {
+        // Backward compatibility: If old assessment format without sections is found, convert it.
+        const sections = assessment.sections && assessment.sections.length > 0 
+          ? assessment.sections 
+          : (assessment.questions ? [{ id: uuidv4(), title: 'General Questions', questions: assessment.questions }] : []);
+
         form.reset({
           ...assessment,
           timeLimit: assessment.timeLimit || undefined,
-          sections: assessment.sections.map(s => ({
+          sections: sections.map(s => ({
               ...s,
               questions: s.questions.map(q => ({
                   ...q,
@@ -117,7 +122,7 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
   const onSubmit = async (data: z.infer<typeof assessmentSchema>) => {
     setIsProcessing(true);
     try {
-       const assessmentData = {
+       const assessmentData: any = {
         ...data,
         timeLimit: data.timeLimit || null,
         sections: data.sections.map(s => ({
@@ -133,6 +138,9 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
             }),
         }))
       };
+      // Remove legacy 'questions' field if it exists
+      delete assessmentData.questions;
+
       await onSave(assessmentData, assessment?.id);
     } catch (error) {
        // Error toast is handled in parent
@@ -343,3 +351,4 @@ function OptionsField({ sectionIndex, questionIndex, control }: { sectionIndex: 
     )
 }
 
+    
