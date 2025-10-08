@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { ColumnDef } from '@tanstack/react-table';
@@ -24,6 +25,7 @@ import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 
 type GetColumnsProps = {
+  onEdit: (assessment: Assessment) => void;
   onDelete: (assessmentId: string, title: string) => void;
 };
 
@@ -51,7 +53,7 @@ const ShareActionItem = ({ assessmentId, passcode }: { assessmentId: string, pas
 }
 
 
-export const getColumns = ({ onDelete }: GetColumnsProps): ColumnDef<Assessment>[] => {
+export const getColumns = ({ onEdit, onDelete }: GetColumnsProps): ColumnDef<Assessment>[] => {
   const columns: ColumnDef<Assessment>[] = [
     {
       accessorKey: 'title',
@@ -67,11 +69,12 @@ export const getColumns = ({ onDelete }: GetColumnsProps): ColumnDef<Assessment>
       cell: ({ row }) => <div className="font-medium">{row.original.title}</div>,
     },
     {
-        accessorKey: 'questions',
+        accessorKey: 'sections',
         header: 'Questions',
-        cell: ({ row }) => (
-            <div className="text-center">{row.original.questions?.length || 0}</div>
-        ),
+        cell: ({ row }) => {
+            const questionCount = row.original.sections?.reduce((acc, section) => acc + (section.questions?.length || 0), 0) || 0;
+            return <div className="text-center">{questionCount}</div>
+        },
     },
      {
       accessorKey: 'submissions',
@@ -146,13 +149,7 @@ export const getColumns = ({ onDelete }: GetColumnsProps): ColumnDef<Assessment>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => {
-                const table = row.table;
-                const onRowClick = table.options.meta?.onRowClick;
-                 if (onRowClick) {
-                    (onRowClick as (row: any) => void)(row);
-                }
-            }}>
+            <DropdownMenuItem onClick={() => onEdit(assessment)}>
                 View/Edit Details
             </DropdownMenuItem>
              <DropdownMenuItem asChild>

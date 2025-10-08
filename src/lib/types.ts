@@ -110,7 +110,8 @@ export type Assessment = {
   title: string;
   passcode?: string;
   timeLimit?: number; // in minutes
-  sections: AssessmentSection[];
+  sections?: AssessmentSection[];
+  questions?: AssessmentQuestion[]; // For backward compatibility
   createdAt: any;
   submissionCount?: number;
   authentication: AuthenticationType;
@@ -124,8 +125,8 @@ export type AssessmentSubmission = {
   assessmentTitle: string;
   candidateName: string;
   candidateEmail: string;
-  candidateContact: string;
-  candidateResumeUrl: string;
+  candidateContact?: string;
+  candidateResumeUrl?: string;
   answers: {
     questionId: string;
     questionText: string;

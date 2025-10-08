@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -107,10 +106,10 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
           disableCopyPaste: assessment.disableCopyPaste || false,
           sections: sections?.map(s => ({
               ...s,
-              questions: s.questions.map(q => ({
+              questions: s.questions?.map(q => ({
                   ...q,
                   options: q.options?.map(opt => ({ value: opt }))
-              }))
+              })) || []
           })) || []
         });
       } else {
