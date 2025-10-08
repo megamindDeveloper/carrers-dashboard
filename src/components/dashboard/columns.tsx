@@ -32,7 +32,6 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { Checkbox } from '../ui/checkbox';
 
 type GetColumnsProps = {
   onStatusChange: (candidateId: string, status: CandidateStatus) => void;
@@ -74,28 +73,6 @@ export const getColumns = ({
   filterType,
 }: GetColumnsProps): ColumnDef<Candidate>[] => {
   const baseColumns: ColumnDef<Candidate>[] = [
-     {
-      id: 'select',
-      header: ({ table }) => (
-        <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
-          }
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
-        />
-      ),
-      cell: ({ row }) => (
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-        />
-      ),
-      enableSorting: false,
-      enableHiding: false,
-    },
     {
       accessorKey: 'fullName',
       header: ({ column }) => (

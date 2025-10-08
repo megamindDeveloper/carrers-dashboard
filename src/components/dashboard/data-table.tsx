@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, Dispatch, SetStateAction } from 'react';
+import { useState } from 'react';
 import {
   type ColumnDef,
   type SortingState,
@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { DataTableToolbar } from './data-table-toolbar';
-import type { Candidate, CandidateType, Job } from '@/lib/types';
+import type { CandidateType } from '@/lib/types';
 import {
   Select,
   SelectContent,
@@ -40,8 +40,6 @@ interface DataTableProps<TData, TValue> {
   data: TData[];
   onRowClick: (row: TData) => void;
   filterType?: CandidateType;
-  rowSelection?: RowSelectionState;
-  setRowSelection?: Dispatch<SetStateAction<RowSelectionState>>;
 }
 
 const toTitleCase = (str: string) => {
@@ -55,15 +53,11 @@ export function DataTable<TData extends {id: string}, TValue>({
   data,
   onRowClick,
   filterType,
-  rowSelection,
-  setRowSelection,
 }: DataTableProps<TData, TValue>) {
 
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   
-  const enableRowSelection = !!(rowSelection && setRowSelection);
-
   const table = useReactTable({
     data,
     columns,
@@ -73,11 +67,9 @@ export function DataTable<TData extends {id: string}, TValue>({
     getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
-    onRowSelectionChange: setRowSelection,
     state: {
       sorting,
       columnFilters,
-      rowSelection,
     },
     initialState: {
       pagination: {
@@ -96,7 +88,6 @@ export function DataTable<TData extends {id: string}, TValue>({
      meta: {
       onRowClick,
     },
-    enableRowSelection,
   });
 
   return (
@@ -127,7 +118,7 @@ export function DataTable<TData extends {id: string}, TValue>({
               table.getRowModel().rows.map(row => (
                 <TableRow
                   key={row.id}
-                  data-state={enableRowSelection && row.getIsSelected() && 'selected'}
+                  data-state={row.getIsSelected() && 'selected'}
                   onClick={() => onRowClick(row.original)}
                   className="cursor-pointer"
                 >
@@ -166,12 +157,6 @@ export function DataTable<TData extends {id: string}, TValue>({
       </div>
        <div className="flex items-center justify-between px-2">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          {enableRowSelection && (
-             <span>
-              {table.getFilteredSelectedRowModel().rows.length} of{" "}
-              {table.getFilteredRowModel().rows.length} row(s) selected.
-            </span>
-          )}
         </div>
         <div className="flex items-center space-x-6 lg:space-x-8">
           <div className="flex items-center space-x-2">

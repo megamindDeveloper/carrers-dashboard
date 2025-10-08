@@ -16,8 +16,6 @@ import { Button } from '../ui/button';
 import { Download, Send, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { deleteObject, ref } from 'firebase/storage';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { SendAssessmentDialog } from './colleges/send-assessment-dialog';
 import { SubmissionDetailsModal } from './submissions/submission-details-modal';
 
 interface CandidateTableProps {
@@ -55,14 +53,7 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
     onConfirm: () => {},
   });
   const { firebaseUser } = useAuth();
-
-  const [rowSelection, setRowSelection] = useState({});
-  const [assessments, setAssessments] = useState<Assessment[]>([]);
-  const [selectedAssessmentId, setSelectedAssessmentId] = useState<string>('');
-  const [isSending, setIsSending] = useState(false);
-  const [isSendAssessmentDialogOpen, setSendAssessmentDialogOpen] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<AssessmentSubmission | null>(null);
-
 
   useEffect(() => {
     // Fetch candidates
@@ -127,16 +118,8 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
       }
     );
 
-    // Fetch assessments
-    const assessmentsQuery = query(collection(db, 'assessments'));
-    const unsubAssessments = onSnapshot(assessmentsQuery, (snapshot) => {
-        const assessmentList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Assessment));
-        setAssessments(assessmentList);
-    });
-
     return () => {
         unsubCandidates();
-        unsubAssessments();
     };
   }, [filterType]);
   
@@ -391,64 +374,6 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
     handleSaveChanges(candidateId, { ...candidate, status });
   }
 
-  const handleOpenSendDialog = () => {
-    const selectedRows = Object.keys(rowSelection);
-    if (selectedRows.length === 0) {
-        toast({ variant: 'destructive', title: 'No Candidates Selected', description: 'Please select at least one candidate to send the assessment to.' });
-        return;
-    }
-     if (!selectedAssessmentId) {
-        toast({ variant: 'destructive', title: 'No Assessment Selected', description: 'Please select an assessment to send.' });
-        return;
-    }
-    setSendAssessmentDialogOpen(true);
-  }
-
-  const handleSendAssessment = async ({ subject, body }: { subject: string, body: string }) => {
-    const selectedRows = Object.keys(rowSelection);
-    const candidatesToSend = selectedRows.map(index => data[parseInt(index, 10)]);
-
-    const selectedAssessment = assessments.find(a => a.id === selectedAssessmentId);
-    if (!selectedAssessment) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Selected assessment could not be found.' });
-        return;
-    }
-
-    setIsSending(true);
-    setSendAssessmentDialogOpen(false);
-    toast({ title: 'Sending Emails...', description: `Preparing to send '${selectedAssessment.title}' to ${candidatesToSend.length} candidates.` });
-
-    try {
-        const response = await fetch('/api/send-assessment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                candidates: candidatesToSend.map(c => ({ id: c.id, name: c.fullName, email: c.email })),
-                assessmentId: selectedAssessment.id,
-                assessmentTitle: selectedAssessment.title,
-                passcode: selectedAssessment.passcode || null,
-                subject,
-                body,
-            }),
-        });
-
-        const result = await response.json();
-
-        if (response.ok || response.status === 207) {
-            toast({ title: result.success ? 'Emails Sent!' : 'Partial Success', description: result.message });
-        } else {
-            throw new Error(result.message || 'An unknown error occurred.');
-        }
-
-    } catch (error: any) {
-        toast({ variant: 'destructive', title: 'Failed to Send Emails', description: error.message });
-    } finally {
-        setIsSending(false);
-        setRowSelection({}); // Clear selection
-    }
-  }
-
-
   const columns = useMemo(
     () => getColumns({ onStatusChange: handleStatusChangeFromDropdown, filterType, onDelete: handleDeleteCandidate, onViewSubmission: (sub) => setSelectedSubmission(sub) }),
     [handleStatusChangeFromDropdown, filterType, handleDeleteCandidate]
@@ -473,36 +398,9 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
                 <AddCandidateSheet />
               </div>
             </div>
-             <Card className="bg-muted/40">
-              <CardHeader className="pb-4">
-                  <CardTitle className="text-lg">Send Assessment</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col sm:flex-row gap-4">
-                 <Select value={selectedAssessmentId} onValueChange={setSelectedAssessmentId}>
-                    <SelectTrigger className="w-full sm:w-[280px]">
-                      <SelectValue placeholder="Select an assessment..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {assessments.length > 0 ? (
-                          assessments.map(assessment => (
-                              <SelectItem key={assessment.id} value={assessment.id}>
-                                  {assessment.title}
-                              </SelectItem>
-                          ))
-                      ) : (
-                          <div className="p-4 text-sm text-muted-foreground">No assessments found.</div>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <Button onClick={handleOpenSendDialog} disabled={isSending || !selectedAssessmentId || Object.keys(rowSelection).length === 0}>
-                    {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Send className="mr-2 h-4 w-4" />}
-                    {`Send to ${Object.keys(rowSelection).length} selected`}
-                  </Button>
-              </CardContent>
-            </Card>
         </CardHeader>
         <CardContent>
-          <DataTable columns={columns} data={data} onRowClick={handleRowClick} filterType={filterType} rowSelection={rowSelection} setRowSelection={setRowSelection} />
+          <DataTable columns={columns} data={data} onRowClick={handleRowClick} filterType={filterType} />
         </CardContent>
       </Card>
       <CandidateDetailsModal
@@ -519,13 +417,6 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
         description={confirmation.description}
         onConfirm={confirmation.onConfirm}
         onCancel={() => setConfirmation({ ...confirmation, isOpen: false })}
-      />
-      <SendAssessmentDialog
-        isOpen={isSendAssessmentDialogOpen}
-        onClose={() => setSendAssessmentDialogOpen(false)}
-        onSend={handleSendAssessment}
-        isSending={isSending}
-        assessment={assessments.find(a => a.id === selectedAssessmentId)}
       />
       <SubmissionDetailsModal
         isOpen={!!selectedSubmission}
