@@ -375,8 +375,8 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
   }
 
   const columns = useMemo(
-    () => getColumns({ onStatusChange: handleStatusChangeFromDropdown, filterType, onDelete: handleDeleteCandidate, onViewSubmission: (sub) => setSelectedSubmission(sub) }),
-    [handleStatusChangeFromDropdown, filterType, handleDeleteCandidate]
+    () => getColumns({ onStatusChange: handleStatusChangeFromDropdown, onDelete: handleDeleteCandidate, onViewSubmission: (sub) => setSelectedSubmission(sub) }),
+    [handleStatusChangeFromDropdown, handleDeleteCandidate]
   );
 
   if (loading) return <p className="p-4">Loading candidates...</p>;
@@ -400,7 +400,7 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
             </div>
         </CardHeader>
         <CardContent>
-          <DataTable columns={columns} data={data} onRowClick={handleRowClick} filterType={filterType} />
+          <DataTable columns={columns} data={data} onRowClick={handleRowClick} />
         </CardContent>
       </Card>
       <CandidateDetailsModal
