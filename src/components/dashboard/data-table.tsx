@@ -90,6 +90,8 @@ export function DataTable<TData extends {id: string}, TValue>({
     },
   });
 
+  const rowSelectionEnabled = table.options.enableRowSelection;
+
   return (
     <div className="space-y-4">
       <DataTableToolbar table={table} filterType={filterType} />
@@ -118,7 +120,7 @@ export function DataTable<TData extends {id: string}, TValue>({
               table.getRowModel().rows.map(row => (
                 <TableRow
                   key={row.id}
-                  data-state={row.getIsSelected() && 'selected'}
+                  data-state={rowSelectionEnabled && row.getIsSelected() && 'selected'}
                   onClick={() => onRowClick(row.original)}
                   className="cursor-pointer"
                 >

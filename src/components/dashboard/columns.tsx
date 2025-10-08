@@ -32,6 +32,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import { Checkbox } from '@/components/ui/checkbox';
 
 type GetColumnsProps = {
   onStatusChange: (candidateId: string, status: CandidateStatus) => void;
