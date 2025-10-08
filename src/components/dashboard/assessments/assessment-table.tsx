@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
 import type { Assessment, AssessmentSubmission } from '@/lib/types';
@@ -142,7 +143,7 @@ export function AssessmentTable() {
     }
   };
 
-  const columns = useMemo(() => getColumns({ onDelete: handleDelete }), []);
+  const columns = useMemo(() => getColumns({ onEdit: handleRowClick, onDelete: handleDelete }), [handleDelete]);
 
   if (loading) return <p className="p-4">Loading assessments...</p>;
 

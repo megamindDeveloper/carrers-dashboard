@@ -7,6 +7,7 @@ import {
   type ColumnDef,
   type SortingState,
   type ColumnFiltersState,
+  type RowSelectionState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
@@ -25,7 +26,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { DataTableToolbar } from './data-table-toolbar';
-import type { Candidate, CandidateType, Job } from '@/lib/types';
+import type { CandidateType } from '@/lib/types';
 import {
   Select,
   SelectContent,
@@ -56,7 +57,7 @@ export function DataTable<TData extends {id: string}, TValue>({
 
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-
+  
   const table = useReactTable({
     data,
     columns,
@@ -89,6 +90,8 @@ export function DataTable<TData extends {id: string}, TValue>({
     },
   });
 
+  const rowSelectionEnabled = table.options.enableRowSelection;
+
   return (
     <div className="space-y-4">
       <DataTableToolbar table={table} filterType={filterType} />
@@ -117,7 +120,7 @@ export function DataTable<TData extends {id: string}, TValue>({
               table.getRowModel().rows.map(row => (
                 <TableRow
                   key={row.id}
-                  data-state={row.getIsSelected() && 'selected'}
+                  data-state={rowSelectionEnabled && row.getIsSelected() && 'selected'}
                   onClick={() => onRowClick(row.original)}
                   className="cursor-pointer"
                 >
@@ -126,7 +129,9 @@ export function DataTable<TData extends {id: string}, TValue>({
                       key={cell.id}
                       onClick={(e) => {
                         const cellId = cell.column.id;
-                        if (cellId === 'actions') {
+                        // Stop propagation for selection and action cells
+                        // to prevent the row click handler from firing.
+                        if (cellId === 'select' || cellId === 'actions') {
                             e.stopPropagation();
                         }
                       }}
@@ -153,8 +158,7 @@ export function DataTable<TData extends {id: string}, TValue>({
         </Table>
       </div>
        <div className="flex items-center justify-between px-2">
-        <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredRowModel().rows.length} row(s) available.
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
         </div>
         <div className="flex items-center space-x-6 lg:space-x-8">
           <div className="flex items-center space-x-2">

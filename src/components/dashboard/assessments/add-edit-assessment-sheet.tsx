@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useForm, useFieldArray, useWatch } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
@@ -28,10 +28,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import type { Assessment, QuestionType, AssessmentSection } from '@/lib/types';
-import { QUESTION_TYPES } from '@/lib/types';
+import { QUESTION_TYPES, AUTHENTICATION_TYPES } from '@/lib/types';
 import { Loader2, PlusCircle, Trash2, Wand2, X } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface AddEditAssessmentSheetProps {
   isOpen: boolean;
@@ -46,11 +48,11 @@ const questionSchema = z.object({
   type: z.enum(QUESTION_TYPES),
   options: z.array(z.object({ value: z.string().min(1, "Option cannot be empty") })).optional(),
 }).superRefine((data, ctx) => {
-    if (data.type === 'multiple-choice' && (!data.options || data.options.length < 2)) {
+    if ((data.type === 'multiple-choice' || data.type === 'checkbox') && (!data.options || data.options.length < 2)) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: ['options'],
-            message: 'Multiple choice questions must have at least 2 options.',
+            message: 'This question type must have at least 2 options.',
         });
     }
 });
@@ -65,6 +67,8 @@ const assessmentSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   passcode: z.string().optional(),
   timeLimit: z.coerce.number().optional(),
+  authentication: z.enum(AUTHENTICATION_TYPES),
+  disableCopyPaste: z.boolean().optional(),
   sections: z.array(sectionSchema).min(1, "At least one section is required"),
 });
 
@@ -88,26 +92,37 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
   useEffect(() => {
     if (isOpen) {
       if (assessment) {
+        let sections = assessment.sections;
+
+        // Backward compatibility: If sections don't exist but questions do, create a default section.
+        if (!sections && (assessment as any).questions) {
+            sections = [{ id: 'default', title: 'General Questions', questions: (assessment as any).questions }];
+        }
+
         form.reset({
           ...assessment,
           timeLimit: assessment.timeLimit || undefined,
-          sections: assessment.sections.map(s => ({
+          authentication: assessment.authentication || 'none',
+          disableCopyPaste: assessment.disableCopyPaste || false,
+          sections: sections?.map(s => ({
               ...s,
-              questions: s.questions.map(q => ({
+              questions: s.questions?.map(q => ({
                   ...q,
                   options: q.options?.map(opt => ({ value: opt }))
-              }))
-          }))
+              })) || []
+          })) || []
         });
       } else {
         form.reset({
           title: '',
           passcode: '',
           timeLimit: 30,
+          authentication: 'none',
+          disableCopyPaste: true,
           sections: [{ 
               id: uuidv4(), 
               title: 'General Questions', 
-              questions: [{ id: uuidv4(), text: 'Please introduce yourself and walk us through your resume.', type: 'text' }]
+              questions: [{ id: uuidv4(), text: 'Please introduce yourself and walk us through your resume.', type: 'textarea' }]
           }],
         });
       }
@@ -124,7 +139,7 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
             ...s,
             questions: s.questions.map(q => {
                 const newQ: any = { ...q };
-                if (q.type === 'multiple-choice') {
+                if (q.type === 'multiple-choice' || q.type === 'checkbox') {
                     newQ.options = q.options?.map(opt => opt.value);
                 } else {
                     delete newQ.options;
@@ -146,25 +161,34 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
   const addSection = () => appendSection({ id: uuidv4(), title: `New Section ${sectionsFields.length + 1}`, questions: [{ id: uuidv4(), text: '', type: 'text' }] });
 
   const deleteSection = (index: number) => {
-      removeSection(index);
+      if (sectionsFields.length > 1) {
+        removeSection(index);
+      } else {
+        toast({
+            variant: 'destructive',
+            title: 'Cannot Delete Section',
+            description: 'An assessment must have at least one section.',
+        });
+      }
   };
 
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-4xl">
+      <SheetContent className="w-full sm:max-w-4xl flex flex-col">
+        <SheetHeader>
+          <SheetTitle>{assessment ? 'Edit Assessment' : 'Create New Assessment'}</SheetTitle>
+          <SheetDescription>
+            Fill in the details below. You can add multiple sections with questions.
+          </SheetDescription>
+        </SheetHeader>
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
-            className="flex h-full flex-col"
+            className="flex-1 flex flex-col overflow-hidden"
           >
-            <SheetHeader>
-              <SheetTitle>{assessment ? 'Edit Assessment' : 'Create New Assessment'}</SheetTitle>
-              <SheetDescription>
-                Fill in the details below. You can add multiple sections with questions.
-              </SheetDescription>
-            </SheetHeader>
-            <div className="flex-1 overflow-y-auto p-1 pr-6 space-y-6 py-4">
+            <ScrollArea className="flex-1 pr-6">
+            <div className="space-y-6 py-4">
               {/* Assessment Details */}
               <div className="space-y-4 p-4 border rounded-lg">
                   <FormField control={form.control} name="title" render={({ field }) => (
@@ -176,18 +200,23 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
               )} />
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FormField control={form.control} name="passcode" render={({ field }) => (
-                  <FormItem>
-                      <FormLabel>Passcode (Optional)</FormLabel>
-                      <div className="flex items-center gap-2">
-                          <FormControl><Input placeholder="e.g., FDEV24" {...field} /></FormControl>
-                          <Button type="button" variant="outline" size="icon" onClick={handleGeneratePasscode}>
-                              <Wand2 className="h-4 w-4" />
-                          </Button>
-                      </div>
-                      <FormDescription>Leave blank for no passcode.</FormDescription>
+                 <FormField control={form.control} name="authentication" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Authentication Type</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select authentication type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            <SelectItem value="none">No Authentication</SelectItem>
+                            <SelectItem value="email_verification">Email & Name Verification</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>Require candidates to verify their identity before starting.</FormDescription>
                       <FormMessage />
-                  </FormItem>
+                    </FormItem>
                   )} />
 
                   <FormField control={form.control} name="timeLimit" render={({ field }) => (
@@ -199,6 +228,40 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
                   </FormItem>
                   )} />
               </div>
+               <FormField control={form.control} name="passcode" render={({ field }) => (
+                  <FormItem>
+                      <FormLabel>Passcode (Optional)</FormLabel>
+                      <div className="flex items-center gap-2">
+                          <FormControl><Input placeholder="e.g., FDEV24" {...field} /></FormControl>
+                          <Button type="button" variant="outline" size="icon" onClick={handleGeneratePasscode}>
+                              <Wand2 className="h-4 w-4" />
+                          </Button>
+                      </div>
+                      <FormDescription>If authentication is off, anyone with the link and passcode can enter.</FormDescription>
+                      <FormMessage />
+                  </FormItem>
+                  )} />
+
+                <FormField
+                    control={form.control}
+                    name="disableCopyPaste"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                        <div className="space-y-0.5">
+                            <FormLabel>Disable Copy & Paste</FormLabel>
+                            <FormDescription>
+                            Prevent candidates from pasting content into text fields.
+                            </FormDescription>
+                        </div>
+                        <FormControl>
+                            <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            />
+                        </FormControl>
+                        </FormItem>
+                    )}
+                    />
               </div>
 
               {/* Sections */}
@@ -236,10 +299,10 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
                   <PlusCircle className="mr-2 h-4 w-4" /> Add Another Section
               </Button>
             </div>
-
-            <SheetFooter className="pt-4">
+            </ScrollArea>
+            <SheetFooter className="pt-4 border-t">
                 <SheetClose asChild><Button type="button" variant="ghost" disabled={isProcessing}>Cancel</Button></SheetClose>
-                <Button type="submit" disabled={isProcessing}>
+                <Button type="submit" disabled={isProcessing || !form.formState.isValid}>
                     {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Save Assessment
                 </Button>
@@ -285,16 +348,23 @@ function QuestionsField({ sectionIndex, control, form }: { sectionIndex: number,
                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                     <FormControl><SelectTrigger><SelectValue placeholder="Select an answer type" /></SelectTrigger></FormControl>
                                     <SelectContent>
-                                        <SelectItem value="text">Text Answer</SelectItem>
-                                        <SelectItem value="multiple-choice">Multiple Choice</SelectItem>
+                                        <SelectItem value="textarea">Text Area (Multi-line)</SelectItem>
+                                        <SelectItem value="text">Text (Single line)</SelectItem>
+                                        <SelectItem value="multiple-choice">Multiple Choice (Single Answer)</SelectItem>
+                                        <SelectItem value="checkbox">Checkboxes (Multiple Answers)</SelectItem>
                                         <SelectItem value="file-upload">File Upload</SelectItem>
+                                        <SelectItem value="date">Date</SelectItem>
+                                        <SelectItem value="email">Email</SelectItem>
+                                        <SelectItem value="number">Number</SelectItem>
+                                        <SelectItem value="tel">Phone Number</SelectItem>
+                                        <SelectItem value="url">URL</SelectItem>
                                     </SelectContent>
                                 </Select>
                                 <FormMessage />
                             </FormItem>
                         )}
                     />
-                     {form.watch(`sections.${sectionIndex}.questions.${questionIndex}.type`) === 'multiple-choice' && (
+                     {(form.watch(`sections.${sectionIndex}.questions.${questionIndex}.type`) === 'multiple-choice' || form.watch(`sections.${sectionIndex}.questions.${questionIndex}.type`) === 'checkbox') && (
                         <OptionsField sectionIndex={sectionIndex} questionIndex={questionIndex} control={control} />
                     )}
                 </div>
@@ -342,4 +412,3 @@ function OptionsField({ sectionIndex, questionIndex, control }: { sectionIndex: 
         </div>
     )
 }
-

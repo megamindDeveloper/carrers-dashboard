@@ -1,8 +1,9 @@
 
+
 'use client';
 
 import type { ColumnDef } from '@tanstack/react-table';
-import type { Candidate, CandidateStatus, CandidateType } from '@/lib/types';
+import type { Candidate, CandidateStatus, CandidateType, AssessmentSubmission } from '@/lib/types';
 import { CANDIDATE_STATUSES } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
@@ -26,14 +27,17 @@ import {
   Video,
   Share2,
   Trash2,
+  ClipboardList,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import { Checkbox } from '@/components/ui/checkbox';
 
 type GetColumnsProps = {
   onStatusChange: (candidateId: string, status: CandidateStatus) => void;
   onDelete: (candidateId: string, candidateName: string) => void;
+  onViewSubmission: (submission: AssessmentSubmission) => void;
   filterType?: CandidateType;
 };
 
@@ -66,23 +70,10 @@ const ShareActionItem = ({ candidateId }: { candidateId: string }) => {
 export const getColumns = ({
   onStatusChange,
   onDelete,
+  onViewSubmission,
   filterType,
 }: GetColumnsProps): ColumnDef<Candidate>[] => {
   const baseColumns: ColumnDef<Candidate>[] = [
-    {
-      id: 'slNo',
-      header: 'Sl. No.',
-      cell: ({ row, table }) => {
-        const { pageIndex, pageSize } = table.getState().pagination;
-        // `row.index` is the index of the row in the original data array.
-        // We need to find the index of the row in the paginated and filtered view.
-        const paginatedRowIndex = table.getRowModel().rows.findIndex(
-            paginatedRow => paginatedRow.id === row.id
-        );
-        const index = (pageIndex * pageSize) + paginatedRowIndex + 1;
-        return <span>{index}</span>;
-      },
-    },
     {
       accessorKey: 'fullName',
       header: ({ column }) => (
@@ -159,6 +150,28 @@ export const getColumns = ({
       );
     },
   };
+  
+  const assessmentStatusColumn: ColumnDef<Candidate> = {
+    accessorKey: 'submissions',
+    header: 'Assessment Status',
+    cell: ({ row }) => {
+      const submissions = row.original.submissions;
+      if (!submissions || submissions.length === 0) {
+        return <Badge variant="outline">Pending</Badge>;
+      }
+      return (
+        <div className="flex flex-col items-start gap-1">
+            {submissions.map(sub => (
+                <Button key={sub.id} variant="secondary" size="sm" className="h-auto" onClick={(e) => { e.stopPropagation(); onViewSubmission(sub); }}>
+                    <ClipboardList className="mr-2 h-4 w-4" />
+                    {sub.assessmentTitle}
+                </Button>
+            ))}
+        </div>
+      );
+    },
+  }
+
 
   const commonColumns: ColumnDef<Candidate>[] = [
     {
@@ -256,8 +269,6 @@ export const getColumns = ({
           <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuItem onClick={() => {
-                // This triggers the row click handler in `candidate-table.tsx`
-                // which opens the modal.
                 const table = row.table;
                 const onRowClick = table.options.meta?.onRowClick;
                  if (onRowClick) {
@@ -266,6 +277,20 @@ export const getColumns = ({
             }}>
                 View/Edit Details
             </DropdownMenuItem>
+             {candidate.submissions && candidate.submissions.length > 0 && (
+                <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                        <ClipboardList className="mr-2 h-4 w-4" /> View Submission
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                        {candidate.submissions.map(sub => (
+                            <DropdownMenuItem key={sub.id} onClick={() => onViewSubmission(sub)}>
+                                {sub.assessmentTitle}
+                            </DropdownMenuItem>
+                        ))}
+                    </DropdownMenuSubContent>
+                </DropdownMenuSub>
+            )}
             <ShareActionItem candidateId={candidate.id} />
             {candidate.portfolio && (
               <DropdownMenuItem
@@ -321,7 +346,7 @@ export const getColumns = ({
     },
   };
 
-  let columns: ColumnDef<Candidate>[] = [...baseColumns];
+  let columns: ColumnDef<Candidate>[] = [...baseColumns, assessmentStatusColumn];
 
   if (filterType === 'internship') {
     // For interns, add intro video and remove experience
@@ -336,3 +361,5 @@ export const getColumns = ({
 
   return columns;
 };
+
+    

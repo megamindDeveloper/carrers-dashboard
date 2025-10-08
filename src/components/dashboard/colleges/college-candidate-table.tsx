@@ -55,12 +55,22 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
         const submissionsQuery = query(collection(db, 'assessmentSubmissions'), where('collegeId', '==', collegeId));
         const submissionsSnapshot = await getDocs(submissionsQuery);
         const submissions = submissionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AssessmentSubmission));
-        const submissionsMap = new Map(submissions.map(s => [s.collegeCandidateId, s]));
         
+        // Group submissions by candidate ID
+        const submissionsByCandidate = submissions.reduce((acc, sub) => {
+            if (sub.collegeCandidateId) {
+                if (!acc[sub.collegeCandidateId]) {
+                    acc[sub.collegeCandidateId] = [];
+                }
+                acc[sub.collegeCandidateId].push(sub);
+            }
+            return acc;
+        }, {} as Record<string, AssessmentSubmission[]>);
+
         // Match submissions to candidates
         const candidatesWithSubmissions = candidatesData.map(candidate => ({
             ...candidate,
-            submission: submissionsMap.get(candidate.id) || null
+            submissions: submissionsByCandidate[candidate.id] || [],
         }));
 
         // Populate submission with candidate details if not already present
@@ -201,7 +211,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
         toast({ variant: 'destructive', title: 'No Assessment Selected', description: 'Please select an assessment to send.' });
         return;
     }
-    const candidatesToSend = data.filter(c => !c.submission);
+    const candidatesToSend = data.filter(c => !c.submissions?.some(s => s.assessmentId === selectedAssessmentId));
     if (candidatesToSend.length === 0) {
         toast({ title: 'All Candidates Have Submitted', description: 'There are no pending submissions for this assessment.' });
         return;
@@ -211,7 +221,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
 
   const handleSendAssessment = async ({ subject, body }: { subject: string, body: string }) => {
     
-    const candidatesToSend = data.filter(c => !c.submission);
+    const candidatesToSend = data.filter(c => !c.submissions?.some(s => s.assessmentId === selectedAssessmentId));
     const selectedAssessment = assessments.find(a => a.id === selectedAssessmentId);
     if (!selectedAssessment) {
         toast({ variant: 'destructive', title: 'Error', description: 'Selected assessment could not be found.' });
@@ -254,7 +264,12 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
 
 
   const columns = useMemo(() => getCandidateColumns({ onViewSubmission: (sub) => setSelectedSubmission(sub) }), []);
-  const candidatesToReceive = useMemo(() => data.filter(c => !c.submission).length, [data]);
+
+  const candidatesToReceive = useMemo(() => {
+    if (!selectedAssessmentId) return data.length;
+    return data.filter(c => !c.submissions?.some(s => s.assessmentId === selectedAssessmentId)).length;
+  }, [data, selectedAssessmentId]);
+
 
   if (loading) return <p className="p-4">Loading candidates...</p>;
 
@@ -292,7 +307,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
                  <Card className="mb-6 bg-muted/40">
                     <CardHeader>
                         <CardTitle>Send Assessment</CardTitle>
-                        <CardDescription>Select an assessment and send it to all candidates who haven't submitted yet.</CardDescription>
+                        <CardDescription>Select an assessment and send it to candidates who haven't submitted it yet.</CardDescription>
                     </CardHeader>
                     <CardContent className="flex flex-col sm:flex-row gap-4">
                        <Select value={selectedAssessmentId} onValueChange={setSelectedAssessmentId}>

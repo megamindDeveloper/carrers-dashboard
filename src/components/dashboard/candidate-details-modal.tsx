@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { Candidate, CandidateStatus, CandidateType } from '@/lib/types';
+import type { AssessmentSubmission, Candidate, CandidateStatus, CandidateType } from '@/lib/types';
 import { CANDIDATE_STATUSES, CANDIDATE_TYPES, CandidateUpdateSchema } from '@/lib/types';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { ExternalLink, FileText, Share2, Loader2, Trash2 } from 'lucide-react';
+import { ExternalLink, FileText, Share2, Loader2, Trash2, ClipboardList } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
@@ -35,6 +35,7 @@ interface CandidateDetailsModalProps {
   candidate: Candidate | null;
   onSaveChanges: (candidateId: string, updates: Partial<Candidate>) => void;
   onDelete: (candidateId: string, candidateName: string) => void;
+  onViewSubmission: (submission: AssessmentSubmission) => void;
 }
 
 type CandidateUpdateForm = z.infer<typeof CandidateUpdateSchema>;
@@ -50,6 +51,7 @@ export function CandidateDetailsModal({
   candidate,
   onSaveChanges,
   onDelete,
+  onViewSubmission,
 }: CandidateDetailsModalProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
@@ -263,6 +265,20 @@ export function CandidateDetailsModal({
                 </Button>
               )}
             </div>
+
+             {candidate.submissions && candidate.submissions.length > 0 && (
+              <div className="space-y-4 pt-4 border-t">
+                  <h3 className="text-base font-semibold">Submissions</h3>
+                  <div className="flex flex-wrap gap-2">
+                      {candidate.submissions.map(sub => (
+                          <Button key={sub.id} type="button" variant="secondary" size="sm" onClick={() => onViewSubmission(sub)}>
+                              <ClipboardList className="mr-2 h-4 w-4" />
+                              View '{sub.assessmentTitle}'
+                          </Button>
+                      ))}
+                  </div>
+              </div>
+            )}
             
             <div className="space-y-4 pt-4 border-t">
               <FormField

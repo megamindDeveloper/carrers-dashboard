@@ -1,3 +1,4 @@
+
 import { z } from 'zod';
 
 export const CANDIDATE_STATUSES = [
@@ -40,6 +41,7 @@ export type Candidate = {
   whatsappNumber: string;
   introductionVideoIntern?: string;
   comments?: string;
+  submissions?: AssessmentSubmission[];
 };
 
 export const CandidateUpdateSchema = z.object({
@@ -85,8 +87,22 @@ export type Job = {
 };
 
 // Assessment Types
-export const QUESTION_TYPES = ['text', 'multiple-choice', 'file-upload'] as const;
+export const QUESTION_TYPES = [
+    'textarea',
+    'text',
+    'multiple-choice',
+    'checkbox',
+    'file-upload',
+    'date',
+    'email',
+    'number',
+    'url',
+    'tel',
+] as const;
 export type QuestionType = (typeof QUESTION_TYPES)[number];
+
+export const AUTHENTICATION_TYPES = ['none', 'email_verification'] as const;
+export type AuthenticationType = (typeof AUTHENTICATION_TYPES)[number];
 
 export type AssessmentQuestion = {
   id: string;
@@ -106,9 +122,12 @@ export type Assessment = {
   title: string;
   passcode?: string;
   timeLimit?: number; // in minutes
-  sections: AssessmentSection[];
+  sections?: AssessmentSection[];
+  questions?: AssessmentQuestion[]; // For backward compatibility
   createdAt: any;
   submissionCount?: number;
+  authentication: AuthenticationType;
+  disableCopyPaste?: boolean;
 };
 
 
@@ -118,8 +137,8 @@ export type AssessmentSubmission = {
   assessmentTitle: string;
   candidateName: string;
   candidateEmail: string;
-  candidateContact: string;
-  candidateResumeUrl: string;
+  candidateContact?: string;
+  candidateResumeUrl?: string;
   answers: {
     questionId: string;
     questionText: string;
@@ -129,6 +148,7 @@ export type AssessmentSubmission = {
   timeTaken: number; // in seconds
   collegeId?: string | null;
   collegeCandidateId?: string | null;
+  candidateId?: string | null; // Link to the main 'applications' candidate
 };
 
 // College Collaboration Types
@@ -148,7 +168,7 @@ export type CollegeCandidate = {
     name: string;
     email: string;
     importedAt?: any;
-    submission?: AssessmentSubmission | null;
+    submissions?: AssessmentSubmission[];
 };
 
 export const CollegeSchema = z.object({
