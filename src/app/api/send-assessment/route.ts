@@ -6,10 +6,11 @@ import { collection, doc, writeBatch } from "firebase/firestore";
 import { db } from "@/app/utils/firebase/firebaseConfig";
 import path from "path";
 import fs from "fs/promises";
+import type { AuthenticationType } from "@/lib/types";
 
 export async function POST(req: Request) {
   try {
-    const { candidates, assessmentId, assessmentTitle, passcode, collegeId, subject, body } = await req.json();
+    const { candidates, assessmentId, assessmentTitle, passcode, collegeId, subject, body, authentication } = await req.json();
 
     if (!candidates || !Array.isArray(candidates) || candidates.length === 0 || !assessmentId || !assessmentTitle || !subject || !body) {
       return NextResponse.json(
@@ -37,13 +38,18 @@ export async function POST(req: Request) {
             assessmentLink += `&collegeId=${collegeId}`;
         }
 
+        let finalBody = body;
+        if (authentication === 'email_verification') {
+            finalBody = `Please note: You will need to verify your name and email address to access this assessment.\n\n${body}`;
+        }
+
         // Replace all placeholders for the specific candidate
         personalizedTemplate = personalizedTemplate
           .replace(/<<Candidate Name>>/g, candidate.name)
           .replace(/<<Assessment Name>>/g, assessmentTitle)
           .replace(/<<Assessment Link>>/g, assessmentLink)
           .replace(/<<Passcode>>/g, passcode || 'N/A')
-          .replace(/<<EMAIL_BODY>>/g, body.replace(/\n/g, '<br />')); // Replace custom body content
+          .replace(/<<EMAIL_BODY>>/g, finalBody.replace(/\n/g, '<br />')); // Replace custom body content
 
 
         // Conditionally show passcode section

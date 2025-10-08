@@ -246,6 +246,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
                 collegeId: collegeId,
                 subject,
                 body,
+                authentication: selectedAssessment.authentication,
             }),
         });
 
