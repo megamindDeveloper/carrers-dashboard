@@ -184,9 +184,10 @@ export const getColumns = ({
       return (
         <div className="flex flex-col items-start gap-1">
             {submissions.map(sub => (
-                <Badge key={sub.id} variant="default" className="bg-green-600 hover:bg-green-700">
-                    Submitted: {sub.assessmentTitle}
-                </Badge>
+                <Button key={sub.id} variant="secondary" size="sm" className="h-auto" onClick={(e) => { e.stopPropagation(); onViewSubmission(sub); }}>
+                    <ClipboardList className="mr-2 h-4 w-4" />
+                    {sub.assessmentTitle}
+                </Button>
             ))}
         </div>
       );
@@ -299,9 +300,18 @@ export const getColumns = ({
                 View/Edit Details
             </DropdownMenuItem>
              {candidate.submissions && candidate.submissions.length > 0 && (
-                <DropdownMenuItem onClick={() => onViewSubmission(candidate.submissions![0])}>
-                    <ClipboardList className="mr-2 h-4 w-4" /> View Submission
-                </DropdownMenuItem>
+                <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                        <ClipboardList className="mr-2 h-4 w-4" /> View Submission
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                        {candidate.submissions.map(sub => (
+                            <DropdownMenuItem key={sub.id} onClick={() => onViewSubmission(sub)}>
+                                {sub.assessmentTitle}
+                            </DropdownMenuItem>
+                        ))}
+                    </DropdownMenuSubContent>
+                </DropdownMenuSub>
             )}
             <ShareActionItem candidateId={candidate.id} />
             {candidate.portfolio && (
@@ -373,3 +383,5 @@ export const getColumns = ({
 
   return columns;
 };
+
+    
