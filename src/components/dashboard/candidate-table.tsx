@@ -1,21 +1,24 @@
 
 'use client';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import type { Candidate, CandidateStatus, CandidateType } from '@/lib/types';
+import type { Assessment, Candidate, CandidateStatus, CandidateType, AssessmentSubmission } from '@/lib/types';
 import { CANDIDATE_STATUSES } from '@/lib/types';
 import { DataTable } from './data-table';
 import { getColumns } from './columns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { collection, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, updateDoc, doc, deleteDoc, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { db, storage } from '@/app/utils/firebase/firebaseConfig';
 import { AddCandidateSheet } from './add-candidate-sheet';
 import { useToast } from '@/hooks/use-toast';
 import { CandidateDetailsModal } from './candidate-details-modal';
 import { ConfirmationDialog } from './confirmation-dialog';
 import { Button } from '../ui/button';
-import { Download } from 'lucide-react';
+import { Download, Send, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { deleteObject, ref } from 'firebase/storage';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { SendAssessmentDialog } from './colleges/send-assessment-dialog';
+import { SubmissionDetailsModal } from './submissions/submission-details-modal';
 
 interface CandidateTableProps {
   title: string;
@@ -53,12 +56,20 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
   });
   const { firebaseUser } = useAuth();
 
+  const [rowSelection, setRowSelection] = useState({});
+  const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const [selectedAssessmentId, setSelectedAssessmentId] = useState<string>('');
+  const [isSending, setIsSending] = useState(false);
+  const [isSendAssessmentDialogOpen, setSendAssessmentDialogOpen] = useState(false);
+  const [selectedSubmission, setSelectedSubmission] = useState<AssessmentSubmission | null>(null);
+
 
   useEffect(() => {
-    const colRef = collection(db, 'applications');
-    const unsub = onSnapshot(
-      colRef,
-      snapshot => {
+    // Fetch candidates
+    const candidatesQuery = collection(db, 'applications');
+    const unsubCandidates = onSnapshot(
+      candidatesQuery,
+      async snapshot => {
         let candidates = snapshot.docs.map(d => ({
           id: d.id,
           ...(d.data() as Omit<Candidate, 'id'>),
@@ -67,30 +78,44 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
         if (filterType) {
           candidates = candidates.filter(c => c.type === filterType);
         }
+
+        // Fetch all submissions
+        const submissionsQuery = query(collection(db, 'assessmentSubmissions'));
+        const submissionsSnapshot = await getDocs(submissionsQuery);
+        const submissionsData = submissionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AssessmentSubmission));
         
-        candidates.sort((a, b) => {
-          // 1. Primary Sort: Status
+        // Group submissions by candidate email
+        const submissionsByEmail = submissionsData.reduce((acc, sub) => {
+            if (sub.candidateEmail) {
+                if (!acc[sub.candidateEmail]) {
+                    acc[sub.candidateEmail] = [];
+                }
+                acc[sub.candidateEmail].push(sub);
+            }
+            return acc;
+        }, {} as Record<string, AssessmentSubmission[]>);
+
+        // Attach submissions to candidates
+        const candidatesWithSubmissions = candidates.map(candidate => ({
+            ...candidate,
+            submissions: submissionsByEmail[candidate.email] || [],
+        }));
+        
+        candidatesWithSubmissions.sort((a, b) => {
+          // Sorting logic...
           const statusA = toTitleCase(a.status as string) as CandidateStatus;
           const statusB = toTitleCase(b.status as string) as CandidateStatus;
           const orderA = statusOrder[statusA] ?? 99;
           const orderB = statusOrder[statusB] ?? 99;
-          if (orderA !== orderB) {
-            return orderA - orderB;
-          }
-          
-          // 2. Secondary Sort: Position (alphabetical)
+          if (orderA !== orderB) return orderA - orderB;
           const positionCompare = a.position.localeCompare(b.position);
-          if (positionCompare !== 0) {
-            return positionCompare;
-          }
-
-          // 3. Tertiary Sort: Submission Date (newest first)
+          if (positionCompare !== 0) return positionCompare;
           const dateA = a.submittedAt?.toDate ? a.submittedAt.toDate() : new Date(0);
           const dateB = b.submittedAt?.toDate ? b.submittedAt.toDate() : new Date(0);
           return dateB.getTime() - dateA.getTime();
         });
 
-        setData(candidates.map(c => ({
+        setData(candidatesWithSubmissions.map(c => ({
           ...c,
           type: c.type === 'intern' ? 'internship' : c.type === 'emp' ? 'full-time' : c.type,
         })));
@@ -101,7 +126,18 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
         setLoading(false);
       }
     );
-    return () => unsub();
+
+    // Fetch assessments
+    const assessmentsQuery = query(collection(db, 'assessments'));
+    const unsubAssessments = onSnapshot(assessmentsQuery, (snapshot) => {
+        const assessmentList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Assessment));
+        setAssessments(assessmentList);
+    });
+
+    return () => {
+        unsubCandidates();
+        unsubAssessments();
+    };
   }, [filterType]);
   
   const handleRowClick = (candidate: Candidate) => {
@@ -187,8 +223,16 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
         setConfirmation({ ...confirmation, isOpen: false });
   
         try {
+            const batch = writeBatch(db);
+            
+            // Delete main application doc
             const docRef = doc(db, 'applications', candidateId);
-            await deleteDoc(docRef);
+            batch.delete(docRef);
+
+            // Delete associated submissions
+            const submissionsQuery = query(collection(db, 'assessmentSubmissions'), where('candidateId', '==', candidateId));
+            const submissionsSnapshot = await getDocs(submissionsQuery);
+            submissionsSnapshot.forEach(subDoc => batch.delete(subDoc.ref));
 
             // If there's a resume URL, delete the file from Storage
             if (candidateToDelete.resumeUrl) {
@@ -196,12 +240,11 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
                     const resumeRef = ref(storage, candidateToDelete.resumeUrl);
                     await deleteObject(resumeRef);
                 } catch (storageError: any) {
-                    // Log if storage deletion fails, but don't fail the entire request
-                    // as the primary record (Firestore doc) is already deleted.
                     console.warn(`Failed to delete resume from storage: ${storageError.message}`);
                 }
             }
 
+            await batch.commit();
             toast({
                 title: 'Candidate Deleted',
                 description: `${candidateName}'s application has been successfully deleted.`,
@@ -348,9 +391,66 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
     handleSaveChanges(candidateId, { ...candidate, status });
   }
 
+  const handleOpenSendDialog = () => {
+    const selectedRows = Object.keys(rowSelection);
+    if (selectedRows.length === 0) {
+        toast({ variant: 'destructive', title: 'No Candidates Selected', description: 'Please select at least one candidate to send the assessment to.' });
+        return;
+    }
+     if (!selectedAssessmentId) {
+        toast({ variant: 'destructive', title: 'No Assessment Selected', description: 'Please select an assessment to send.' });
+        return;
+    }
+    setSendAssessmentDialogOpen(true);
+  }
+
+  const handleSendAssessment = async ({ subject, body }: { subject: string, body: string }) => {
+    const selectedRows = Object.keys(rowSelection);
+    const candidatesToSend = selectedRows.map(index => data[parseInt(index, 10)]);
+
+    const selectedAssessment = assessments.find(a => a.id === selectedAssessmentId);
+    if (!selectedAssessment) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Selected assessment could not be found.' });
+        return;
+    }
+
+    setIsSending(true);
+    setSendAssessmentDialogOpen(false);
+    toast({ title: 'Sending Emails...', description: `Preparing to send '${selectedAssessment.title}' to ${candidatesToSend.length} candidates.` });
+
+    try {
+        const response = await fetch('/api/send-assessment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                candidates: candidatesToSend.map(c => ({ id: c.id, name: c.fullName, email: c.email })),
+                assessmentId: selectedAssessment.id,
+                assessmentTitle: selectedAssessment.title,
+                passcode: selectedAssessment.passcode || null,
+                subject,
+                body,
+            }),
+        });
+
+        const result = await response.json();
+
+        if (response.ok || response.status === 207) {
+            toast({ title: result.success ? 'Emails Sent!' : 'Partial Success', description: result.message });
+        } else {
+            throw new Error(result.message || 'An unknown error occurred.');
+        }
+
+    } catch (error: any) {
+        toast({ variant: 'destructive', title: 'Failed to Send Emails', description: error.message });
+    } finally {
+        setIsSending(false);
+        setRowSelection({}); // Clear selection
+    }
+  }
+
 
   const columns = useMemo(
-    () => getColumns({ onStatusChange: handleStatusChangeFromDropdown, filterType, onDelete: handleDeleteCandidate }),
+    () => getColumns({ onStatusChange: handleStatusChangeFromDropdown, filterType, onDelete: handleDeleteCandidate, onViewSubmission: (sub) => setSelectedSubmission(sub) }),
     [handleStatusChangeFromDropdown, filterType, handleDeleteCandidate]
   );
 
@@ -359,21 +459,50 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
   return (
     <>
       <Card>
-        <CardHeader className="flex flex-col items-stretch gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <CardTitle>{title}</CardTitle>
-            <CardDescription>{description}</CardDescription>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Button variant="outline" onClick={handleExport} className="w-full sm:w-auto">
-              <Download className="mr-2 h-4 w-4" />
-              Export to CSV
-            </Button>
-            <AddCandidateSheet />
-          </div>
+        <CardHeader className="flex flex-col items-stretch gap-4">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <CardTitle>{title}</CardTitle>
+                <CardDescription>{description}</CardDescription>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button variant="outline" onClick={handleExport} className="w-full sm:w-auto">
+                  <Download className="mr-2 h-4 w-4" />
+                  Export to CSV
+                </Button>
+                <AddCandidateSheet />
+              </div>
+            </div>
+             <Card className="bg-muted/40">
+              <CardHeader className="pb-4">
+                  <CardTitle className="text-lg">Send Assessment</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col sm:flex-row gap-4">
+                 <Select value={selectedAssessmentId} onValueChange={setSelectedAssessmentId}>
+                    <SelectTrigger className="w-full sm:w-[280px]">
+                      <SelectValue placeholder="Select an assessment..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {assessments.length > 0 ? (
+                          assessments.map(assessment => (
+                              <SelectItem key={assessment.id} value={assessment.id}>
+                                  {assessment.title}
+                              </SelectItem>
+                          ))
+                      ) : (
+                          <div className="p-4 text-sm text-muted-foreground">No assessments found.</div>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <Button onClick={handleOpenSendDialog} disabled={isSending || !selectedAssessmentId || Object.keys(rowSelection).length === 0}>
+                    {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Send className="mr-2 h-4 w-4" />}
+                    {`Send to ${Object.keys(rowSelection).length} selected`}
+                  </Button>
+              </CardContent>
+            </Card>
         </CardHeader>
         <CardContent>
-          <DataTable columns={columns} data={data} onRowClick={handleRowClick} filterType={filterType}/>
+          <DataTable columns={columns} data={data} onRowClick={handleRowClick} filterType={filterType} rowSelection={rowSelection} setRowSelection={setRowSelection} />
         </CardContent>
       </Card>
       <CandidateDetailsModal
@@ -391,8 +520,18 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
         onConfirm={confirmation.onConfirm}
         onCancel={() => setConfirmation({ ...confirmation, isOpen: false })}
       />
+      <SendAssessmentDialog
+        isOpen={isSendAssessmentDialogOpen}
+        onClose={() => setSendAssessmentDialogOpen(false)}
+        onSend={handleSendAssessment}
+        isSending={isSending}
+        assessment={assessments.find(a => a.id === selectedAssessmentId)}
+      />
+      <SubmissionDetailsModal
+        isOpen={!!selectedSubmission}
+        onClose={() => setSelectedSubmission(null)}
+        submission={selectedSubmission}
+      />
     </>
   );
 }
-
-    

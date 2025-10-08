@@ -2,11 +2,12 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, Dispatch, SetStateAction } from 'react';
 import {
   type ColumnDef,
   type SortingState,
   type ColumnFiltersState,
+  type RowSelectionState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
@@ -39,6 +40,8 @@ interface DataTableProps<TData, TValue> {
   data: TData[];
   onRowClick: (row: TData) => void;
   filterType?: CandidateType;
+  rowSelection?: RowSelectionState;
+  setRowSelection?: Dispatch<SetStateAction<RowSelectionState>>;
 }
 
 const toTitleCase = (str: string) => {
@@ -52,10 +55,14 @@ export function DataTable<TData extends {id: string}, TValue>({
   data,
   onRowClick,
   filterType,
+  rowSelection,
+  setRowSelection,
 }: DataTableProps<TData, TValue>) {
 
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  
+  const enableRowSelection = !!(rowSelection && setRowSelection);
 
   const table = useReactTable({
     data,
@@ -66,9 +73,11 @@ export function DataTable<TData extends {id: string}, TValue>({
     getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
+    onRowSelectionChange: setRowSelection,
     state: {
       sorting,
       columnFilters,
+      rowSelection,
     },
     initialState: {
       pagination: {
@@ -87,6 +96,7 @@ export function DataTable<TData extends {id: string}, TValue>({
      meta: {
       onRowClick,
     },
+    enableRowSelection,
   });
 
   return (
@@ -126,7 +136,9 @@ export function DataTable<TData extends {id: string}, TValue>({
                       key={cell.id}
                       onClick={(e) => {
                         const cellId = cell.column.id;
-                        if (cellId === 'actions') {
+                        // Stop propagation for selection and action cells
+                        // to prevent the row click handler from firing.
+                        if (cellId === 'select' || cellId === 'actions') {
                             e.stopPropagation();
                         }
                       }}
@@ -153,8 +165,13 @@ export function DataTable<TData extends {id: string}, TValue>({
         </Table>
       </div>
        <div className="flex items-center justify-between px-2">
-        <div className="flex-1 text-sm text-muted-foreground">
-          {table.getFilteredRowModel().rows.length} row(s) available.
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          {enableRowSelection && (
+             <span>
+              {table.getFilteredSelectedRowModel().rows.length} of{" "}
+              {table.getFilteredRowModel().rows.length} row(s) selected.
+            </span>
+          )}
         </div>
         <div className="flex items-center space-x-6 lg:space-x-8">
           <div className="flex items-center space-x-2">

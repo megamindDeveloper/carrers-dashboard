@@ -2,7 +2,8 @@
 
 import { NextResponse } from "next/server";
 import { sendEmail } from "@/lib/mail";
-import type { CollegeCandidate } from "@/lib/types";
+import { collection, doc, writeBatch } from "firebase/firestore";
+import { db } from "@/app/utils/firebase/firebaseConfig";
 import path from "path";
 import fs from "fs/promises";
 
@@ -10,7 +11,7 @@ export async function POST(req: Request) {
   try {
     const { candidates, assessmentId, assessmentTitle, passcode, collegeId, subject, body } = await req.json();
 
-    if (!candidates || !Array.isArray(candidates) || candidates.length === 0 || !assessmentId || !assessmentTitle || !collegeId || !subject || !body) {
+    if (!candidates || !Array.isArray(candidates) || candidates.length === 0 || !assessmentId || !assessmentTitle || !subject || !body) {
       return NextResponse.json(
         { success: false, message: "Invalid request body. Missing required fields." },
         { status: 400 }
@@ -24,18 +25,21 @@ export async function POST(req: Request) {
     let sentCount = 0;
     let failedCount = 0;
     const failedReasons: string[] = [];
+    const batch = writeBatch(db);
 
     for (const candidate of candidates) {
       try {
         let personalizedTemplate = baseTemplate;
 
         // Create a unique link for each candidate
-        const assessmentLink = `${process.env.NEXT_PUBLIC_BASE_URL}/assessment/${assessmentId}?collegeId=${collegeId}&candidateId=${candidate.id}`;
+        let assessmentLink = `${process.env.NEXT_PUBLIC_BASE_URL}/assessment/${assessmentId}?candidateId=${candidate.id}`;
+        if (collegeId) {
+            assessmentLink += `&collegeId=${collegeId}`;
+        }
 
         // Replace all placeholders for the specific candidate
         personalizedTemplate = personalizedTemplate
           .replace(/<<Candidate Name>>/g, candidate.name)
-          .replace(/<<Candidate ID>>/g, candidate.id)
           .replace(/<<Assessment Name>>/g, assessmentTitle)
           .replace(/<<Assessment Link>>/g, assessmentLink)
           .replace(/<<Passcode>>/g, passcode || 'N/A')
@@ -55,6 +59,17 @@ export async function POST(req: Request) {
             subject: subject,
             htmlBody: personalizedTemplate,
         });
+
+        // Add a record of this invitation
+        const invitationRef = doc(collection(db, 'assessmentInvitations'));
+        batch.set(invitationRef, {
+            candidateId: candidate.id,
+            candidateEmail: candidate.email,
+            assessmentId,
+            assessmentTitle,
+            sentAt: new Date(),
+        });
+
         sentCount++;
       } catch (emailError: any) {
         failedCount++;
@@ -63,6 +78,9 @@ export async function POST(req: Request) {
         failedReasons.push(reason);
       }
     }
+    
+    // Commit batch of invitation records
+    await batch.commit();
 
     if (failedCount > 0) {
       const errorMessage = `Process completed with errors. Sent: ${sentCount}, Failed: ${failedCount}. Reasons: ${failedReasons.join(', ')}`;

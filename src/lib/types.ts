@@ -41,6 +41,7 @@ export type Candidate = {
   whatsappNumber: string;
   introductionVideoIntern?: string;
   comments?: string;
+  submissions?: AssessmentSubmission[];
 };
 
 export const CandidateUpdateSchema = z.object({
@@ -136,6 +137,7 @@ export type AssessmentSubmission = {
   timeTaken: number; // in seconds
   collegeId?: string | null;
   collegeCandidateId?: string | null;
+  candidateId?: string | null; // Link to the main 'applications' candidate
 };
 
 // College Collaboration Types
