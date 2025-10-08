@@ -4,7 +4,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { doc, getDoc, collection, addDoc, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, serverTimestamp, getDocs, query, where, updateDoc } from 'firebase/firestore';
 import { db, storage } from '@/app/utils/firebase/firebaseConfig';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import type { Assessment, CollegeCandidate, Candidate } from '@/lib/types';
@@ -216,9 +216,6 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     if (!params.id) return;
 
-    const candidateId = searchParams.get('candidateId');
-    const collegeId = searchParams.get('collegeId');
-
     const getAssessmentData = async () => {
       setLoading(true);
       setError(null);
@@ -257,6 +254,9 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
 
         const authRequired = data.authentication === 'email_verification';
         const hasPasscode = !!data.passcode;
+        
+        const candidateId = searchParams.get('candidateId');
+        const collegeId = searchParams.get('collegeId');
 
         // Try to find candidate from either college or general pool
         if (candidateId) {
@@ -598,14 +598,16 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                             <ArrowLeft className="mr-2 h-4 w-4" /> Previous
                        </Button>
 
-                       {currentSectionIndex < totalSections - 1 ? (
+                       {currentSectionIndex < totalSections - 1 && (
                            <Button 
                             type="button" 
                             onClick={() => setCurrentSectionIndex(prev => prev + 1)}
                            >
                               Next <ArrowRight className="ml-2 h-4 w-4" />
                            </Button>
-                       ) : (
+                       )}
+
+                       {currentSectionIndex === totalSections - 1 && (
                            <Button type="submit" className="w-auto" disabled={isSubmitting}>
                                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                                 Submit Assessment
@@ -619,3 +621,5 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
+
+    
