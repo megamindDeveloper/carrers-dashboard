@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -32,6 +33,8 @@ import { QUESTION_TYPES, AUTHENTICATION_TYPES } from '@/lib/types';
 import { Loader2, PlusCircle, Trash2, Wand2, X } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface AddEditAssessmentSheetProps {
   isOpen: boolean;
@@ -66,6 +69,7 @@ const assessmentSchema = z.object({
   passcode: z.string().optional(),
   timeLimit: z.coerce.number().optional(),
   authentication: z.enum(AUTHENTICATION_TYPES),
+  disableCopyPaste: z.boolean().optional(),
   sections: z.array(sectionSchema).min(1, "At least one section is required"),
 });
 
@@ -100,6 +104,7 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
           ...assessment,
           timeLimit: assessment.timeLimit || undefined,
           authentication: assessment.authentication || 'none',
+          disableCopyPaste: assessment.disableCopyPaste || false,
           sections: sections?.map(s => ({
               ...s,
               questions: s.questions.map(q => ({
@@ -114,6 +119,7 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
           passcode: '',
           timeLimit: 30,
           authentication: 'none',
+          disableCopyPaste: true,
           sections: [{ 
               id: uuidv4(), 
               title: 'General Questions', 
@@ -170,19 +176,20 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-4xl">
+      <SheetContent className="w-full sm:max-w-4xl flex flex-col">
+        <SheetHeader>
+          <SheetTitle>{assessment ? 'Edit Assessment' : 'Create New Assessment'}</SheetTitle>
+          <SheetDescription>
+            Fill in the details below. You can add multiple sections with questions.
+          </SheetDescription>
+        </SheetHeader>
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
-            className="flex h-full flex-col"
+            className="flex-1 flex flex-col"
           >
-            <SheetHeader>
-              <SheetTitle>{assessment ? 'Edit Assessment' : 'Create New Assessment'}</SheetTitle>
-              <SheetDescription>
-                Fill in the details below. You can add multiple sections with questions.
-              </SheetDescription>
-            </SheetHeader>
-            <div className="flex-1 overflow-y-auto p-1 pr-6 space-y-6 py-4">
+            <ScrollArea className="flex-1 pr-6">
+            <div className="space-y-6 py-4">
               {/* Assessment Details */}
               <div className="space-y-4 p-4 border rounded-lg">
                   <FormField control={form.control} name="title" render={({ field }) => (
@@ -235,6 +242,27 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
                       <FormMessage />
                   </FormItem>
                   )} />
+
+                <FormField
+                    control={form.control}
+                    name="disableCopyPaste"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                        <div className="space-y-0.5">
+                            <FormLabel>Disable Copy & Paste</FormLabel>
+                            <FormDescription>
+                            Prevent candidates from pasting content into text fields.
+                            </FormDescription>
+                        </div>
+                        <FormControl>
+                            <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            />
+                        </FormControl>
+                        </FormItem>
+                    )}
+                    />
               </div>
 
               {/* Sections */}
@@ -272,10 +300,10 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
                   <PlusCircle className="mr-2 h-4 w-4" /> Add Another Section
               </Button>
             </div>
-
-            <SheetFooter className="pt-4">
+            </ScrollArea>
+            <SheetFooter className="pt-4 border-t">
                 <SheetClose asChild><Button type="button" variant="ghost" disabled={isProcessing}>Cancel</Button></SheetClose>
-                <Button type="submit" disabled={isProcessing}>
+                <Button type="submit" disabled={isProcessing || !form.formState.isValid}>
                     {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Save Assessment
                 </Button>

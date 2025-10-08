@@ -1,3 +1,4 @@
+
 import { z } from 'zod';
 
 export const CANDIDATE_STATUSES = [
@@ -113,6 +114,7 @@ export type Assessment = {
   createdAt: any;
   submissionCount?: number;
   authentication: AuthenticationType;
+  disableCopyPaste?: boolean;
 };
 
 

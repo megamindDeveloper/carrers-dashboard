@@ -1,7 +1,8 @@
 
+
 'use client';
 
-import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { doc, getDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db, storage } from '@/app/utils/firebase/firebaseConfig';
@@ -157,10 +158,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
   const { toast } = useToast();
   const startTimeRef = useRef<number | null>(null);
   const searchParams = useSearchParams();
-  const collegeId = searchParams.get('collegeId');
-  const collegeCandidateId = searchParams.get('candidateId');
-
-
+  
   const passcodeForm = useForm<z.infer<typeof passcodeSchema>>({
     resolver: zodResolver(passcodeSchema),
     defaultValues: { passcode: '' },
@@ -175,15 +173,13 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     resolver: zodResolver(answersSchema),
   });
 
-  const allQuestions = useMemo(() => {
-    return assessment?.sections?.flatMap(section => section.questions) || [];
-  }, [assessment]);
-
- const onSubmit = useCallback(async (data: AnswersFormValues) => {
+  const onSubmit = useCallback(async (data: AnswersFormValues) => {
     if (!assessment || isSubmitting) return;
 
     setIsSubmitting(true);
     const timeTaken = startTimeRef.current ? Math.floor((Date.now() - startTimeRef.current) / 1000) : 0;
+    const collegeId = searchParams.get('collegeId');
+    const collegeCandidateId = searchParams.get('candidateId');
 
     try {
       await addDoc(collection(db, 'assessmentSubmissions'), {
@@ -213,11 +209,14 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     } finally {
         setIsSubmitting(false);
     }
-  }, [assessment, collegeId, collegeCandidateId, candidate, toast, isSubmitting]);
+  }, [assessment, candidate, isSubmitting, searchParams, toast]);
 
   // Effect for fetching the assessment and candidate data
   useEffect(() => {
     if (!params.id) return;
+
+    const collegeId = searchParams.get('collegeId');
+    const collegeCandidateId = searchParams.get('candidateId');
 
     const getAssessmentData = async () => {
       setLoading(true);
@@ -228,6 +227,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
 
         if (!docSnap.exists()) {
           setError('Assessment not found.');
+          setLoading(false);
           return;
         }
 
@@ -282,7 +282,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     };
 
     getAssessmentData();
-  }, [params.id, collegeId, collegeCandidateId, answersForm]);
+  }, [params.id, searchParams, answersForm]);
 
 
   // Effect for the countdown timer
@@ -339,6 +339,9 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     const secs = seconds % 60;
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
+  
+  const allQuestions = assessment?.sections?.flatMap(section => section.questions) || [];
+
 
   if (loading) {
     return (
@@ -459,7 +462,8 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                             <Timer className="h-4 w-4" />
                             <AlertTitle>Time Limit: {assessment?.timeLimit} minutes</AlertTitle>
                             <AlertDescription>
-                                The timer will start as soon as you click the button below. The form will be submitted automatically when the time runs out. Make sure you are in a quiet environment before you begin. Pasting is disabled for text fields.
+                                The timer will start as soon as you click the button below. The form will be submitted automatically when the time runs out.
+                                {assessment.disableCopyPaste && " Pasting is disabled for text fields."}
                             </AlertDescription>
                         </Alert>
                     )}
@@ -483,9 +487,9 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
   }
 
   const currentSection = assessment.sections[currentSectionIndex];
-  const totalSections = assessment.sections.length || 0;
+  const totalSections = assessment.sections.length;
   
-  const sectionQuestionStartIndex = assessment.sections.slice(0, currentSectionIndex).reduce((acc, sec) => acc + (sec.questions?.length || 0), 0) || 0;
+  const sectionQuestionStartIndex = assessment.sections.slice(0, currentSectionIndex).reduce((acc, sec) => acc + (sec.questions?.length || 0), 0);
 
   return (
     <div className="min-h-screen bg-muted/40 p-4 sm:p-8">
@@ -511,11 +515,12 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                 <Form {...answersForm}>
                 <form onSubmit={answersForm.handleSubmit(onSubmit)}>
                     <CardContent className="space-y-8 pt-4">
-                        {currentSection && (
+                        {currentSection && currentSection.questions && (
                             <div className="space-y-6">
                                 <h3 className="text-xl font-semibold border-b pb-2">{currentSection.title}</h3>
                                 {currentSection.questions.map((question, questionInSectionIndex) => {
                                     const overallQuestionIndex = sectionQuestionStartIndex + questionInSectionIndex;
+                                    const AnswerComponent = assessment.disableCopyPaste ? PasteDisabledTextarea : Textarea;
                                     return (
                                         <FormField
                                             key={question.id}
@@ -551,7 +556,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                                                           }}
                                                         />
                                                     ) : (
-                                                        <PasteDisabledTextarea
+                                                        <AnswerComponent
                                                             {...field}
                                                             value={field.value as string || ''}
                                                             className="min-h-[120px] text-base"
