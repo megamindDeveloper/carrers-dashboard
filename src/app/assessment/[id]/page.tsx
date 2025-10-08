@@ -326,8 +326,17 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
   };
 
   const handleVerificationSubmit = (values: z.infer<typeof verificationSchema>) => {
-      const candidateName = 'fullName' in candidate! ? (candidate as Candidate).fullName : (candidate as CollegeCandidate).name;
-      if (candidate && values.name.toLowerCase() === candidateName.toLowerCase() && values.email.toLowerCase() === candidate.email.toLowerCase()) {
+      if (!candidate) {
+          verificationForm.setError('email', { type: 'manual', message: 'Candidate record not found.' });
+          return;
+      }
+      const candidateName = 'fullName' in candidate ? (candidate as Candidate).fullName : (candidate as CollegeCandidate).name;
+      
+      // Case-insensitive comparison
+      const isNameMatch = values.name.toLowerCase() === candidateName.toLowerCase();
+      const isEmailMatch = values.email.toLowerCase() === candidate.email.toLowerCase();
+
+      if (isNameMatch && isEmailMatch) {
           setIsAuthenticated(true);
       } else {
           verificationForm.setError('email', { type: 'manual', message: 'The name or email does not match our records for this link.' });
