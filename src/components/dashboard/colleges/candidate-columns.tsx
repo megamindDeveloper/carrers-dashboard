@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { ColumnDef } from '@tanstack/react-table';
@@ -37,21 +38,23 @@ export const getCandidateColumns = ({ onViewSubmission }: { onViewSubmission: (s
       },
     },
     {
-      accessorKey: 'submissionStatus',
-      header: 'Submission Status',
+      accessorKey: 'submissions',
+      header: 'Submissions',
       cell: ({ row }) => {
-          const submission = row.original.submission;
-          if (submission) {
-              return (
-                  <div className="flex flex-col">
-                      <Badge variant="default" className="bg-green-500 hover:bg-green-600 mb-1 w-fit">Submitted</Badge>
-                      <span className="text-xs text-muted-foreground">
-                          {format(submission.submittedAt.toDate(), 'MMM d, yyyy')}
-                      </span>
-                  </div>
-              );
+          const { submissions } = row.original;
+          if (!submissions || submissions.length === 0) {
+              return <Badge variant="secondary">None</Badge>;
           }
-          return <Badge variant="secondary">Not Submitted</Badge>;
+          return (
+              <div className="flex flex-wrap gap-1">
+                  {submissions.map(sub => (
+                       <Button key={sub.id} variant="outline" size="sm" className="h-auto" onClick={(e) => { e.stopPropagation(); onViewSubmission(sub); }}>
+                          <ClipboardList className="mr-2 h-3 w-3" />
+                          <span>{sub.assessmentTitle}</span>
+                      </Button>
+                  ))}
+              </div>
+          )
       }
     },
     {
@@ -79,20 +82,6 @@ export const getCandidateColumns = ({ onViewSubmission }: { onViewSubmission: (s
         }
       },
     },
-    {
-        id: 'actions',
-        cell: ({ row }) => {
-            const submission = row.original.submission;
-            if (!submission) return null;
-
-            return (
-                <Button variant="outline" size="sm" onClick={() => onViewSubmission(submission)}>
-                    <ClipboardList className="mr-2 h-4 w-4" />
-                    View Submission
-                </Button>
-            );
-        }
-    }
   ];
 
   return columns;

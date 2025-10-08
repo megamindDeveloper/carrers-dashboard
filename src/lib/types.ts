@@ -157,7 +157,7 @@ export type CollegeCandidate = {
     name: string;
     email: string;
     importedAt?: any;
-    submission?: AssessmentSubmission | null;
+    submissions?: AssessmentSubmission[];
 };
 
 export const CollegeSchema = z.object({
