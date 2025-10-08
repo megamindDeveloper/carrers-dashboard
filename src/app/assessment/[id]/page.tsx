@@ -232,6 +232,12 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
         }
 
         const data = { id: docSnap.id, ...docSnap.data() } as Assessment;
+        
+        // Handle assessments with old structure (questions at root)
+        if (!data.sections && data.questions) {
+            data.sections = [{ id: 'default', title: 'General Questions', questions: data.questions }];
+        }
+
         setAssessment(data);
 
         // Pre-fill form answers
@@ -269,8 +275,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     };
 
     getAssessmentData();
-  // DO NOT add answersForm to dependency array to prevent re-fetching on form state change
-  }, [params.id, collegeId, collegeCandidateId]);
+  }, [params.id, collegeId, collegeCandidateId, answersForm]);
 
 
   // Effect for the countdown timer
@@ -459,10 +464,18 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
       );
   }
 
-  const currentSection = assessment?.sections[currentSectionIndex];
-  const totalSections = assessment?.sections?.length || 0;
+  if (!assessment || !assessment.sections) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-muted/40">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const currentSection = assessment.sections[currentSectionIndex];
+  const totalSections = assessment.sections.length || 0;
   
-  const sectionQuestionStartIndex = assessment?.sections.slice(0, currentSectionIndex).reduce((acc, sec) => acc + (sec.questions?.length || 0), 0) || 0;
+  const sectionQuestionStartIndex = assessment.sections.slice(0, currentSectionIndex).reduce((acc, sec) => acc + (sec.questions?.length || 0), 0) || 0;
 
   return (
     <div className="min-h-screen bg-muted/40 p-4 sm:p-8">
