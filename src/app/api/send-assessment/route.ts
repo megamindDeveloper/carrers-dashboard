@@ -40,7 +40,7 @@ export async function POST(req: Request) {
 
         let finalBody = body;
         if (authentication === 'email_verification') {
-            finalBody = `Please note: You will need to verify your name and email address to access this assessment.\n\n${body}`;
+            finalBody = `Please note: You will need to verify your name and email address to access this assessment. Use the following credentials:\n\nEmail: ${candidate.email}\nUsername: ${candidate.name}\n\n${body}`;
         }
 
         // Replace all placeholders for the specific candidate
