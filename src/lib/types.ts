@@ -88,6 +88,9 @@ export type Job = {
 export const QUESTION_TYPES = ['text', 'multiple-choice', 'file-upload'] as const;
 export type QuestionType = (typeof QUESTION_TYPES)[number];
 
+export const AUTHENTICATION_TYPES = ['none', 'email_verification'] as const;
+export type AuthenticationType = (typeof AUTHENTICATION_TYPES)[number];
+
 export type AssessmentQuestion = {
   id: string;
   text: string;
@@ -109,6 +112,7 @@ export type Assessment = {
   sections: AssessmentSection[];
   createdAt: any;
   submissionCount?: number;
+  authentication: AuthenticationType;
 };
 
 

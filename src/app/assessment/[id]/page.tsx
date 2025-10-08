@@ -234,8 +234,8 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
         const data = { id: docSnap.id, ...docSnap.data() } as Assessment;
         
         // Handle assessments with old structure (questions at root)
-        if (!data.sections && data.questions) {
-            data.sections = [{ id: 'default', title: 'General Questions', questions: data.questions }];
+        if (!data.sections && (data as any).questions) {
+            data.sections = [{ id: 'default', title: 'General Questions', questions: (data as any).questions }];
         }
 
         setAssessment(data);
@@ -254,17 +254,24 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
           setTimeLeft(data.timeLimit * 60);
         }
 
-        // Handle authentication logic
+        const authRequired = data.authentication === 'email_verification';
+        const hasPasscode = !!data.passcode;
+
+        // If from a college link, try to find the candidate
         if (collegeId && collegeCandidateId) {
           const candidateDocRef = doc(db, `colleges/${collegeId}/candidates/${collegeCandidateId}`);
           const candidateSnap = await getDoc(candidateDocRef);
           if (candidateSnap.exists()) {
             setCandidate({ id: candidateSnap.id, ...candidateSnap.data() } as CollegeCandidate);
+            // If auth is required, don't auto-authenticate yet.
+            if (!authRequired) {
+              setIsAuthenticated(true);
+            }
           } else {
             setError("Candidate not found for this assessment link.");
           }
-        } else if (!data.passcode) {
-          setIsAuthenticated(true);
+        } else if (!authRequired && !hasPasscode) {
+           setIsAuthenticated(true);
         }
       } catch (e: any) {
         setError('Failed to load assessment: ' + e.message);
@@ -314,10 +321,11 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
   };
 
   const handleVerificationSubmit = (values: z.infer<typeof verificationSchema>) => {
+      // This logic is primarily for college candidates with pre-registered emails.
       if (candidate && values.name.toLowerCase() === candidate.name.toLowerCase() && values.email.toLowerCase() === candidate.email.toLowerCase()) {
           setIsAuthenticated(true);
       } else {
-          verificationForm.setError('email', { type: 'manual', message: 'The name or email does not match our records.' });
+          verificationForm.setError('email', { type: 'manual', message: 'The name or email does not match our records for this link.' });
       }
   };
 
@@ -366,7 +374,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
   }
 
   if (!isAuthenticated) {
-     if (collegeCandidateId) {
+     if (assessment?.authentication === 'email_verification') {
         return (
              <div className="flex min-h-screen w-full items-center justify-center bg-muted/40 p-4">
                 <Card className="w-full max-w-sm">
@@ -379,10 +387,10 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                         <form onSubmit={verificationForm.handleSubmit(handleVerificationSubmit)}>
                             <CardContent className="space-y-4">
                                 <FormField control={verificationForm.control} name="name" render={({ field }) => (
-                                    <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                    <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} defaultValue={candidate?.name ?? ''} /></FormControl><FormMessage /></FormItem>
                                 )} />
                                 <FormField control={verificationForm.control} name="email" render={({ field }) => (
-                                    <FormItem><FormLabel>Email Address</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
+                                    <FormItem><FormLabel>Email Address</FormLabel><FormControl><Input type="email" {...field} defaultValue={candidate?.email ?? ''} /></FormControl><FormMessage /></FormItem>
                                 )} />
                             </CardContent>
                             <CardFooter>
@@ -397,41 +405,43 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
         )
     }
 
-    return (
-        <div className="flex min-h-screen w-full items-center justify-center bg-muted/40 p-4">
-            <Card className="w-full max-w-sm">
-                <CardHeader>
-                    <Image height={50} width={200} src={mmLogo} alt="MegaMind Careers Logo" className="mx-auto mb-4" />
-                    <CardTitle className="flex items-center gap-2 justify-center"><Lock /> Secure Assessment</CardTitle>
-                    <CardDescription className="text-center">{assessment?.title}</CardDescription>
-                </CardHeader>
-                <Form {...passcodeForm}>
-                    <form onSubmit={passcodeForm.handleSubmit(handlePasscodeSubmit)}>
-                        <CardContent className="space-y-4">
-                             <FormField
-                                control={passcodeForm.control}
-                                name="passcode"
-                                render={({ field }) => (
-                                    <FormItem>
-                                    <FormLabel>Enter Passcode</FormLabel>
-                                    <FormControl>
-                                        <Input type="password" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                    </FormItem>
-                                )}
-                                />
-                        </CardContent>
-                        <CardFooter>
-                            <Button type="submit" className="w-full">
-                                Unlock Assessment
-                            </Button>
-                        </CardFooter>
-                    </form>
-                </Form>
-            </Card>
-        </div>
-    );
+    if(assessment?.passcode) {
+      return (
+          <div className="flex min-h-screen w-full items-center justify-center bg-muted/40 p-4">
+              <Card className="w-full max-w-sm">
+                  <CardHeader>
+                      <Image height={50} width={200} src={mmLogo} alt="MegaMind Careers Logo" className="mx-auto mb-4" />
+                      <CardTitle className="flex items-center gap-2 justify-center"><Lock /> Secure Assessment</CardTitle>
+                      <CardDescription className="text-center">{assessment?.title}</CardDescription>
+                  </CardHeader>
+                  <Form {...passcodeForm}>
+                      <form onSubmit={passcodeForm.handleSubmit(handlePasscodeSubmit)}>
+                          <CardContent className="space-y-4">
+                              <FormField
+                                  control={passcodeForm.control}
+                                  name="passcode"
+                                  render={({ field }) => (
+                                      <FormItem>
+                                      <FormLabel>Enter Passcode</FormLabel>
+                                      <FormControl>
+                                          <Input type="password" {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                      </FormItem>
+                                  )}
+                                  />
+                          </CardContent>
+                          <CardFooter>
+                              <Button type="submit" className="w-full">
+                                  Unlock Assessment
+                              </Button>
+                          </CardFooter>
+                      </form>
+                  </Form>
+              </Card>
+          </div>
+      );
+    }
   }
 
   if (!isStarted) {

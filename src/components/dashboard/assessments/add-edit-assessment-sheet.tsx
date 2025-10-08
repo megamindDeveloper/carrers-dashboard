@@ -28,7 +28,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import type { Assessment, QuestionType, AssessmentSection } from '@/lib/types';
-import { QUESTION_TYPES } from '@/lib/types';
+import { QUESTION_TYPES, AUTHENTICATION_TYPES } from '@/lib/types';
 import { Loader2, PlusCircle, Trash2, Wand2, X } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -65,6 +65,7 @@ const assessmentSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   passcode: z.string().optional(),
   timeLimit: z.coerce.number().optional(),
+  authentication: z.enum(AUTHENTICATION_TYPES),
   sections: z.array(sectionSchema).min(1, "At least one section is required"),
 });
 
@@ -98,6 +99,7 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
         form.reset({
           ...assessment,
           timeLimit: assessment.timeLimit || undefined,
+          authentication: assessment.authentication || 'none',
           sections: sections?.map(s => ({
               ...s,
               questions: s.questions.map(q => ({
@@ -111,6 +113,7 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
           title: '',
           passcode: '',
           timeLimit: 30,
+          authentication: 'none',
           sections: [{ 
               id: uuidv4(), 
               title: 'General Questions', 
@@ -153,7 +156,15 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
   const addSection = () => appendSection({ id: uuidv4(), title: `New Section ${sectionsFields.length + 1}`, questions: [{ id: uuidv4(), text: '', type: 'text' }] });
 
   const deleteSection = (index: number) => {
-      removeSection(index);
+      if (sectionsFields.length > 1) {
+        removeSection(index);
+      } else {
+        toast({
+            variant: 'destructive',
+            title: 'Cannot Delete Section',
+            description: 'An assessment must have at least one section.',
+        });
+      }
   };
 
 
@@ -183,18 +194,23 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
               )} />
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FormField control={form.control} name="passcode" render={({ field }) => (
-                  <FormItem>
-                      <FormLabel>Passcode (Optional)</FormLabel>
-                      <div className="flex items-center gap-2">
-                          <FormControl><Input placeholder="e.g., FDEV24" {...field} /></FormControl>
-                          <Button type="button" variant="outline" size="icon" onClick={handleGeneratePasscode}>
-                              <Wand2 className="h-4 w-4" />
-                          </Button>
-                      </div>
-                      <FormDescription>Leave blank for no passcode.</FormDescription>
+                 <FormField control={form.control} name="authentication" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Authentication Type</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select authentication type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            <SelectItem value="none">No Authentication</SelectItem>
+                            <SelectItem value="email_verification">Email & Name Verification</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>Require candidates to verify their identity before starting.</FormDescription>
                       <FormMessage />
-                  </FormItem>
+                    </FormItem>
                   )} />
 
                   <FormField control={form.control} name="timeLimit" render={({ field }) => (
@@ -206,6 +222,19 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
                   </FormItem>
                   )} />
               </div>
+               <FormField control={form.control} name="passcode" render={({ field }) => (
+                  <FormItem>
+                      <FormLabel>Passcode (Optional)</FormLabel>
+                      <div className="flex items-center gap-2">
+                          <FormControl><Input placeholder="e.g., FDEV24" {...field} /></FormControl>
+                          <Button type="button" variant="outline" size="icon" onClick={handleGeneratePasscode}>
+                              <Wand2 className="h-4 w-4" />
+                          </Button>
+                      </div>
+                      <FormDescription>If authentication is off, anyone with the link and passcode can enter.</FormDescription>
+                      <FormMessage />
+                  </FormItem>
+                  )} />
               </div>
 
               {/* Sections */}
@@ -349,5 +378,3 @@ function OptionsField({ sectionIndex, questionIndex, control }: { sectionIndex: 
         </div>
     )
 }
-
-    
