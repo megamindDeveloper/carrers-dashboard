@@ -6,11 +6,11 @@ import type { Assessment, CollegeCandidate, AssessmentSubmission } from '@/lib/t
 import { DataTable } from '@/components/dashboard/data-table';
 import { getCandidateColumns } from './candidate-columns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { collection, onSnapshot, writeBatch, serverTimestamp, doc, getDocs, query, where, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, writeBatch, serverTimestamp, doc, getDocs, query, where, updateDoc, addDoc } from 'firebase/firestore';
 import { db } from '@/app/utils/firebase/firebaseConfig';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Upload, Send } from 'lucide-react';
+import { Upload, Send, PlusCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Loader2 } from 'lucide-react';
 import {
@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select';
 import { SubmissionDetailsModal } from '../submissions/submission-details-modal';
 import { SendAssessmentDialog } from './send-assessment-dialog';
+import { AddCollegeCandidateSheet } from './add-college-candidate-sheet';
 
 
 interface CollegeCandidateTableProps {
@@ -37,6 +38,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
   const [isSending, setIsSending] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<AssessmentSubmission | null>(null);
   const [isSendAssessmentDialogOpen, setSendAssessmentDialogOpen] = useState(false);
+  const [isAddSheetOpen, setAddSheetOpen] = useState(false);
   const { toast } = useToast();
   
   useEffect(() => {
@@ -262,6 +264,20 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
     }
   }
 
+  const handleSaveIndividualCandidate = async (candidate: { name: string; email: string }) => {
+    try {
+        const docRef = await addDoc(collection(db, `colleges/${collegeId}/candidates`), {
+            ...candidate,
+            importedAt: serverTimestamp(),
+        });
+        toast({ title: 'Candidate Added', description: `${candidate.name} has been added successfully.` });
+        setAddSheetOpen(false);
+    } catch (error: any) {
+        toast({ variant: 'destructive', title: 'Save Failed', description: error.message || 'Could not save the candidate.' });
+        throw error;
+    }
+  };
+
 
   const columns = useMemo(() => getCandidateColumns({ onViewSubmission: (sub) => setSelectedSubmission(sub) }), []);
 
@@ -282,6 +298,10 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
                 <CardDescription>A list of all candidates imported for this college.</CardDescription>
             </div>
             <div className="flex gap-2">
+                 <Button onClick={() => setAddSheetOpen(true)} variant="outline" className="w-full sm:w-auto">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add Candidate
+                </Button>
                 <Button asChild className="w-full sm:w-auto">
                     <label htmlFor="csv-upload">
                         {isUploading ? (
@@ -347,6 +367,11 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
         onSend={handleSendAssessment}
         isSending={isSending}
         assessment={assessments.find(a => a.id === selectedAssessmentId)}
+      />
+      <AddCollegeCandidateSheet
+        isOpen={isAddSheetOpen}
+        onClose={() => setAddSheetOpen(false)}
+        onSave={handleSaveIndividualCandidate}
       />
     </>
   );
