@@ -78,10 +78,11 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
         // Group submissions by candidate email
         const submissionsByEmail = submissionsData.reduce((acc, sub) => {
             if (sub.candidateEmail) {
-                if (!acc[sub.candidateEmail]) {
-                    acc[sub.candidateEmail] = [];
+                const lowerEmail = sub.candidateEmail.toLowerCase();
+                if (!acc[lowerEmail]) {
+                    acc[lowerEmail] = [];
                 }
-                acc[sub.candidateEmail].push(sub);
+                acc[lowerEmail].push(sub);
             }
             return acc;
         }, {} as Record<string, AssessmentSubmission[]>);
@@ -89,7 +90,7 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
         // Attach submissions to candidates
         const candidatesWithSubmissions = candidates.map(candidate => ({
             ...candidate,
-            submissions: submissionsByEmail[candidate.email] || [],
+            submissions: submissionsByEmail[candidate.email.toLowerCase()] || [],
         }));
         
         candidatesWithSubmissions.sort((a, b) => {
@@ -409,6 +410,7 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
         candidate={selectedCandidate}
         onSaveChanges={handleSaveChanges}
         onDelete={handleDeleteCandidate}
+        onViewSubmission={(sub) => setSelectedSubmission(sub)}
       />
       <ConfirmationDialog
         isOpen={confirmation.isOpen}
