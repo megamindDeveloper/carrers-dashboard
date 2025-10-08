@@ -88,16 +88,23 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
   useEffect(() => {
     if (isOpen) {
       if (assessment) {
+        let sections = assessment.sections;
+
+        // Backward compatibility: If sections don't exist but questions do, create a default section.
+        if (!sections && (assessment as any).questions) {
+            sections = [{ id: 'default', title: 'General Questions', questions: (assessment as any).questions }];
+        }
+
         form.reset({
           ...assessment,
           timeLimit: assessment.timeLimit || undefined,
-          sections: assessment.sections.map(s => ({
+          sections: sections?.map(s => ({
               ...s,
               questions: s.questions.map(q => ({
                   ...q,
                   options: q.options?.map(opt => ({ value: opt }))
               }))
-          }))
+          })) || []
         });
       } else {
         form.reset({
@@ -343,3 +350,4 @@ function OptionsField({ sectionIndex, questionIndex, control }: { sectionIndex: 
     )
 }
 
+    
