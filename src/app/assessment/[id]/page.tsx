@@ -8,7 +8,7 @@ import { doc, getDoc, collection, addDoc, serverTimestamp, getDocs, query, where
 import { db, storage } from '@/app/utils/firebase/firebaseConfig';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import type { Assessment, CollegeCandidate, Candidate } from '@/lib/types';
-import { Loader2, Lock, Timer, UploadCloud, CheckCircle2, AlertCircle, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Loader2, Lock, Timer, UploadCloud, CheckCircle2, AlertCircle, ArrowLeft, ArrowRight, CalendarIcon } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import mmLogo from '../../../../.idx/mmLogo.png';
 
@@ -244,7 +249,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
           answers: questions.map(q => ({
             questionId: q.id,
             questionText: q.text,
-            answer: ''
+            answer: q.type === 'checkbox' ? [] : ''
           }))
         });
 
@@ -547,37 +552,126 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                                                     {questionInSectionIndex + 1}. {question.text}
                                                 </FormLabel>
                                                 <FormControl>
-                                                    {question.type === 'multiple-choice' ? (
-                                                        <RadioGroup
-                                                            onValueChange={field.onChange}
-                                                            defaultValue={field.value as string}
-                                                            className="flex flex-col space-y-2"
-                                                        >
-                                                            {question.options?.map((option, optionIndex) => (
-                                                                <FormItem key={optionIndex} className="flex items-center space-x-3 space-y-0">
-                                                                    <FormControl>
-                                                                        <RadioGroupItem value={option} />
-                                                                    </FormControl>
-                                                                    <FormLabel className="font-normal">{option}</FormLabel>
-                                                                </FormItem>
-                                                            ))}
-                                                        </RadioGroup>
-                                                    ) : question.type === 'file-upload' ? (
-                                                        <FileUploadInput
-                                                          questionId={question.id}
-                                                          assessmentId={assessment.id}
-                                                          onUploadComplete={(url) => {
-                                                            field.onChange(url);
-                                                          }}
-                                                        />
-                                                    ) : (
-                                                        <AnswerComponent
-                                                            {...field}
-                                                            value={field.value as string || ''}
-                                                            className="min-h-[120px] text-base"
-                                                            placeholder="Type your answer here..."
-                                                        />
-                                                    )}
+                                                    {(() => {
+                                                        switch (question.type) {
+                                                            case 'multiple-choice':
+                                                                return (
+                                                                    <RadioGroup
+                                                                        onValueChange={field.onChange}
+                                                                        defaultValue={field.value as string}
+                                                                        className="flex flex-col space-y-2"
+                                                                    >
+                                                                        {question.options?.map((option, optionIndex) => (
+                                                                            <FormItem key={optionIndex} className="flex items-center space-x-3 space-y-0">
+                                                                                <FormControl>
+                                                                                    <RadioGroupItem value={option} />
+                                                                                </FormControl>
+                                                                                <FormLabel className="font-normal">{option}</FormLabel>
+                                                                            </FormItem>
+                                                                        ))}
+                                                                    </RadioGroup>
+                                                                );
+                                                             case 'checkbox':
+                                                                return (
+                                                                     <div>
+                                                                        {question.options?.map((option, optionIndex) => (
+                                                                            <FormField
+                                                                                key={optionIndex}
+                                                                                control={answersForm.control}
+                                                                                name={`answers.${overallQuestionIndex}.answer`}
+                                                                                render={({ field }) => {
+                                                                                    return (
+                                                                                    <FormItem
+                                                                                        key={optionIndex}
+                                                                                        className="flex flex-row items-start space-x-3 space-y-0"
+                                                                                    >
+                                                                                        <FormControl>
+                                                                                        <Checkbox
+                                                                                            checked={(field.value as string[])?.includes(option)}
+                                                                                            onCheckedChange={(checked) => {
+                                                                                                const currentValue = (field.value as string[]) || [];
+                                                                                                return checked
+                                                                                                ? field.onChange([...currentValue, option])
+                                                                                                : field.onChange(
+                                                                                                    currentValue?.filter(
+                                                                                                        (value) => value !== option
+                                                                                                    )
+                                                                                                    )
+                                                                                            }}
+                                                                                        />
+                                                                                        </FormControl>
+                                                                                        <FormLabel className="font-normal">
+                                                                                            {option}
+                                                                                        </FormLabel>
+                                                                                    </FormItem>
+                                                                                    )
+                                                                                }}
+                                                                            />
+                                                                        ))}
+                                                                        <FormMessage />
+                                                                    </div>
+                                                                );
+                                                            case 'file-upload':
+                                                                return (
+                                                                    <FileUploadInput
+                                                                      questionId={question.id}
+                                                                      assessmentId={assessment.id}
+                                                                      onUploadComplete={(url) => {
+                                                                        field.onChange(url);
+                                                                      }}
+                                                                    />
+                                                                );
+                                                            case 'date':
+                                                                return (
+                                                                     <Popover>
+                                                                        <PopoverTrigger asChild>
+                                                                        <FormControl>
+                                                                            <Button
+                                                                            variant={"outline"}
+                                                                            className={cn(
+                                                                                "w-[240px] pl-3 text-left font-normal",
+                                                                                !field.value && "text-muted-foreground"
+                                                                            )}
+                                                                            >
+                                                                            {field.value ? (
+                                                                                format(new Date(field.value as string), "PPP")
+                                                                            ) : (
+                                                                                <span>Pick a date</span>
+                                                                            )}
+                                                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                                            </Button>
+                                                                        </FormControl>
+                                                                        </PopoverTrigger>
+                                                                        <PopoverContent className="w-auto p-0" align="start">
+                                                                        <Calendar
+                                                                            mode="single"
+                                                                            selected={field.value ? new Date(field.value as string) : undefined}
+                                                                            onSelect={(date) => field.onChange(date?.toISOString())}
+                                                                            initialFocus
+                                                                        />
+                                                                        </PopoverContent>
+                                                                    </Popover>
+                                                                );
+                                                            case 'textarea':
+                                                                return (
+                                                                    <AnswerComponent
+                                                                        {...field}
+                                                                        value={field.value as string || ''}
+                                                                        className="min-h-[120px] text-base"
+                                                                        placeholder="Type your answer here..."
+                                                                    />
+                                                                );
+                                                            default:
+                                                                return (
+                                                                    <Input
+                                                                        {...field}
+                                                                        type={question.type}
+                                                                        value={field.value as string || ''}
+                                                                        placeholder="Type your answer here..."
+                                                                    />
+                                                                );
+                                                        }
+                                                    })()}
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -598,16 +692,14 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                             <ArrowLeft className="mr-2 h-4 w-4" /> Previous
                        </Button>
 
-                       {currentSectionIndex < totalSections - 1 && (
+                       {currentSectionIndex < totalSections - 1 ? (
                            <Button 
                             type="button" 
                             onClick={() => setCurrentSectionIndex(prev => prev + 1)}
                            >
                               Next <ArrowRight className="ml-2 h-4 w-4" />
                            </Button>
-                       )}
-
-                       {currentSectionIndex === totalSections - 1 && (
+                       ) : (
                            <Button type="submit" className="w-auto" disabled={isSubmitting}>
                                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                                 Submit Assessment
@@ -621,5 +713,3 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
-
-    

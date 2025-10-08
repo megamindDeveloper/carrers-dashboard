@@ -87,7 +87,18 @@ export type Job = {
 };
 
 // Assessment Types
-export const QUESTION_TYPES = ['text', 'multiple-choice', 'file-upload'] as const;
+export const QUESTION_TYPES = [
+    'textarea',
+    'text',
+    'multiple-choice',
+    'checkbox',
+    'file-upload',
+    'date',
+    'email',
+    'number',
+    'url',
+    'tel',
+] as const;
 export type QuestionType = (typeof QUESTION_TYPES)[number];
 
 export const AUTHENTICATION_TYPES = ['none', 'email_verification'] as const;

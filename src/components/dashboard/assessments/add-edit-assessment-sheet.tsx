@@ -48,11 +48,11 @@ const questionSchema = z.object({
   type: z.enum(QUESTION_TYPES),
   options: z.array(z.object({ value: z.string().min(1, "Option cannot be empty") })).optional(),
 }).superRefine((data, ctx) => {
-    if (data.type === 'multiple-choice' && (!data.options || data.options.length < 2)) {
+    if ((data.type === 'multiple-choice' || data.type === 'checkbox') && (!data.options || data.options.length < 2)) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: ['options'],
-            message: 'Multiple choice questions must have at least 2 options.',
+            message: 'This question type must have at least 2 options.',
         });
     }
 });
@@ -122,7 +122,7 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
           sections: [{ 
               id: uuidv4(), 
               title: 'General Questions', 
-              questions: [{ id: uuidv4(), text: 'Please introduce yourself and walk us through your resume.', type: 'text' }]
+              questions: [{ id: uuidv4(), text: 'Please introduce yourself and walk us through your resume.', type: 'textarea' }]
           }],
         });
       }
@@ -139,7 +139,7 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
             ...s,
             questions: s.questions.map(q => {
                 const newQ: any = { ...q };
-                if (q.type === 'multiple-choice') {
+                if (q.type === 'multiple-choice' || q.type === 'checkbox') {
                     newQ.options = q.options?.map(opt => opt.value);
                 } else {
                     delete newQ.options;
@@ -348,16 +348,23 @@ function QuestionsField({ sectionIndex, control, form }: { sectionIndex: number,
                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                     <FormControl><SelectTrigger><SelectValue placeholder="Select an answer type" /></SelectTrigger></FormControl>
                                     <SelectContent>
-                                        <SelectItem value="text">Text Answer</SelectItem>
-                                        <SelectItem value="multiple-choice">Multiple Choice</SelectItem>
+                                        <SelectItem value="textarea">Text Area (Multi-line)</SelectItem>
+                                        <SelectItem value="text">Text (Single line)</SelectItem>
+                                        <SelectItem value="multiple-choice">Multiple Choice (Single Answer)</SelectItem>
+                                        <SelectItem value="checkbox">Checkboxes (Multiple Answers)</SelectItem>
                                         <SelectItem value="file-upload">File Upload</SelectItem>
+                                        <SelectItem value="date">Date</SelectItem>
+                                        <SelectItem value="email">Email</SelectItem>
+                                        <SelectItem value="number">Number</SelectItem>
+                                        <SelectItem value="tel">Phone Number</SelectItem>
+                                        <SelectItem value="url">URL</SelectItem>
                                     </SelectContent>
                                 </Select>
                                 <FormMessage />
                             </FormItem>
                         )}
                     />
-                     {form.watch(`sections.${sectionIndex}.questions.${questionIndex}.type`) === 'multiple-choice' && (
+                     {(form.watch(`sections.${sectionIndex}.questions.${questionIndex}.type`) === 'multiple-choice' || form.watch(`sections.${sectionIndex}.questions.${questionIndex}.type`) === 'checkbox') && (
                         <OptionsField sectionIndex={sectionIndex} questionIndex={questionIndex} control={control} />
                     )}
                 </div>
@@ -405,5 +412,3 @@ function OptionsField({ sectionIndex, questionIndex, control }: { sectionIndex: 
         </div>
     )
 }
-
-    
