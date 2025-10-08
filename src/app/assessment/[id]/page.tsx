@@ -1,17 +1,17 @@
 
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { doc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db, storage } from '@/app/utils/firebase/firebaseConfig';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import type { Assessment, AssessmentQuestion } from '@/lib/types';
-import { Loader2, Lock, Timer, UploadCloud, CheckCircle2, AlertCircle } from 'lucide-react';
+import type { Assessment, CollegeCandidate } from '@/lib/types';
+import { Loader2, Lock, Timer, UploadCloud, CheckCircle2, AlertCircle, ArrowLeft, ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -28,11 +28,16 @@ const passcodeSchema = z.object({
   passcode: z.string().min(1, 'Passcode is required'),
 });
 
+const verificationSchema = z.object({
+    name: z.string().min(1, 'Your name is required'),
+    email: z.string().email('A valid email is required'),
+});
+
 const answersSchema = z.object({
     answers: z.array(z.object({
         questionId: z.string(),
         questionText: z.string(),
-        answer: z.string().optional(),
+        answer: z.union([z.string(), z.array(z.string())]).optional(),
     })),
 });
 
@@ -139,12 +144,15 @@ const FileUploadInput = ({
 
 export default function AssessmentPage({ params }: { params: { id: string } }) {
   const [assessment, setAssessment] = useState<Assessment | null>(null);
+  const [candidate, setCandidate] = useState<CollegeCandidate | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isStarted, setIsStarted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
+  const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
 
   const { toast } = useToast();
   const startTimeRef = useRef<number | null>(null);
@@ -157,102 +165,136 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     resolver: zodResolver(passcodeSchema),
     defaultValues: { passcode: '' },
   });
+  
+  const verificationForm = useForm<z.infer<typeof verificationSchema>>({
+      resolver: zodResolver(verificationSchema),
+      defaultValues: { name: '', email: '' }
+  });
 
   const answersForm = useForm<AnswersFormValues>({
     resolver: zodResolver(answersSchema),
   });
 
-  const { fields } = useFieldArray({
-      control: answersForm.control,
-      name: 'answers'
-  });
+  const allQuestions = useMemo(() => {
+    return assessment?.sections?.flatMap(section => section.questions) || [];
+  }, [assessment]);
 
-  const onSubmit = useCallback(async (data: AnswersFormValues) => {
-    if (!assessment) return;
+ const onSubmit = useCallback(async (data: AnswersFormValues) => {
+    if (!assessment || isSubmitting) return;
 
+    setIsSubmitting(true);
     const timeTaken = startTimeRef.current ? Math.floor((Date.now() - startTimeRef.current) / 1000) : 0;
 
     try {
       await addDoc(collection(db, 'assessmentSubmissions'), {
         assessmentId: assessment.id,
         assessmentTitle: assessment.title,
-        // The candidate info is no longer collected here, but from the college context
-        candidateName: 'N/A',
-        candidateEmail: 'N/A',
-        candidateContact: 'N/A',
-        candidateResumeUrl: 'N/A',
+        candidateName: candidate?.name || 'N/A',
+        candidateEmail: candidate?.email || 'N/A',
         answers: data.answers,
         submittedAt: serverTimestamp(),
         timeTaken,
         collegeId: collegeId || null,
         collegeCandidateId: collegeCandidateId || null,
       });
-      setIsFinished(true);
+      
       toast({
         title: 'Submission Successful!',
         description: 'Your answers have been recorded.',
       });
+      setIsFinished(true);
+
     } catch (e: any) {
       toast({
         variant: 'destructive',
         title: 'Submission Failed',
         description: e.message || 'An unexpected error occurred.',
       });
+    } finally {
+        setIsSubmitting(false);
     }
-  }, [assessment, collegeId, collegeCandidateId, toast]);
+  }, [assessment, collegeId, collegeCandidateId, candidate, toast, isSubmitting]);
 
+  // Effect for fetching the assessment and candidate data
   useEffect(() => {
-    if (params.id) {
-      const getAssessment = async () => {
-        try {
-          const docRef = doc(db, 'assessments', params.id);
-          const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            const data = { id: docSnap.id, ...docSnap.data() } as Assessment;
-            setAssessment(data);
-            if (data.timeLimit) {
-              setTimeLeft(data.timeLimit * 60);
-            }
-            if (!data.passcode) {
-                setIsAuthenticated(true);
-            }
+    if (!params.id) return;
 
-            answersForm.reset({
-                answers: data.questions.map(q => ({
-                    questionId: q.id,
-                    questionText: q.text,
-                    answer: ''
-                }))
-            });
+    const getAssessmentData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const docRef = doc(db, 'assessments', params.id);
+        const docSnap = await getDoc(docRef);
 
-          } else {
-            setError('Assessment not found.');
-          }
-        } catch (e: any) {
-          setError('Failed to load assessment: ' + e.message);
-        } finally {
-          setLoading(false);
+        if (!docSnap.exists()) {
+          setError('Assessment not found.');
+          return;
         }
-      };
-      getAssessment();
-    }
-  }, [params.id, answersForm]);
 
+        const data = { id: docSnap.id, ...docSnap.data() } as Assessment;
+        setAssessment(data);
+
+        // Pre-fill form answers
+        const questions = data.sections?.flatMap(s => s.questions) || [];
+        answersForm.reset({
+          answers: questions.map(q => ({
+            questionId: q.id,
+            questionText: q.text,
+            answer: ''
+          }))
+        });
+
+        if (data.timeLimit) {
+          setTimeLeft(data.timeLimit * 60);
+        }
+
+        // Handle authentication logic
+        if (collegeId && collegeCandidateId) {
+          const candidateDocRef = doc(db, `colleges/${collegeId}/candidates/${collegeCandidateId}`);
+          const candidateSnap = await getDoc(candidateDocRef);
+          if (candidateSnap.exists()) {
+            setCandidate({ id: candidateSnap.id, ...candidateSnap.data() } as CollegeCandidate);
+          } else {
+            setError("Candidate not found for this assessment link.");
+          }
+        } else if (!data.passcode) {
+          setIsAuthenticated(true);
+        }
+      } catch (e: any) {
+        setError('Failed to load assessment: ' + e.message);
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    getAssessmentData();
+  // DO NOT add answersForm to dependency array to prevent re-fetching on form state change
+  }, [params.id, collegeId, collegeCandidateId]);
+
+
+  // Effect for the countdown timer
   useEffect(() => {
     if (!isStarted || isFinished || !assessment?.timeLimit) return;
-
-    if (timeLeft <= 0) {
-      setIsFinished(true);
-      answersForm.handleSubmit(onSubmit)(); // Auto-submit when time is up
-      return;
-    }
-
+    
     const timer = setInterval(() => {
-      setTimeLeft(prev => prev - 1);
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          toast({
+            title: "Time's up!",
+            description: "Submitting your assessment now.",
+            variant: "destructive"
+          });
+          answersForm.handleSubmit(onSubmit)();
+          return 0;
+        }
+        return prev - 1;
+      });
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isStarted, isFinished, timeLeft, answersForm, onSubmit, assessment?.timeLimit]);
+  }, [isStarted, isFinished, assessment?.timeLimit, answersForm, onSubmit, toast]);
 
 
   const handlePasscodeSubmit = (values: z.infer<typeof passcodeSchema>) => {
@@ -264,6 +306,14 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
         message: 'Invalid passcode.',
       });
     }
+  };
+
+  const handleVerificationSubmit = (values: z.infer<typeof verificationSchema>) => {
+      if (candidate && values.name.toLowerCase() === candidate.name.toLowerCase() && values.email.toLowerCase() === candidate.email.toLowerCase()) {
+          setIsAuthenticated(true);
+      } else {
+          verificationForm.setError('email', { type: 'manual', message: 'The name or email does not match our records.' });
+      }
   };
 
   const handleStart = () => {
@@ -311,6 +361,37 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
   }
 
   if (!isAuthenticated) {
+     if (collegeCandidateId) {
+        return (
+             <div className="flex min-h-screen w-full items-center justify-center bg-muted/40 p-4">
+                <Card className="w-full max-w-sm">
+                    <CardHeader>
+                        <Image height={50} width={200} src={mmLogo} alt="MegaMind Careers Logo" className="mx-auto mb-4" />
+                        <CardTitle className="flex items-center gap-2 justify-center"><Lock /> Candidate Verification</CardTitle>
+                        <CardDescription className="text-center">Please verify your identity to access the assessment.</CardDescription>
+                    </CardHeader>
+                    <Form {...verificationForm}>
+                        <form onSubmit={verificationForm.handleSubmit(handleVerificationSubmit)}>
+                            <CardContent className="space-y-4">
+                                <FormField control={verificationForm.control} name="name" render={({ field }) => (
+                                    <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                                <FormField control={verificationForm.control} name="email" render={({ field }) => (
+                                    <FormItem><FormLabel>Email Address</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
+                                )} />
+                            </CardContent>
+                            <CardFooter>
+                                <Button type="submit" className="w-full">
+                                    Proceed to Assessment
+                                </Button>
+                            </CardFooter>
+                        </form>
+                    </Form>
+                </Card>
+            </div>
+        )
+    }
+
     return (
         <div className="flex min-h-screen w-full items-center justify-center bg-muted/40 p-4">
             <Card className="w-full max-w-sm">
@@ -367,7 +448,8 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                             </AlertDescription>
                         </Alert>
                     )}
-                    <p>Number of questions: {assessment?.questions.length}</p>
+                    <p>Number of sections: {assessment?.sections?.length || 0}</p>
+                    <p>Total questions: {allQuestions.length}</p>
                 </CardContent>
                 <CardFooter>
                     <Button onClick={handleStart} className="w-full">Start Assessment</Button>
@@ -377,6 +459,10 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
       );
   }
 
+  const currentSection = assessment?.sections[currentSectionIndex];
+  const totalSections = assessment?.sections?.length || 0;
+  
+  const sectionQuestionStartIndex = assessment?.sections.slice(0, currentSectionIndex).reduce((acc, sec) => acc + (sec.questions?.length || 0), 0) || 0;
 
   return (
     <div className="min-h-screen bg-muted/40 p-4 sm:p-8">
@@ -387,6 +473,9 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                         <div>
                             <Image height={40} width={180} src={mmLogo} alt="MegaMind Careers Logo" className="mb-4" />
                             <CardTitle>{assessment?.title}</CardTitle>
+                            {totalSections > 1 && (
+                                <CardDescription>Section {currentSectionIndex + 1} of {totalSections}: {currentSection?.title}</CardDescription>
+                            )}
                         </div>
                         {assessment?.timeLimit && (
                             <div className="flex items-center gap-2 rounded-full bg-destructive px-4 py-2 text-destructive-foreground">
@@ -399,60 +488,86 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                 <Form {...answersForm}>
                 <form onSubmit={answersForm.handleSubmit(onSubmit)}>
                     <CardContent className="space-y-8 pt-4">
-                        <h3 className="text-lg font-medium">Questions</h3>
-                        {assessment?.questions.map((question, index) => (
-                            <FormField
-                                key={question.id}
-                                control={answersForm.control}
-                                name={`answers.${index}.answer`}
-                                render={({ field }) => (
-                                <FormItem className="space-y-3">
-                                    <FormLabel className="text-base font-semibold">
-                                        {index + 1}. {question.text}
-                                    </FormLabel>
-                                    <FormControl>
-                                        {question.type === 'multiple-choice' ? (
-                                            <RadioGroup
-                                                onValueChange={field.onChange}
-                                                defaultValue={field.value}
-                                                className="flex flex-col space-y-2"
-                                            >
-                                                {question.options?.map((option, optionIndex) => (
-                                                    <FormItem key={optionIndex} className="flex items-center space-x-3 space-y-0">
-                                                        <FormControl>
-                                                            <RadioGroupItem value={option} />
-                                                        </FormControl>
-                                                        <FormLabel className="font-normal">{option}</FormLabel>
-                                                    </FormItem>
-                                                ))}
-                                            </RadioGroup>
-                                        ) : question.type === 'file-upload' ? (
-                                            <FileUploadInput
-                                              questionId={question.id}
-                                              assessmentId={assessment.id}
-                                              onUploadComplete={(url) => {
-                                                field.onChange(url);
-                                              }}
-                                            />
-                                        ) : (
-                                            <PasteDisabledTextarea
-                                                {...field}
-                                                className="min-h-[120px] text-base"
-                                                placeholder="Type your answer here..."
-                                            />
-                                        )}
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                        ))}
+                        {currentSection && (
+                            <div className="space-y-6">
+                                <h3 className="text-xl font-semibold border-b pb-2">{currentSection.title}</h3>
+                                {currentSection.questions.map((question, questionInSectionIndex) => {
+                                    const overallQuestionIndex = sectionQuestionStartIndex + questionInSectionIndex;
+                                    return (
+                                        <FormField
+                                            key={question.id}
+                                            control={answersForm.control}
+                                            name={`answers.${overallQuestionIndex}.answer`}
+                                            render={({ field }) => (
+                                            <FormItem className="space-y-3">
+                                                <FormLabel className="text-base font-semibold">
+                                                    {questionInSectionIndex + 1}. {question.text}
+                                                </FormLabel>
+                                                <FormControl>
+                                                    {question.type === 'multiple-choice' ? (
+                                                        <RadioGroup
+                                                            onValueChange={field.onChange}
+                                                            defaultValue={field.value as string}
+                                                            className="flex flex-col space-y-2"
+                                                        >
+                                                            {question.options?.map((option, optionIndex) => (
+                                                                <FormItem key={optionIndex} className="flex items-center space-x-3 space-y-0">
+                                                                    <FormControl>
+                                                                        <RadioGroupItem value={option} />
+                                                                    </FormControl>
+                                                                    <FormLabel className="font-normal">{option}</FormLabel>
+                                                                </FormItem>
+                                                            ))}
+                                                        </RadioGroup>
+                                                    ) : question.type === 'file-upload' ? (
+                                                        <FileUploadInput
+                                                          questionId={question.id}
+                                                          assessmentId={assessment.id}
+                                                          onUploadComplete={(url) => {
+                                                            field.onChange(url);
+                                                          }}
+                                                        />
+                                                    ) : (
+                                                        <PasteDisabledTextarea
+                                                            {...field}
+                                                            value={field.value as string || ''}
+                                                            className="min-h-[120px] text-base"
+                                                            placeholder="Type your answer here..."
+                                                        />
+                                                    )}
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                            )}
+                                        />
+                                    );
+                                })}
+                            </div>
+                        )}
                     </CardContent>
-                    <CardFooter>
-                        <Button type="submit" className="w-full" disabled={answersForm.formState.isSubmitting}>
-                            {answersForm.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                            Submit Assessment
-                        </Button>
+                    <CardFooter className="flex justify-between">
+                       <Button 
+                          type="button" 
+                          variant="outline" 
+                          onClick={() => setCurrentSectionIndex(prev => prev - 1)}
+                          disabled={currentSectionIndex === 0}
+                        >
+                            <ArrowLeft className="mr-2 h-4 w-4" /> Previous
+                       </Button>
+
+                       {currentSectionIndex < totalSections - 1 ? (
+                           <Button 
+                            type="button" 
+                            onClick={() => setCurrentSectionIndex(prev => prev + 1)}
+                           >
+                              Next <ArrowRight className="ml-2 h-4 w-4" />
+                           </Button>
+                       ) : (
+                           <Button type="submit" className="w-auto" disabled={isSubmitting}>
+                                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                Submit Assessment
+                            </Button>
+                       )}
                     </CardFooter>
                 </form>
                 </Form>
@@ -461,5 +576,3 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
-
-    

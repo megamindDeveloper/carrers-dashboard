@@ -76,7 +76,6 @@ export function CandidateDetailsModal({
         introductionVideoIntern: candidate.introductionVideoIntern || '',
         status: candidate.status ? toTitleCase(candidate.status as string) as CandidateStatus : 'Applied',
         type: candidate.type || 'full-time',
-        rejectionReason: candidate.rejectionReason || '',
         comments: candidate.comments || '',
       });
     }
@@ -95,21 +94,8 @@ export function CandidateDetailsModal({
 
   const onSubmit = async (data: CandidateUpdateForm) => {
     setIsProcessing(true);
-    if (data.status === 'Rejected' && !data.rejectionReason?.trim()) {
-      toast({
-        variant: "destructive",
-        title: "Reason Required",
-        description: "Please provide a reason for rejection.",
-      });
-      form.setFocus('rejectionReason');
-      setIsProcessing(false);
-      return;
-    }
-
+    
     const updates: Partial<Candidate> = { ...data };
-    if (data.status !== 'Rejected') {
-      updates.rejectionReason = '';
-    }
 
     await onSaveChanges(candidate.id, updates);
     setIsProcessing(false);
@@ -303,25 +289,6 @@ export function CandidateDetailsModal({
                   </FormItem>
                 )}
               />
-
-              {currentStatus === 'Rejected' && (
-                 <FormField
-                  control={form.control}
-                  name="rejectionReason"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Rejection Reason</FormLabel>
-                       <FormControl>
-                         <Textarea
-                          placeholder="Provide a reason for rejection... (This will be sent to the candidate)"
-                          {...field}
-                         />
-                       </FormControl>
-                       <FormMessage />
-                    </FormItem>
-                  )}
-                 />
-              )}
 
               <FormField
                 control={form.control}

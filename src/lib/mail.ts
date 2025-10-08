@@ -18,6 +18,7 @@ console.log("TOKEN LOADED IN lib/mail.ts:", token);
 // 2. Initialize the client ONCE and reuse it
 const client = new SendMailClient({ url, token: token! });
 
+
 // 3. Define the structure for the function's arguments using an interface
 export interface SendEmailOptions {
   to: {
@@ -27,6 +28,7 @@ export interface SendEmailOptions {
   subject: string;
   htmlBody: string;
 }
+
 
 // 4. Create the generic, reusable email function
 export async function sendEmail({ to, subject, htmlBody }: SendEmailOptions) {
@@ -54,5 +56,6 @@ export async function sendEmail({ to, subject, htmlBody }: SendEmailOptions) {
   } catch (error) {
     
     return { success: false, error: error };
+
   }
 }
