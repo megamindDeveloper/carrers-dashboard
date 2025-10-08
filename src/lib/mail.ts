@@ -1,7 +1,25 @@
-// File: lib/mail.ts
+// lib/mail.ts
 
-import nodemailer from "nodemailer";
+import { SendMailClient } from "zeptomail";
 
+// 1. Get credentials from environment variables for security
+const url = "https://api.zeptomail.in/";
+const token = process.env.ZEPTOMAIL_TOKEN; // <-- IMPORTANT: Use environment variable
+
+if (!token) {
+  console.error("ZeptoMail token is not defined in environment variables.");
+  // In a real app, you might want to prevent the app from starting
+}else{
+  // TEMPORARY DEBUGGING LINE - ADD THIS!
+console.log("TOKEN LOADED IN lib/mail.ts:", token); 
+
+}
+
+// 2. Initialize the client ONCE and reuse it
+const client = new SendMailClient({ url, token: token! });
+
+
+// 3. Define the structure for the function's arguments using an interface
 export interface SendEmailOptions {
   to: {
     email: string;
@@ -11,39 +29,33 @@ export interface SendEmailOptions {
   htmlBody: string;
 }
 
+
+// 4. Create the generic, reusable email function
 export async function sendEmail({ to, subject, htmlBody }: SendEmailOptions) {
-  const smtpPassword = process.env.ZEPTO_PASS;
-
-  if (!smtpPassword) {
-    console.error("ZeptoMail SMTP password is not defined in environment variables.");
-    throw new Error("Missing email configuration.");
-  }
-
-  const transport = nodemailer.createTransport({
-    host: "smtp.zeptomail.in",
-    port: 587,
-    auth: {
-      user: "emailapikey",
-      pass: smtpPassword,
-    }
-  });
-
-  const mailOptions = {
-    from: 'megamind <no-reply@megamind.studio>',
-    to: to.email,
-    subject: subject,
-    html: htmlBody,
-  };
-
   try {
-    const info = await transport.sendMail(mailOptions);
-    console.log('Email sent successfully:', info.response);
-    return { success: true };
+    const response = await client.sendMail({
+      from: {
+        address: "no-reply@megamind.studio", // This can also be an environment variable
+        name: "megamind",
+      },
+      to: [
+        {
+          email_address: {
+            address: to.email,
+            name: to.name,
+          },
+        },
+      ],
+      subject: subject,
+      htmlbody: htmlBody,
+    });
+    
+   
+    return { success: true, data: response };
+
   } catch (error) {
-    console.error("Failed to send email:", error);
-    if (error instanceof Error) {
-        throw new Error(`Failed to send email: ${error.message}`);
-    }
-    throw new Error("An unknown error occurred while sending the email.");
+    
+    return { success: false, error: error };
+
   }
 }
