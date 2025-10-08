@@ -186,7 +186,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
         assessmentId: assessment.id,
         assessmentTitle: assessment.title,
         candidateId: candidate?.id, // Main candidate ID
-        candidateName: candidate?.name || 'N/A',
+        candidateName: candidate?.name || (candidate as Candidate)?.fullName || 'N/A',
         candidateEmail: candidate?.email || 'N/A',
         answers: data.answers,
         submittedAt: serverTimestamp(),
@@ -326,7 +326,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
   };
 
   const handleVerificationSubmit = (values: z.infer<typeof verificationSchema>) => {
-      const candidateName = 'fullName' in candidate! ? candidate.fullName : candidate!.name;
+      const candidateName = 'fullName' in candidate! ? (candidate as Candidate).fullName : (candidate as CollegeCandidate).name;
       if (candidate && values.name.toLowerCase() === candidateName.toLowerCase() && values.email.toLowerCase() === candidate.email.toLowerCase()) {
           setIsAuthenticated(true);
       } else {
@@ -383,7 +383,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
 
   if (!isAuthenticated) {
      if (assessment?.authentication === 'email_verification') {
-        const candidateName = candidate ? ('fullName' in candidate ? candidate.fullName : candidate.name) : '';
+        const candidateName = candidate ? ('fullName' in candidate ? (candidate as Candidate).fullName : (candidate as CollegeCandidate).name) : '';
         return (
              <div className="flex min-h-screen w-full items-center justify-center bg-muted/40 p-4">
                 <Card className="w-full max-w-sm">
