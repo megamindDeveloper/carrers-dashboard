@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
@@ -905,5 +904,3 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
-
-    

@@ -248,9 +248,9 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
                     render={({ field }) => (
                         <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                         <div className="space-y-0.5">
-                            <FormLabel>Disable Copy &amp; Paste</FormLabel>
+                            <FormLabel>Disable Proctoring Features</FormLabel>
                             <FormDescription>
-                            Prevent candidates from copying questions and pasting content.
+                             Includes disabling copy/paste and auto-submitting on tab switch.
                             </FormDescription>
                         </div>
                         <FormControl>
@@ -412,5 +412,3 @@ function OptionsField({ sectionIndex, questionIndex, control }: { sectionIndex: 
         </div>
     )
 }
-
-    
