@@ -451,6 +451,15 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     }
   };
 
+  const allQuestions = assessment?.sections?.flatMap(section => section.questions || []) || [];
+  const totalQuestions = allQuestions.length;
+  const answeredAnswers = answersForm.watch('answers')?.filter(a => {
+      if (Array.isArray(a.answer)) return a.answer.length > 0;
+      return !!a.answer;
+  });
+  const answeredCount = answeredAnswers?.length || 0;
+  const progressPercentage = totalQuestions > 0 ? (answeredCount / totalQuestions) * 100 : 0;
+
   if (loading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-muted/40">
@@ -605,9 +614,6 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
       </div>
     );
   }
-
-  const allQuestions = assessment.sections.flatMap(section => section.questions || []);
-  const totalQuestions = allQuestions.length;
   
   const currentSection = assessment.sections[currentSectionIndex];
   if (!currentSection || !currentSection.questions || currentSection.questions.length === 0) {
@@ -672,7 +678,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
         <div className="mx-auto max-w-3xl w-full">
             <Card>
                 <CardHeader>
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-center mb-4">
                         <div className="flex-grow">
                             <CardTitle>{assessment?.title}</CardTitle>
                             <CardDescription>Question {overallQuestionIndex + 1} of {totalQuestions}</CardDescription>
@@ -684,6 +690,13 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                                 <span className="font-mono text-lg">{formatTime(timeLeft)}</span>
                             </div>
                         )}
+                    </div>
+                     <div className="space-y-2">
+                        <div className="flex justify-between text-sm text-muted-foreground">
+                            <span>Progress</span>
+                            <span>{answeredCount} of {totalQuestions} answered</span>
+                        </div>
+                        <Progress value={progressPercentage} />
                     </div>
                 </CardHeader>
                 <Form {...answersForm}>
