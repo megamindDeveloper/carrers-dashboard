@@ -158,6 +158,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
   const [isFinished, setIsFinished] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
+  const [viewingSectionIntro, setViewingSectionIntro] = useState(true);
 
   const { toast } = useToast();
   const startTimeRef = useRef<number | null>(null);
@@ -312,7 +313,8 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
 
 
   const submitOnTimeUp = useCallback(() => {
-    answersForm.handleSubmit(onSubmit)();
+    const submitAction = answersForm.handleSubmit(onSubmit);
+    submitAction();
   }, [answersForm, onSubmit]);
 
   // Effect for the countdown timer
@@ -377,6 +379,20 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
+
+  const handleNextSection = () => {
+    if (currentSectionIndex < (assessment?.sections?.length || 0) - 1) {
+      setCurrentSectionIndex(prev => prev + 1);
+      setViewingSectionIntro(true);
+    }
+  };
+
+  const handlePrevSection = () => {
+    if (currentSectionIndex > 0) {
+      setCurrentSectionIndex(prev => prev - 1);
+      setViewingSectionIntro(true);
+    }
   };
   
   const allQuestions = assessment?.sections?.flatMap(section => section.questions) || [];
@@ -529,6 +545,35 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
   const isLastSection = currentSectionIndex === totalSections - 1;
   
   const sectionQuestionStartIndex = assessment.sections.slice(0, currentSectionIndex).reduce((acc, sec) => acc + (sec.questions?.length || 0), 0);
+
+  if (viewingSectionIntro) {
+    return (
+      <div className="flex min-h-screen w-full items-center justify-center bg-muted/40 p-4">
+        <Card className="w-full max-w-lg text-center shadow-lg">
+          <CardHeader className="p-8">
+            <Image height={50} width={200} src={mmLogo} alt="MegaMind Careers Logo" className="mx-auto mb-6" />
+            <CardDescription>Section {currentSectionIndex + 1} of {totalSections}</CardDescription>
+            <CardTitle className="text-3xl font-bold">{currentSection.title}</CardTitle>
+          </CardHeader>
+          <CardContent className="px-8 pb-4">
+             <Alert className="text-left">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Questions in this section: {currentSection.questions?.length || 0}</AlertTitle>
+                  <AlertDescription>
+                      Click the button below to start this section.
+                  </AlertDescription>
+              </Alert>
+          </CardContent>
+          <CardFooter className="p-8 pt-4">
+            <Button onClick={() => setViewingSectionIntro(false)} className="w-full" size="lg">
+              Start Section
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
+
 
   return (
     <div className="min-h-screen bg-muted/40 p-4 sm:p-8">
@@ -705,21 +750,21 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                        <Button 
                           type="button" 
                           variant="outline" 
-                          onClick={() => setCurrentSectionIndex(prev => prev - 1)}
+                          onClick={handlePrevSection}
                           disabled={currentSectionIndex === 0}
                         >
                             <ArrowLeft className="mr-2 h-4 w-4" /> Previous
                        </Button>
 
                        {isLastSection ? (
-                           <Button type="submit" className="w-auto" disabled={isSubmitting}>
+                            <Button type="submit" className="w-auto" disabled={isSubmitting}>
                                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                                 Submit Assessment
                             </Button>
                        ) : (
                            <Button 
                             type="button" 
-                            onClick={() => setCurrentSectionIndex(prev => prev + 1)}
+                            onClick={handleNextSection}
                            >
                               Next <ArrowRight className="ml-2 h-4 w-4" />
                            </Button>
@@ -732,3 +777,5 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
+
+    
