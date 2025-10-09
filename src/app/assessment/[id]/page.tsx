@@ -258,7 +258,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
   
         // Handle assessments with old structure (questions at root) for backward compatibility
         if (!data.sections || data.sections.length === 0) {
-          if ((data as any).questions && Array.isArray((data as any).questions)) {
+          if ((data as any).questions && Array.isArray((data as any).questions) && (data as any).questions.length > 0) {
             data.sections = [{ id: 'default', title: 'General Questions', questions: (data as any).questions }];
           } else {
             data.sections = []; // Ensure sections is an empty array if no questions found
@@ -322,9 +322,16 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
           }
   
           if (candidateDoc.exists()) {
-            setCandidate({ id: candidateDoc.id, ...candidateDoc.data() } as (CollegeCandidate | Candidate));
+            const candidateData = { id: candidateDoc.id, ...candidateDoc.data() } as (CollegeCandidate | Candidate);
+            setCandidate(candidateData);
             if (!authRequired) {
               setIsAuthenticated(true);
+            } else {
+                // Pre-fill verification form
+                verificationForm.reset({
+                    name: 'fullName' in candidateData ? candidateData.fullName : candidateData.name,
+                    email: candidateData.email
+                });
             }
           } else {
             setError("Candidate not found for this assessment link.");
@@ -341,7 +348,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     };
   
     getAssessmentData();
-  }, [params.id, searchParams, answersForm]);
+  }, [params.id, searchParams, answersForm, verificationForm]);
 
 
   const submitOnTimeUp = useCallback(() => {
@@ -493,7 +500,6 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
 
   if (!isAuthenticated) {
      if (assessment?.authentication === 'email_verification') {
-        const candidateName = candidate ? ('fullName' in candidate ? (candidate as Candidate).fullName : (candidate as CollegeCandidate).name) : '';
         return (
              <div className="flex min-h-screen w-full items-center justify-center bg-muted/40 p-4">
                 <Card className="w-full max-w-sm">
@@ -506,10 +512,10 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                         <form onSubmit={verificationForm.handleSubmit(handleVerificationSubmit)}>
                             <CardContent className="space-y-4">
                                 <FormField control={verificationForm.control} name="name" render={({ field }) => (
-                                    <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} defaultValue={candidateName} /></FormControl><FormMessage /></FormItem>
+                                    <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                                 )} />
-                                <FormField control={form.control} name="email" render={({ field }) => (
-                                    <FormItem><FormLabel>Email Address</FormLabel><FormControl><Input type="email" {...field} defaultValue={candidate?.email ?? ''} /></FormControl><FormMessage /></FormItem>
+                                <FormField control={verificationForm.control} name="email" render={({ field }) => (
+                                    <FormItem><FormLabel>Email Address</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
                                 )} />
                             </CardContent>
                             <CardFooter>
