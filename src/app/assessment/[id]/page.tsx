@@ -610,13 +610,13 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
 
 
   return (
-    <div className="min-h-screen bg-muted/40 p-4 sm:p-8">
-        <div className="mx-auto max-w-3xl">
+    <div className="min-h-screen bg-muted/40 p-4 sm:p-8 flex items-center justify-center">
+        <div className="mx-auto max-w-3xl w-full">
             <Card>
-                <CardHeader>
+                <CardHeader className="text-center">
+                    <Image height={40} width={180} src={mmLogo} alt="MegaMind Careers Logo" className="mx-auto mb-4" />
                     <div className="flex justify-between items-center">
                         <div>
-                            <Image height={40} width={180} src={mmLogo} alt="MegaMind Careers Logo" className="mb-4" />
                             <CardTitle>{assessment?.title}</CardTitle>
                             <CardDescription>Question {overallQuestionIndex + 1} of {totalQuestions}</CardDescription>
                         </div>
@@ -636,131 +636,133 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                           control={answersForm.control}
                           name={`answers.${overallQuestionIndex}.answer`}
                           render={({ field }) => (
-                          <FormItem className="space-y-3">
+                          <FormItem className="space-y-3 text-center">
                               <FormLabel className="text-base font-semibold">
                                   {currentQuestionIndex + 1}. {currentQuestion.text}
                               </FormLabel>
-                              <FormControl>
-                                  {(() => {
-                                      switch (currentQuestion.type) {
-                                          case 'multiple-choice':
-                                              return (
-                                                  <RadioGroup
-                                                      onValueChange={field.onChange}
-                                                      defaultValue={field.value as string}
-                                                      className="flex flex-col space-y-2"
-                                                  >
-                                                      {currentQuestion.options?.map((option, optionIndex) => (
-                                                          <FormItem key={optionIndex} className="flex items-center space-x-3 space-y-0">
-                                                              <FormControl>
-                                                                  <RadioGroupItem value={option} />
-                                                              </FormControl>
-                                                              <FormLabel className="font-normal">{option}</FormLabel>
-                                                          </FormItem>
-                                                      ))}
-                                                  </RadioGroup>
-                                              );
-                                           case 'checkbox':
-                                              return (
-                                                   <div>
-                                                      {currentQuestion.options?.map((option, optionIndex) => (
-                                                          <FormField
-                                                              key={optionIndex}
-                                                              control={answersForm.control}
-                                                              name={`answers.${overallQuestionIndex}.answer`}
-                                                              render={({ field }) => {
-                                                                  return (
-                                                                  <FormItem
-                                                                      key={optionIndex}
-                                                                      className="flex flex-row items-start space-x-3 space-y-0"
-                                                                  >
-                                                                      <FormControl>
-                                                                      <Checkbox
-                                                                          checked={(field.value as string[])?.includes(option)}
-                                                                          onCheckedChange={(checked) => {
-                                                                              const currentValue = (field.value as string[]) || [];
-                                                                              return checked
-                                                                              ? field.onChange([...currentValue, option])
-                                                                              : field.onChange(
-                                                                                  currentValue?.filter(
-                                                                                      (value) => value !== option
-                                                                                  )
-                                                                                  )
-                                                                          }}
-                                                                      />
-                                                                      </FormControl>
-                                                                      <FormLabel className="font-normal">
-                                                                          {option}
-                                                                      </FormLabel>
-                                                                  </FormItem>
-                                                                  )
-                                                              }}
-                                                          />
-                                                      ))}
-                                                      <FormMessage />
-                                                  </div>
-                                              );
-                                          case 'file-upload':
-                                              return (
-                                                  <FileUploadInput
-                                                    questionId={currentQuestion.id}
-                                                    assessmentId={assessment.id}
-                                                    onUploadComplete={(url) => {
-                                                      field.onChange(url);
-                                                    }}
-                                                  />
-                                              );
-                                          case 'date':
-                                              return (
-                                                   <Popover>
-                                                      <PopoverTrigger asChild>
-                                                      <FormControl>
-                                                          <Button
-                                                          variant={"outline"}
-                                                          className={cn(
-                                                              "w-[240px] pl-3 text-left font-normal",
-                                                              !field.value && "text-muted-foreground"
-                                                          )}
-                                                          >
-                                                          {field.value ? (
-                                                              format(new Date(field.value as string), "PPP")
-                                                          ) : (
-                                                              <span>Pick a date</span>
-                                                          )}
-                                                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                          </Button>
-                                                      </FormControl>
-                                                      </PopoverTrigger>
-                                                      <PopoverContent className="w-auto p-0" align="start">
-                                                      <Calendar
-                                                          mode="single"
-                                                          selected={field.value ? new Date(field.value as string) : undefined}
-                                                          onSelect={(date) => field.onChange(date?.toISOString())}
-                                                          initialFocus
+                              <FormControl className="flex justify-center">
+                                  <div className="w-full max-w-md text-left">
+                                      {(() => {
+                                          switch (currentQuestion.type) {
+                                              case 'multiple-choice':
+                                                  return (
+                                                      <RadioGroup
+                                                          onValueChange={field.onChange}
+                                                          defaultValue={field.value as string}
+                                                          className="flex flex-col space-y-2"
+                                                      >
+                                                          {currentQuestion.options?.map((option, optionIndex) => (
+                                                              <FormItem key={optionIndex} className="flex items-center space-x-3 space-y-0">
+                                                                  <FormControl>
+                                                                      <RadioGroupItem value={option} />
+                                                                  </FormControl>
+                                                                  <FormLabel className="font-normal">{option}</FormLabel>
+                                                              </FormItem>
+                                                          ))}
+                                                      </RadioGroup>
+                                                  );
+                                              case 'checkbox':
+                                                  return (
+                                                      <div>
+                                                          {currentQuestion.options?.map((option, optionIndex) => (
+                                                              <FormField
+                                                                  key={optionIndex}
+                                                                  control={answersForm.control}
+                                                                  name={`answers.${overallQuestionIndex}.answer`}
+                                                                  render={({ field }) => {
+                                                                      return (
+                                                                      <FormItem
+                                                                          key={optionIndex}
+                                                                          className="flex flex-row items-start space-x-3 space-y-0"
+                                                                      >
+                                                                          <FormControl>
+                                                                          <Checkbox
+                                                                              checked={(field.value as string[])?.includes(option)}
+                                                                              onCheckedChange={(checked) => {
+                                                                                  const currentValue = (field.value as string[]) || [];
+                                                                                  return checked
+                                                                                  ? field.onChange([...currentValue, option])
+                                                                                  : field.onChange(
+                                                                                      currentValue?.filter(
+                                                                                          (value) => value !== option
+                                                                                      )
+                                                                                      )
+                                                                              }}
+                                                                          />
+                                                                          </FormControl>
+                                                                          <FormLabel className="font-normal">
+                                                                              {option}
+                                                                          </FormLabel>
+                                                                      </FormItem>
+                                                                      )
+                                                                  }}
+                                                              />
+                                                          ))}
+                                                          <FormMessage />
+                                                      </div>
+                                                  );
+                                              case 'file-upload':
+                                                  return (
+                                                      <FileUploadInput
+                                                        questionId={currentQuestion.id}
+                                                        assessmentId={assessment.id}
+                                                        onUploadComplete={(url) => {
+                                                          field.onChange(url);
+                                                        }}
                                                       />
-                                                      </PopoverContent>
-                                                  </Popover>
-                                              );
-                                          case 'textarea':
-                                              return (
-                                                  <AnswerComponent
-                                                      {...field}
-                                                      value={field.value as string || ''}
-                                                      className="min-h-[120px] text-base"
-                                                      placeholder="Type your answer here..."
-                                                  />
-                                              );
-                                          default:
-                                              return (
-                                                  <Input
-                                                      {...field}
-                                                      type={currentQuestion.type}
-                                                      value={field.value as string || ''}
-                                                      placeholder="Type your answer here..."
-                                                  />
-                                              );
-                                      }
-                                  })()}
+                                                  );
+                                              case 'date':
+                                                  return (
+                                                      <Popover>
+                                                          <PopoverTrigger asChild>
+                                                          <FormControl>
+                                                              <Button
+                                                              variant={"outline"}
+                                                              className={cn(
+                                                                  "w-[240px] pl-3 text-left font-normal",
+                                                                  !field.value && "text-muted-foreground"
+                                                              )}
+                                                              >
+                                                              {field.value ? (
+                                                                  format(new Date(field.value as string), "PPP")
+                                                              ) : (
+                                                                  <span>Pick a date</span>
+                                                              )}
+                                                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                              </Button>
+                                                          </FormControl>
+                                                          </PopoverTrigger>
+                                                          <PopoverContent className="w-auto p-0" align="start">
+                                                          <Calendar
+                                                              mode="single"
+                                                              selected={field.value ? new Date(field.value as string) : undefined}
+                                                              onSelect={(date) => field.onChange(date?.toISOString())}
+                                                              initialFocus
+                                                          />
+                                                          </PopoverContent>
+                                                      </Popover>
+                                                  );
+                                              case 'textarea':
+                                                  return (
+                                                      <AnswerComponent
+                                                          {...field}
+                                                          value={field.value as string || ''}
+                                                          className="min-h-[120px] text-base"
+                                                          placeholder="Type your answer here..."
+                                                      />
+                                                  );
+                                              default:
+                                                  return (
+                                                      <Input
+                                                          {...field}
+                                                          type={currentQuestion.type}
+                                                          value={field.value as string || ''}
+                                                          placeholder="Type your answer here..."
+                                                      />
+                                                  );
+                                          }
+                                      })()}
+                                  </div>
                               </FormControl>
                               <FormMessage />
                           </FormItem>
@@ -780,7 +782,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                          )}
                        </div>
 
-                       <div>
+                       <div className="flex items-center gap-4">
                            {!isLastQuestionOfAll && (
                                <Button 
                                 type="button" 
