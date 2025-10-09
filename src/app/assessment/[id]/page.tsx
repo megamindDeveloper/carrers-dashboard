@@ -240,57 +240,61 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
   // Effect for fetching the assessment and candidate data
   useEffect(() => {
     if (!params.id) return;
-
+  
     const getAssessmentData = async () => {
       setLoading(true);
       setError(null);
       try {
         const docRef = doc(db, 'assessments', params.id);
         const docSnap = await getDoc(docRef);
-
+  
         if (!docSnap.exists()) {
           setError('Assessment not found.');
           setLoading(false);
           return;
         }
-
-        const data = { id: docSnap.id, ...docSnap.data() } as Assessment;
-        
-        // Handle assessments with old structure (questions at root)
-        if (!data.sections && (data as any).questions) {
+  
+        let data = { id: docSnap.id, ...docSnap.data() } as Assessment;
+  
+        // Handle assessments with old structure (questions at root) for backward compatibility
+        if (!data.sections || data.sections.length === 0) {
+          if ((data as any).questions && Array.isArray((data as any).questions)) {
             data.sections = [{ id: 'default', title: 'General Questions', questions: (data as any).questions }];
+          } else {
+            data.sections = []; // Ensure sections is an empty array if no questions found
+          }
         }
-
+  
         if (data.disableCopyPaste) {
-            const handleCopy = (e: ClipboardEvent) => {
-                e.preventDefault();
-                alert("Copying questions is disabled for this assessment.");
-            };
-            document.addEventListener('copy', handleCopy);
-            // Cleanup on component unmount
-            return () => document.removeEventListener('copy', handleCopy);
+          const handleCopy = (e: ClipboardEvent) => {
+            e.preventDefault();
+            alert("Copying questions is disabled for this assessment.");
+          };
+          document.addEventListener('copy', handleCopy);
+          // Cleanup on component unmount
+          return () => document.removeEventListener('copy', handleCopy);
         }
-
+  
         const candidateId = searchParams.get('candidateId');
         const collegeId = searchParams.get('collegeId');
-
+  
         // Check for existing submissions first if we have a candidate ID
         if (candidateId) {
-            const submissionsQuery = query(
-              collection(db, 'assessmentSubmissions'),
-              where('assessmentId', '==', params.id),
-              where(collegeId ? 'collegeCandidateId' : 'candidateId', '==', candidateId)
-            );
-            const submissionsSnapshot = await getDocs(submissionsQuery);
-            if (!submissionsSnapshot.empty) {
-                setAlreadySubmitted(true);
-                setLoading(false);
-                return;
-            }
+          const submissionsQuery = query(
+            collection(db, 'assessmentSubmissions'),
+            where('assessmentId', '==', params.id),
+            where(collegeId ? 'collegeCandidateId' : 'candidateId', '==', candidateId)
+          );
+          const submissionsSnapshot = await getDocs(submissionsQuery);
+          if (!submissionsSnapshot.empty) {
+            setAlreadySubmitted(true);
+            setLoading(false);
+            return;
+          }
         }
-        
+  
         setAssessment(data);
-
+  
         // Pre-fill form answers
         const questions = data.sections?.flatMap(s => s.questions) || [];
         answersForm.reset({
@@ -300,33 +304,33 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
             answer: q.type === 'checkbox' ? [] : ''
           }))
         });
-
+  
         if (data.timeLimit) {
           setTimeLeft(data.timeLimit * 60);
         }
-
+  
         const authRequired = data.authentication === 'email_verification';
         const hasPasscode = !!data.passcode;
-        
+  
         // Try to find candidate from either college or general pool
         if (candidateId) {
-            let candidateDoc;
-            if (collegeId) { // From college link
-                candidateDoc = await getDoc(doc(db, `colleges/${collegeId}/candidates/${candidateId}`));
-            } else { // From general candidate pool
-                candidateDoc = await getDoc(doc(db, `applications/${candidateId}`));
+          let candidateDoc;
+          if (collegeId) { // From college link
+            candidateDoc = await getDoc(doc(db, `colleges/${collegeId}/candidates/${candidateId}`));
+          } else { // From general candidate pool
+            candidateDoc = await getDoc(doc(db, `applications/${candidateId}`));
+          }
+  
+          if (candidateDoc.exists()) {
+            setCandidate({ id: candidateDoc.id, ...candidateDoc.data() } as (CollegeCandidate | Candidate));
+            if (!authRequired) {
+              setIsAuthenticated(true);
             }
-            
-            if (candidateDoc.exists()) {
-                setCandidate({ id: candidateDoc.id, ...candidateDoc.data() } as (CollegeCandidate | Candidate));
-                 if (!authRequired) {
-                    setIsAuthenticated(true);
-                 }
-            } else {
-                 setError("Candidate not found for this assessment link.");
-            }
+          } else {
+            setError("Candidate not found for this assessment link.");
+          }
         } else if (!authRequired && !hasPasscode) {
-           setIsAuthenticated(true);
+          setIsAuthenticated(true);
         }
       } catch (e: any) {
         setError('Failed to load assessment: ' + e.message);
@@ -335,7 +339,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
         setLoading(false);
       }
     };
-
+  
     getAssessmentData();
   }, [params.id, searchParams, answersForm]);
 
