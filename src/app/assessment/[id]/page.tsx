@@ -613,15 +613,15 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     <div className="min-h-screen bg-muted/40 p-4 sm:p-8 flex items-center justify-center">
         <div className="mx-auto max-w-3xl w-full">
             <Card>
-                <CardHeader className="text-center">
-                    <Image height={40} width={180} src={mmLogo} alt="MegaMind Careers Logo" className="mx-auto mb-4" />
+                <CardHeader>
                     <div className="flex justify-between items-center">
-                        <div>
+                        <div className="flex-grow">
                             <CardTitle>{assessment?.title}</CardTitle>
                             <CardDescription>Question {overallQuestionIndex + 1} of {totalQuestions}</CardDescription>
                         </div>
+                         <Image height={25} width={120} src={mmLogo} alt="MegaMind Careers Logo" className="hidden sm:block" />
                         {assessment?.timeLimit && (
-                            <div className="flex items-center gap-2 rounded-full bg-destructive px-4 py-2 text-destructive-foreground">
+                            <div className="flex items-center gap-2 rounded-full bg-destructive px-4 py-2 text-destructive-foreground ml-auto">
                                 <Timer className="h-5 w-5" />
                                 <span className="font-mono text-lg">{formatTime(timeLeft)}</span>
                             </div>
@@ -636,12 +636,12 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                           control={answersForm.control}
                           name={`answers.${overallQuestionIndex}.answer`}
                           render={({ field }) => (
-                          <FormItem className="space-y-3 text-center">
+                          <FormItem className="space-y-3">
                               <FormLabel className="text-base font-semibold">
                                   {currentQuestionIndex + 1}. {currentQuestion.text}
                               </FormLabel>
-                              <FormControl className="flex justify-center">
-                                  <div className="w-full max-w-md text-left">
+                              <FormControl>
+                                  <div className="w-full">
                                       {(() => {
                                           switch (currentQuestion.type) {
                                               case 'multiple-choice':
@@ -812,3 +812,4 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     
 
     
+
