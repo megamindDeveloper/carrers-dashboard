@@ -243,6 +243,8 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
   // Effect for fetching the assessment and candidate data
   useEffect(() => {
     if (!params.id) return;
+    
+    let copyListener: ((e: ClipboardEvent) => void) | null = null;
   
     const getAssessmentData = async () => {
       setLoading(true);
@@ -253,7 +255,6 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
   
         if (!docSnap.exists()) {
           setError('Assessment not found.');
-          setLoading(false);
           return;
         }
   
@@ -265,13 +266,11 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
         }
   
         if (data.disableCopyPaste) {
-          const handleCopy = (e: ClipboardEvent) => {
+          copyListener = (e: ClipboardEvent) => {
             e.preventDefault();
             alert("Copying questions is disabled for this assessment.");
           };
-          document.addEventListener('copy', handleCopy);
-          // Cleanup on component unmount
-          return () => document.removeEventListener('copy', handleCopy);
+          document.addEventListener('copy', copyListener);
         }
   
         const candidateId = searchParams.get('candidateId');
@@ -287,7 +286,6 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
           const submissionsSnapshot = await getDocs(submissionsQuery);
           if (!submissionsSnapshot.empty) {
             setAlreadySubmitted(true);
-            setLoading(false);
             return;
           }
         }
@@ -346,6 +344,12 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     };
   
     getAssessmentData();
+    
+    return () => {
+        if (copyListener) {
+            document.removeEventListener('copy', copyListener);
+        }
+    };
   }, [params.id, searchParams, answersForm, verificationForm]);
 
 
