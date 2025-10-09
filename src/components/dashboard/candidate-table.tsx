@@ -388,7 +388,7 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
         <CardHeader className="flex flex-col items-stretch gap-4">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
-                <CardTitle>{title}</CardTitle>
+                <CardTitle className="mb-1">{title}</CardTitle>
                 <CardDescription>{description}</CardDescription>
               </div>
               <div className="flex flex-col gap-2 sm:flex-row">

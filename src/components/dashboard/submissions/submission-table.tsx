@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
 import type { AssessmentSubmission } from '@/lib/types';
@@ -66,7 +67,7 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Submissions</CardTitle>
+          <CardTitle className="mb-1">Submissions</CardTitle>
           <CardDescription>A list of all candidate submissions for this assessment.</CardDescription>
         </CardHeader>
         <CardContent>

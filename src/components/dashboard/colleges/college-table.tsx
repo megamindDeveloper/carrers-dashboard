@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
 import type { College } from '@/lib/types';
@@ -157,7 +158,7 @@ export function CollegeTable() {
       <Card>
         <CardHeader className="flex flex-col items-stretch gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <CardTitle>Colleges</CardTitle>
+            <CardTitle className="mb-1">Colleges</CardTitle>
             <CardDescription>Manage partner colleges and import candidates.</CardDescription>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">

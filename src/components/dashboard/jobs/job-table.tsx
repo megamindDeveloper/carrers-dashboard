@@ -119,7 +119,7 @@ export function JobTable() {
       <Card>
         <CardHeader className="flex flex-col items-stretch gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <CardTitle>Job Postings</CardTitle>
+            <CardTitle className="mb-1">Job Postings</CardTitle>
             <CardDescription>Create, manage, and view job openings.</CardDescription>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
