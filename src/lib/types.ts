@@ -130,6 +130,9 @@ export type Assessment = {
   disableCopyPaste?: boolean;
   successTitle?: string;
   successMessage?: string;
+  startPageTitle?: string;
+  startPageInstructions?: string;
+  startButtonText?: string;
 };
 
 

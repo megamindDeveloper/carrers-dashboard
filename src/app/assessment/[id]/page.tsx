@@ -528,7 +528,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
         <Card className="w-full max-w-md text-center">
             <CardHeader>
                 <Image height={50} width={200} src={mmLogo} alt="Megamind Careers Logo" className="mx-auto mb-4" />
-                <CardTitle>{assessment?.successTitle || 'Assessment Complete'}</CardTitle>
+                <CardTitle className="mb-1">{assessment?.successTitle || 'Assessment Complete'}</CardTitle>
             </CardHeader>
             <CardContent><p>{assessment?.successMessage || 'Thank you for your submission. The hiring team will get back to you soon.'}</p></CardContent>
         </Card>
@@ -544,7 +544,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                     <CardHeader>
                         <Image height={50} width={200} src={mmLogo} alt="Megamind Careers Logo" className="mx-auto mb-4" />
                         <CardTitle className="flex items-center gap-2 justify-center"><Lock /> Candidate Verification</CardTitle>
-                        <CardDescription className="text-center">Please verify your identity to access the assessment.</CardDescription>
+                        <CardDescription className="text-center pt-2">Please verify your identity to access the assessment.</CardDescription>
                     </CardHeader>
                     <Form {...verificationForm}>
                         <form onSubmit={verificationForm.handleSubmit(handleVerificationSubmit)}>
@@ -583,7 +583,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                   <CardHeader>
                       <Image height={50} width={200} src={mmLogo} alt="Megamind Careers Logo" className="mx-auto mb-4" />
                       <CardTitle className="flex items-center gap-2 justify-center"><Lock /> Secure Assessment</CardTitle>
-                      <CardDescription className="text-center">{assessment?.title}</CardDescription>
+                      <CardDescription className="text-center pt-2">{assessment?.title}</CardDescription>
                   </CardHeader>
                   <Form {...passcodeForm}>
                       <form onSubmit={passcodeForm.handleSubmit(handlePasscodeSubmit)}>
@@ -621,8 +621,8 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
             <Card className="w-full max-w-lg text-center shadow-lg">
                 <CardHeader className="p-8 text-center">
                     <Image height={50} width={200} src={mmLogo} alt="Megamind Careers Logo" className="mx-auto mb-6" />
-                    <CardTitle className="text-3xl font-bold">{assessment?.title}</CardTitle>
-                    <CardDescription className="text-lg pt-2">Ready to begin?</CardDescription>
+                    <CardTitle className="text-3xl font-bold mb-1">{assessment?.startPageTitle || assessment?.title}</CardTitle>
+                    <CardDescription className="text-lg pt-2 whitespace-pre-wrap">{assessment?.startPageInstructions || 'Ready to begin?'}</CardDescription>
                 </CardHeader>
                 <CardContent className="px-8 pb-4">
                     {assessment && (
@@ -637,7 +637,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                     )}
                 </CardContent>
                 <CardFooter className="p-8 pt-4">
-                    <Button onClick={handleStart} className="w-full" size="lg">Start Assessment</Button>
+                    <Button onClick={handleStart} className="w-full" size="lg">{assessment?.startButtonText || 'Start Assessment'}</Button>
                 </CardFooter>
             </Card>
         </div>
@@ -663,7 +663,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
             <Card className="w-full max-w-md text-center">
                 <CardHeader>
                     <CardTitle>End of Assessment</CardTitle>
-                    <CardDescription>You have reached the end. Please submit your answers.</CardDescription>
+                    <CardDescription className="pt-2">You have reached the end. Please submit your answers.</CardDescription>
                 </CardHeader>
                 <CardFooter>
                     <Button onClick={() => answersForm.handleSubmit(onSubmit)()} disabled={isSubmitting} className="w-full">
@@ -689,7 +689,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
           <CardHeader className="p-8 text-center">
             <Image height={50} width={200} src={mmLogo} alt="Megamind Careers Logo" className="mx-auto mb-6" />
             <CardDescription>Section {currentSectionIndex + 1} of {assessment.sections.length}</CardDescription>
-            <CardTitle className="text-3xl font-bold">{currentSection.title}</CardTitle>
+            <CardTitle className="text-3xl font-bold mb-1">{currentSection.title}</CardTitle>
           </CardHeader>
           <CardContent className="px-8 pb-4">
              <Alert className="text-center">
@@ -717,7 +717,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                 <CardHeader>
                     <div className="flex justify-between items-start mb-4">
                         <div className="flex-grow">
-                            <CardTitle>{assessment?.title}</CardTitle>
+                            <CardTitle className="mb-1">{assessment?.title}</CardTitle>
                             <CardDescription>Question {overallQuestionIndex + 1} of {totalQuestions}</CardDescription>
                         </div>
                          <Image height={25} width={120} src={mmLogo} alt="Megamind Careers Logo" className="hidden sm:block" />

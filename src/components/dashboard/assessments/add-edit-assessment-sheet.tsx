@@ -72,6 +72,9 @@ const assessmentSchema = z.object({
   sections: z.array(sectionSchema).min(1, "At least one section is required"),
   successTitle: z.string().optional(),
   successMessage: z.string().optional(),
+  startPageTitle: z.string().optional(),
+  startPageInstructions: z.string().optional(),
+  startButtonText: z.string().optional(),
 });
 
 const generatePasscode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -115,6 +118,9 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
           })) || [],
           successTitle: assessment.successTitle || 'Assessment Complete',
           successMessage: assessment.successMessage || 'Thank you for your submission. The hiring team will get back to you soon.',
+          startPageTitle: assessment.startPageTitle || assessment.title,
+          startPageInstructions: assessment.startPageInstructions || 'Ready to begin?',
+          startButtonText: assessment.startButtonText || 'Start Assessment',
         });
       } else {
         form.reset({
@@ -130,6 +136,9 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
           }],
           successTitle: 'Assessment Complete',
           successMessage: 'Thank you for your submission. The hiring team will get back to you soon.',
+          startPageTitle: '',
+          startPageInstructions: 'Ready to begin?',
+          startButtonText: 'Start Assessment',
         });
       }
     }
@@ -197,6 +206,7 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
             <div className="space-y-6 py-4">
               {/* Assessment Details */}
               <div className="space-y-4 p-4 border rounded-lg">
+                  <h3 className="text-lg font-medium mb-1">General Settings</h3>
                   <FormField control={form.control} name="title" render={({ field }) => (
                   <FormItem>
                   <FormLabel>Assessment Title</FormLabel>
@@ -217,7 +227,7 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
                         </FormControl>
                         <SelectContent>
                             <SelectItem value="none">No Authentication</SelectItem>
-                            <SelectItem value="email_verification">Email &amp; Name Verification</SelectItem>
+                            <SelectItem value="email_verification">Email & Name Verification</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormDescription>Require candidates to verify their identity before starting.</FormDescription>
@@ -270,9 +280,37 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
                     />
               </div>
 
+               {/* Start Page Customization */}
+              <div className="space-y-4 p-4 border rounded-lg">
+                <h3 className="text-lg font-medium mb-1">Start Page Customization</h3>
+                <FormField control={form.control} name="startPageTitle" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Start Page Title</FormLabel>
+                    <FormControl><Input {...field} placeholder="e.g., Frontend Developer Screening" /></FormControl>
+                    <FormDescription>If blank, the main assessment title will be used.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                 <FormField control={form.control} name="startPageInstructions" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Start Page Instructions</FormLabel>
+                    <FormControl><Textarea {...field} placeholder="Add instructions for the candidate before they begin..."/></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="startButtonText" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Start Button Text</FormLabel>
+                    <FormControl><Input {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+
+
                {/* Success Page Customization */}
               <div className="space-y-4 p-4 border rounded-lg">
-                <h3 className="text-lg font-medium">Success Page</h3>
+                <h3 className="text-lg font-medium mb-1">Success Page</h3>
                 <FormField control={form.control} name="successTitle" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Success Page Title</FormLabel>
@@ -291,6 +329,7 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
 
               {/* Sections */}
               <div className="space-y-4">
+                 <h3 className="text-lg font-medium p-4 border rounded-lg bg-muted/20">Questions & Sections</h3>
                 {sectionsFields.map((section, sectionIndex) => (
                     <div key={section.id}>
                         <div className="p-4 border rounded-lg space-y-4 bg-muted/50 relative">
