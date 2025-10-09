@@ -128,6 +128,8 @@ export type Assessment = {
   submissionCount?: number;
   authentication: AuthenticationType;
   disableCopyPaste?: boolean;
+  successTitle?: string;
+  successMessage?: string;
 };
 
 

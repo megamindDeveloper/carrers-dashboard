@@ -258,15 +258,13 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
           return;
         }
   
-        let data = { id: docSnap.id, ...docSnap.data() } as Assessment;
+        const data = { id: docSnap.id, ...docSnap.data() } as Assessment;
   
         // Handle assessments with old structure (questions at root) for backward compatibility
-        if (!data.sections || data.sections.length === 0) {
-            if ((data as any).questions?.length > 0) {
-                data.sections = [{ id: 'default', title: 'General Questions', questions: (data as any).questions }];
-            } else {
-                data.sections = []; // Ensure sections is an empty array if no questions exist
-            }
+        if ((!data.sections || data.sections.length === 0) && (data as any).questions?.length > 0) {
+            data.sections = [{ id: 'default', title: 'General Questions', questions: (data as any).questions }];
+        } else if (!data.sections) {
+            data.sections = []; // Ensure sections is an empty array if no questions exist
         }
   
         if (data.disableCopyPaste) {
@@ -530,9 +528,9 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
         <Card className="w-full max-w-md text-center">
             <CardHeader>
                 <Image height={50} width={200} src={mmLogo} alt="Megamind Careers Logo" className="mx-auto mb-4" />
-                <CardTitle>Assessment Complete</CardTitle>
+                <CardTitle>{assessment?.successTitle || 'Assessment Complete'}</CardTitle>
             </CardHeader>
-            <CardContent><p>Thank you for your submission. The hiring team will get back to you soon.</p></CardContent>
+            <CardContent><p>{assessment?.successMessage || 'Thank you for your submission. The hiring team will get back to you soon.'}</p></CardContent>
         </Card>
       </div>
     );
@@ -552,10 +550,18 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                         <form onSubmit={verificationForm.handleSubmit(handleVerificationSubmit)}>
                             <CardContent className="space-y-4">
                                 <FormField control={verificationForm.control} name="name" render={({ field }) => (
-                                    <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} defaultValue={candidate ? ('fullName' in candidate ? candidate.fullName : candidate.name) : ''} /></FormControl><FormMessage /></FormItem>
+                                    <FormItem>
+                                      <FormLabel>Full Name</FormLabel>
+                                      <FormControl><Input {...field} defaultValue={candidate ? ('fullName' in candidate ? candidate.fullName : candidate.name) : ''} /></FormControl>
+                                      <FormMessage />
+                                    </FormItem>
                                 )} />
                                 <FormField control={verificationForm.control} name="email" render={({ field }) => (
-                                    <FormItem><FormLabel>Email Address</FormLabel><FormControl><Input type="email" {...field} defaultValue={candidate?.email || ''}/></FormControl><FormMessage /></FormItem>
+                                    <FormItem>
+                                      <FormLabel>Email Address</FormLabel>
+                                      <FormControl><Input type="email" {...field} defaultValue={candidate?.email || ''}/></FormControl>
+                                      <FormMessage />
+                                    </FormItem>
                                 )} />
                             </CardContent>
                             <CardFooter>

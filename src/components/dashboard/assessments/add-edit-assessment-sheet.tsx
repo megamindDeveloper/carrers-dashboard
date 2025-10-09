@@ -70,6 +70,8 @@ const assessmentSchema = z.object({
   authentication: z.enum(AUTHENTICATION_TYPES),
   disableCopyPaste: z.boolean().optional(),
   sections: z.array(sectionSchema).min(1, "At least one section is required"),
+  successTitle: z.string().optional(),
+  successMessage: z.string().optional(),
 });
 
 const generatePasscode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -110,7 +112,9 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
                   ...q,
                   options: q.options?.map(opt => ({ value: opt }))
               })) || []
-          })) || []
+          })) || [],
+          successTitle: assessment.successTitle || 'Assessment Complete',
+          successMessage: assessment.successMessage || 'Thank you for your submission. The hiring team will get back to you soon.',
         });
       } else {
         form.reset({
@@ -124,6 +128,8 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
               title: 'General Questions', 
               questions: [{ id: uuidv4(), text: 'Please introduce yourself and walk us through your resume.', type: 'textarea' }]
           }],
+          successTitle: 'Assessment Complete',
+          successMessage: 'Thank you for your submission. The hiring team will get back to you soon.',
         });
       }
     }
@@ -248,7 +254,7 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
                     render={({ field }) => (
                         <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                         <div className="space-y-0.5">
-                            <FormLabel>Disable Proctoring Features</FormLabel>
+                            <FormLabel>Enable Proctoring Features</FormLabel>
                             <FormDescription>
                              Includes disabling copy/paste and auto-submitting on tab switch.
                             </FormDescription>
@@ -262,6 +268,25 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
                         </FormItem>
                     )}
                     />
+              </div>
+
+               {/* Success Page Customization */}
+              <div className="space-y-4 p-4 border rounded-lg">
+                <h3 className="text-lg font-medium">Success Page</h3>
+                <FormField control={form.control} name="successTitle" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Success Page Title</FormLabel>
+                    <FormControl><Input {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="successMessage" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Success Page Message</FormLabel>
+                    <FormControl><Textarea {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
               </div>
 
               {/* Sections */}
