@@ -508,7 +508,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                                 <FormField control={verificationForm.control} name="name" render={({ field }) => (
                                     <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} defaultValue={candidateName} /></FormControl><FormMessage /></FormItem>
                                 )} />
-                                <FormField control={verificationForm.control} name="email" render={({ field }) => (
+                                <FormField control={form.control} name="email" render={({ field }) => (
                                     <FormItem><FormLabel>Email Address</FormLabel><FormControl><Input type="email" {...field} defaultValue={candidate?.email ?? ''} /></FormControl><FormMessage /></FormItem>
                                 )} />
                             </CardContent>
@@ -595,7 +595,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
   if (!assessment || !assessment.sections || assessment.sections.length === 0) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-muted/40">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p>This assessment has no questions.</p>
       </div>
     );
   }
@@ -606,7 +606,21 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
   
   const currentSection = assessment.sections[currentSectionIndex];
   if (!currentSection || !currentSection.questions || currentSection.questions.length === 0) {
-    return <div>Error: Current section has no questions.</div>;
+    // This case should be handled gracefully, e.g., by skipping the section
+    // For now, we show an error, but a better implementation might auto-advance.
+    if (currentSectionIndex < assessment.sections.length -1) {
+      setCurrentSectionIndex(i => i + 1);
+      return <Loader2 className="h-12 w-12 animate-spin text-primary" />;
+    }
+     return (
+        <div className="flex h-screen w-full items-center justify-center">
+            <p>End of assessment. Please submit.</p>
+             <Button onClick={() => answersForm.handleSubmit(onSubmit)()} disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Submit Assessment
+            </Button>
+        </div>
+     );
   }
   const currentQuestion = currentSection.questions[currentQuestionIndex];
   const AnswerComponent = assessment.disableCopyPaste ? PasteDisabledTextarea : Textarea;
