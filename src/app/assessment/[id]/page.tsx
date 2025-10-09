@@ -528,6 +528,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
 
   const currentSection = assessment.sections[currentSectionIndex];
   const totalSections = assessment.sections.length;
+  const isLastSection = currentSectionIndex === totalSections - 1;
   
   const sectionQuestionStartIndex = assessment.sections.slice(0, currentSectionIndex).reduce((acc, sec) => acc + (sec.questions?.length || 0), 0);
 
@@ -712,14 +713,16 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                             <ArrowLeft className="mr-2 h-4 w-4" /> Previous
                        </Button>
 
-                       {currentSectionIndex < totalSections - 1 ? (
+                       {!isLastSection && (
                            <Button 
                             type="button" 
                             onClick={() => setCurrentSectionIndex(prev => prev + 1)}
                            >
                               Next <ArrowRight className="ml-2 h-4 w-4" />
                            </Button>
-                       ) : (
+                       )}
+                       
+                       {isLastSection && (
                            <Button type="submit" className="w-auto" disabled={isSubmitting}>
                                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                                 Submit Assessment
@@ -733,7 +736,5 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
-
-    
 
     
