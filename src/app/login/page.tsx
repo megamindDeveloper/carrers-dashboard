@@ -95,7 +95,7 @@ export default function LoginPage() {
       <div className="flex items-center justify-center p-6 py-12 sm:p-12">
         <div className="mx-auto grid w-full max-w-sm gap-6">
           <div className="grid gap-2 text-center">
-            <Image height={50} width={200} src={mmLogo} alt="MegaMind Careers Logo" className="mx-auto mb-4" />
+            <Image height={50} width={200} src={mmLogo} alt="Megamind Careers Logo" className="mx-auto mb-4" />
             <h1 className="text-3xl font-bold">Login</h1>
             <p className="text-balance text-muted-foreground">
               Enter your credentials to access your dashboard.

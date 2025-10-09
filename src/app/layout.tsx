@@ -1,10 +1,11 @@
+
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/context/auth-context';
 
 export const metadata: Metadata = {
-  title: 'MegaMind Careers Dashboard',
+  title: 'Megamind Careers Dashboard',
   description: 'Manage your candidate pipeline with ease.',
 };
 

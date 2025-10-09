@@ -1,3 +1,4 @@
+
 import { NextResponse } from "next/server";
 import path from "path";
 import fs from "fs/promises";
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
     // Send the email using centralized helper
     await sendEmail({
       to: { email, name: fullName },
-      subject: "Update on your application with MegaMind Careers",
+      subject: "Update on your application with Megamind Careers",
       htmlBody: template,
     });
 

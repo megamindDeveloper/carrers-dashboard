@@ -1,3 +1,4 @@
+
 import { db } from '@/app/utils/firebase/firebaseConfig';
 import { doc, getDoc } from 'firebase/firestore';
 import type { Candidate } from '@/lib/types';
@@ -61,10 +62,10 @@ export default async function SharedCandidatePage({ params }: { params: { id: st
     <div className="min-h-screen bg-muted/40 p-4 sm:p-8">
       <div className="mx-auto max-w-4xl">
         <div className="mb-8 flex items-center justify-between">
-            <Image height={30} width={150} src={mmLogo} alt="MegaMind Careers Logo" />
+            <Image height={30} width={150} src={mmLogo} alt="Megamind Careers Logo" />
             <div className="text-right">
                 <h1 className="text-2xl font-bold text-primary">Candidate Profile</h1>
-                <p className="text-muted-foreground">Shared via MegaMind Careers</p>
+                <p className="text-muted-foreground">Shared via Megamind Careers</p>
             </div>
         </div>
 

@@ -1,3 +1,4 @@
+
 import { NextResponse } from "next/server";
 import path from "path";
 import fs from "fs/promises";
@@ -21,7 +22,7 @@ export async function POST(req: Request) {
     // Send email using the updated mail library
     await sendEmail({
         to: { email, name: fullName },
-        subject: `Update on your application with megamind`,
+        subject: `Update on your application with Megamind`,
         htmlBody: template,
     });
 

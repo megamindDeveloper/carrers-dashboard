@@ -261,8 +261,12 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
         let data = { id: docSnap.id, ...docSnap.data() } as Assessment;
   
         // Handle assessments with old structure (questions at root) for backward compatibility
-        if ((!data.sections || data.sections.length === 0) && (data as any).questions?.length > 0) {
-          data.sections = [{ id: 'default', title: 'General Questions', questions: (data as any).questions }];
+        if (!data.sections || data.sections.length === 0) {
+            if ((data as any).questions?.length > 0) {
+                data.sections = [{ id: 'default', title: 'General Questions', questions: (data as any).questions }];
+            } else {
+                data.sections = []; // Ensure sections is an empty array if no questions exist
+            }
         }
   
         if (data.disableCopyPaste) {
@@ -511,7 +515,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
       <div className="flex h-screen w-full items-center justify-center bg-muted/40 p-4">
         <Card className="w-full max-w-md text-center">
             <CardHeader>
-                <Image height={50} width={200} src={mmLogo} alt="MegaMind Careers Logo" className="mx-auto mb-4" />
+                <Image height={50} width={200} src={mmLogo} alt="Megamind Careers Logo" className="mx-auto mb-4" />
                 <CardTitle>Submission Received</CardTitle>
             </CardHeader>
             <CardContent><p>Thank you. We have already received your submission for this assessment.</p></CardContent>
@@ -525,7 +529,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
       <div className="flex h-screen w-full items-center justify-center bg-muted/40 p-4">
         <Card className="w-full max-w-md text-center">
             <CardHeader>
-                <Image height={50} width={200} src={mmLogo} alt="MegaMind Careers Logo" className="mx-auto mb-4" />
+                <Image height={50} width={200} src={mmLogo} alt="Megamind Careers Logo" className="mx-auto mb-4" />
                 <CardTitle>Assessment Complete</CardTitle>
             </CardHeader>
             <CardContent><p>Thank you for your submission. The hiring team will get back to you soon.</p></CardContent>
@@ -540,7 +544,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
              <div className="flex min-h-screen w-full items-center justify-center bg-muted/40 p-4">
                 <Card className="w-full max-w-sm">
                     <CardHeader>
-                        <Image height={50} width={200} src={mmLogo} alt="MegaMind Careers Logo" className="mx-auto mb-4" />
+                        <Image height={50} width={200} src={mmLogo} alt="Megamind Careers Logo" className="mx-auto mb-4" />
                         <CardTitle className="flex items-center gap-2 justify-center"><Lock /> Candidate Verification</CardTitle>
                         <CardDescription className="text-center">Please verify your identity to access the assessment.</CardDescription>
                     </CardHeader>
@@ -571,7 +575,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
           <div className="flex min-h-screen w-full items-center justify-center bg-muted/40 p-4">
               <Card className="w-full max-w-sm">
                   <CardHeader>
-                      <Image height={50} width={200} src={mmLogo} alt="MegaMind Careers Logo" className="mx-auto mb-4" />
+                      <Image height={50} width={200} src={mmLogo} alt="Megamind Careers Logo" className="mx-auto mb-4" />
                       <CardTitle className="flex items-center gap-2 justify-center"><Lock /> Secure Assessment</CardTitle>
                       <CardDescription className="text-center">{assessment?.title}</CardDescription>
                   </CardHeader>
@@ -610,7 +614,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
         <div className="flex min-h-screen w-full items-center justify-center bg-muted/40 p-4">
             <Card className="w-full max-w-lg text-center shadow-lg">
                 <CardHeader className="p-8 text-center">
-                    <Image height={50} width={200} src={mmLogo} alt="MegaMind Careers Logo" className="mx-auto mb-6" />
+                    <Image height={50} width={200} src={mmLogo} alt="Megamind Careers Logo" className="mx-auto mb-6" />
                     <CardTitle className="text-3xl font-bold">{assessment?.title}</CardTitle>
                     <CardDescription className="text-lg pt-2">Ready to begin?</CardDescription>
                 </CardHeader>
@@ -677,7 +681,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
       <div className="flex min-h-screen w-full items-center justify-center bg-muted/40 p-4">
         <Card className="w-full max-w-lg text-center shadow-lg">
           <CardHeader className="p-8 text-center">
-            <Image height={50} width={200} src={mmLogo} alt="MegaMind Careers Logo" className="mx-auto mb-6" />
+            <Image height={50} width={200} src={mmLogo} alt="Megamind Careers Logo" className="mx-auto mb-6" />
             <CardDescription>Section {currentSectionIndex + 1} of {assessment.sections.length}</CardDescription>
             <CardTitle className="text-3xl font-bold">{currentSection.title}</CardTitle>
           </CardHeader>
@@ -705,12 +709,12 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
         <div className="mx-auto max-w-3xl w-full">
             <Card>
                 <CardHeader>
-                    <div className="flex justify-between items-center mb-4">
+                    <div className="flex justify-between items-start mb-4">
                         <div className="flex-grow">
                             <CardTitle>{assessment?.title}</CardTitle>
                             <CardDescription>Question {overallQuestionIndex + 1} of {totalQuestions}</CardDescription>
                         </div>
-                         <Image height={25} width={120} src={mmLogo} alt="MegaMind Careers Logo" className="hidden sm:block" />
+                         <Image height={25} width={120} src={mmLogo} alt="Megamind Careers Logo" className="hidden sm:block" />
                         {assessment?.timeLimit && (
                             <div className="flex items-center gap-2 rounded-full bg-destructive px-4 py-2 text-destructive-foreground ml-auto">
                                 <Timer className="h-5 w-5" />

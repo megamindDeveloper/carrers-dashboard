@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -58,7 +59,7 @@ export function Sidebar({ isSidebarOpen }: SidebarProps) {
     height={20}
     width={isSidebarOpen ? 80 : 20}
     src={isSidebarOpen ? mmLogoOpen : mmLogoclose} // ✅ switch image
-    alt="MegaMind Careers Logo"
+    alt="Megamind Careers Logo"
     className={cn(
       'transition-all group-hover:scale-110',
       isSidebarOpen ? 'h-12 w-40' : 'h-8 w-8'

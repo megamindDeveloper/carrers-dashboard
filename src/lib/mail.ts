@@ -1,3 +1,4 @@
+
 // lib/mail.ts
 
 import { SendMailClient } from "zeptomail";
@@ -36,7 +37,7 @@ export async function sendEmail({ to, subject, htmlBody }: SendEmailOptions) {
     const response = await client.sendMail({
       from: {
         address: "no-reply@megamind.studio", // This can also be an environment variable
-        name: "megamind",
+        name: "Megamind",
       },
       to: [
         {

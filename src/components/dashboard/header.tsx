@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -66,8 +67,8 @@ export function Header({ onToggleSidebar }: HeaderProps) {
               href="/dashboard"
               className="group flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:text-base"
             >
-              <Image height={30} width={120} src={mmLogo} alt="MegaMind Careers Logo" />
-              <span className="sr-only">MegaMind Careers</span>
+              <Image height={30} width={120} src={mmLogo} alt="Megamind Careers Logo" />
+              <span className="sr-only">Megamind Careers</span>
             </Link>
             {navItems.map(item => {
               const isActive = item.href === '/dashboard' ? pathname === item.href : pathname.startsWith(item.href);
