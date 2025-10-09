@@ -10,9 +10,9 @@ import type { AuthenticationType } from "@/lib/types";
 
 export async function POST(req: Request) {
   try {
-    const { candidates, assessmentId, assessmentTitle, passcode, collegeId, subject, body, authentication } = await req.json();
+    const { candidates, assessmentId, assessmentTitle, passcode, collegeId, subject, body, buttonText, authentication } = await req.json();
 
-    if (!candidates || !Array.isArray(candidates) || candidates.length === 0 || !assessmentId || !assessmentTitle || !subject || !body) {
+    if (!candidates || !Array.isArray(candidates) || candidates.length === 0 || !assessmentId || !assessmentTitle || !subject || !body || !buttonText) {
       return NextResponse.json(
         { success: false, message: "Invalid request body. Missing required fields." },
         { status: 400 }
@@ -49,7 +49,8 @@ export async function POST(req: Request) {
           .replace(/<<Assessment Name>>/g, assessmentTitle)
           .replace(/<<Assessment Link>>/g, assessmentLink)
           .replace(/<<Passcode>>/g, passcode || 'N/A')
-          .replace(/<<EMAIL_BODY>>/g, finalBody.replace(/\n/g, '<br />')); // Replace custom body content
+          .replace(/<<EMAIL_BODY>>/g, finalBody.replace(/\n/g, '<br />')) // Replace custom body content
+          .replace(/<<BUTTON_TEXT>>/g, buttonText);
 
 
         // Conditionally show passcode section

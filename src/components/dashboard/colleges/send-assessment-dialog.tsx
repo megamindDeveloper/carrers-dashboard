@@ -31,7 +31,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 interface SendAssessmentDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSend: (data: { subject:string; body: string }) => void;
+  onSend: (data: { subject:string; body: string; buttonText: string }) => void;
   isSending: boolean;
   assessment: Assessment | undefined;
 }
@@ -39,6 +39,7 @@ interface SendAssessmentDialogProps {
 const emailSchema = z.object({
   subject: z.string().min(1, 'Subject is required'),
   body: z.string().min(1, 'Email body is required'),
+  buttonText: z.string().min(1, 'Button text is required'),
 });
 
 const defaultEmailBody = `As part of our evaluation process, we would like to invite you to complete an online assessment. This will help us better understand your skills and how they align with our requirements.
@@ -59,6 +60,7 @@ export function SendAssessmentDialog({ isOpen, onClose, onSend, isSending, asses
       form.reset({
         subject: `Invitation to complete assessment for ${assessment.title}`,
         body: defaultEmailBody,
+        buttonText: 'Start Assessment',
       });
     }
   }, [assessment, form, isOpen]);
@@ -89,6 +91,14 @@ export function SendAssessmentDialog({ isOpen, onClose, onSend, isSending, asses
                       <FormItem>
                       <FormLabel>Email Subject</FormLabel>
                       <FormControl><Input {...field} /></FormControl>
+                      <FormMessage />
+                      </FormItem>
+                  )} />
+
+                   <FormField control={form.control} name="buttonText" render={({ field }) => (
+                      <FormItem>
+                      <FormLabel>Button Text</FormLabel>
+                      <FormControl><Input {...field} placeholder="e.g., Start Assessment" /></FormControl>
                       <FormMessage />
                       </FormItem>
                   )} />

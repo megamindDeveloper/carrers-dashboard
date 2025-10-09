@@ -221,7 +221,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
     setSendAssessmentDialogOpen(true);
   }
 
-  const handleSendAssessment = async ({ subject, body }: { subject: string, body: string }) => {
+  const handleSendAssessment = async ({ subject, body, buttonText }: { subject: string, body: string, buttonText: string }) => {
     
     const candidatesToSend = data.filter(c => !c.submissions?.some(s => s.assessmentId === selectedAssessmentId));
     const selectedAssessment = assessments.find(a => a.id === selectedAssessmentId);
@@ -246,6 +246,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
                 collegeId: collegeId,
                 subject,
                 body,
+                buttonText,
                 authentication: selectedAssessment.authentication,
             }),
         });
