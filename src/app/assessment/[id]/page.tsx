@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
@@ -532,7 +533,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
       return (
         <div className="flex min-h-screen w-full items-center justify-center bg-muted/40 p-4">
             <Card className="w-full max-w-lg text-center shadow-lg">
-                <CardHeader className="p-8">
+                <CardHeader className="p-8 text-center">
                     <Image height={50} width={200} src={mmLogo} alt="MegaMind Careers Logo" className="mx-auto mb-6" />
                     <CardTitle className="text-3xl font-bold">{assessment?.title}</CardTitle>
                     <CardDescription className="text-lg pt-2">Ready to begin?</CardDescription>
@@ -583,14 +584,14 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     return (
       <div className="flex min-h-screen w-full items-center justify-center bg-muted/40 p-4">
         <Card className="w-full max-w-lg text-center shadow-lg">
-          <CardHeader className="p-8">
+          <CardHeader className="p-8 text-center">
             <Image height={50} width={200} src={mmLogo} alt="MegaMind Careers Logo" className="mx-auto mb-6" />
             <CardDescription>Section {currentSectionIndex + 1} of {assessment.sections.length}</CardDescription>
             <CardTitle className="text-3xl font-bold">{currentSection.title}</CardTitle>
           </CardHeader>
           <CardContent className="px-8 pb-4">
-             <Alert className="text-left">
-                  <AlertCircle className="h-4 w-4" />
+             <Alert className="text-center">
+                  <AlertCircle className="mx-auto h-4 w-4" />
                   <AlertTitle>Questions in this section: {currentSection.questions?.length || 0}</AlertTitle>
                   <AlertDescription>
                       Click the button below to start this section.
@@ -803,6 +804,8 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
+
+    
 
     
 
