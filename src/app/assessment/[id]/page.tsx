@@ -490,28 +490,26 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
   if (!isStarted) {
       return (
         <div className="flex min-h-screen w-full items-center justify-center bg-muted/40 p-4">
-            <Card className="w-full max-w-lg">
-                <CardHeader>
-                    <Image height={50} width={200} src={mmLogo} alt="MegaMind Careers Logo" className="mx-auto mb-4" />
-                    <CardTitle>{assessment?.title}</CardTitle>
-                    <CardDescription>Ready to begin?</CardDescription>
+            <Card className="w-full max-w-lg text-center shadow-lg">
+                <CardHeader className="p-8">
+                    <Image height={50} width={200} src={mmLogo} alt="MegaMind Careers Logo" className="mx-auto mb-6" />
+                    <CardTitle className="text-3xl font-bold">{assessment?.title}</CardTitle>
+                    <CardDescription className="text-lg pt-2">Ready to begin?</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="px-8 pb-4">
                     {assessment?.timeLimit && (
-                        <Alert>
+                        <Alert className="text-left">
                             <Timer className="h-4 w-4" />
                             <AlertTitle>Time Limit: {assessment?.timeLimit} minutes</AlertTitle>
                             <AlertDescription>
-                                The timer will start as soon as you click the button below. The form will be submitted automatically when the time runs out.
-                                {assessment.disableCopyPaste && " Pasting is disabled for text fields."}
+                                The timer will start as soon as you click the button below. 
+                                {assessment.disableCopyPaste && " Pasting content is disabled."}
                             </AlertDescription>
                         </Alert>
                     )}
-                    <p>Number of sections: {assessment?.sections?.length || 0}</p>
-                    <p>Total questions: {allQuestions.length}</p>
                 </CardContent>
-                <CardFooter>
-                    <Button onClick={handleStart} className="w-full">Start Assessment</Button>
+                <CardFooter className="p-8 pt-4">
+                    <Button onClick={handleStart} className="w-full" size="lg">Apply Now</Button>
                 </CardFooter>
             </Card>
         </div>
@@ -713,20 +711,18 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                             <ArrowLeft className="mr-2 h-4 w-4" /> Previous
                        </Button>
 
-                       {!isLastSection && (
+                       {isLastSection ? (
+                           <Button type="submit" className="w-auto" disabled={isSubmitting}>
+                                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                Submit Assessment
+                            </Button>
+                       ) : (
                            <Button 
                             type="button" 
                             onClick={() => setCurrentSectionIndex(prev => prev + 1)}
                            >
                               Next <ArrowRight className="ml-2 h-4 w-4" />
                            </Button>
-                       )}
-                       
-                       {isLastSection && (
-                           <Button type="submit" className="w-auto" disabled={isSubmitting}>
-                                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                                Submit Assessment
-                            </Button>
                        )}
                     </CardFooter>
                 </form>
@@ -736,5 +732,3 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
-
-    
