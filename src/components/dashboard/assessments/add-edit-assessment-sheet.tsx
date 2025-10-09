@@ -211,7 +211,7 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
                         </FormControl>
                         <SelectContent>
                             <SelectItem value="none">No Authentication</SelectItem>
-                            <SelectItem value="email_verification">Email & Name Verification</SelectItem>
+                            <SelectItem value="email_verification">Email &amp; Name Verification</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormDescription>Require candidates to verify their identity before starting.</FormDescription>
@@ -248,9 +248,9 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
                     render={({ field }) => (
                         <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                         <div className="space-y-0.5">
-                            <FormLabel>Disable Copy & Paste</FormLabel>
+                            <FormLabel>Disable Copy &amp; Paste</FormLabel>
                             <FormDescription>
-                            Prevent candidates from pasting content into text fields.
+                            Prevent candidates from copying questions and pasting content.
                             </FormDescription>
                         </div>
                         <FormControl>
@@ -412,3 +412,5 @@ function OptionsField({ sectionIndex, questionIndex, control }: { sectionIndex: 
         </div>
     )
 }
+
+    

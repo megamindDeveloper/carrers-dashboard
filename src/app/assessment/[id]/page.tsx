@@ -313,8 +313,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
 
 
   const submitOnTimeUp = useCallback(() => {
-    const submitAction = answersForm.handleSubmit(onSubmit);
-    submitAction();
+    answersForm.handleSubmit(onSubmit)();
   }, [answersForm, onSubmit]);
 
   // Effect for the countdown timer
@@ -339,6 +338,22 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
 
     return () => clearInterval(timer);
   }, [isStarted, isFinished, assessment?.timeLimit, submitOnTimeUp, toast]);
+  
+  // Effect for disabling copy
+  useEffect(() => {
+    if (!isStarted || isFinished || !assessment?.disableCopyPaste) return;
+
+    const handleCopy = (e: ClipboardEvent) => {
+      e.preventDefault();
+      alert("Copying questions is disabled for this assessment.");
+    };
+
+    document.addEventListener('copy', handleCopy);
+
+    return () => {
+      document.removeEventListener('copy', handleCopy);
+    };
+  }, [isStarted, isFinished, assessment?.disableCopyPaste]);
 
 
   const handlePasscodeSubmit = (values: z.infer<typeof passcodeSchema>) => {
@@ -519,7 +534,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                             <AlertTitle>Time Limit: {assessment?.timeLimit} minutes</AlertTitle>
                             <AlertDescription>
                                 The timer will start as soon as you click the button below. 
-                                {assessment.disableCopyPaste && " Pasting content is disabled."}
+                                {assessment.disableCopyPaste && " Copying questions and pasting content is disabled."}
                             </AlertDescription>
                         </Alert>
                     )}
@@ -777,5 +792,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
+
+    
 
     
