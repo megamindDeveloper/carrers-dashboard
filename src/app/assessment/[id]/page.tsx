@@ -341,7 +341,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
   
   // Effect for disabling copy
   useEffect(() => {
-    if (!isStarted || isFinished || !assessment?.disableCopyPaste) return;
+    if (!assessment?.disableCopyPaste) return;
 
     const handleCopy = (e: ClipboardEvent) => {
       e.preventDefault();
@@ -353,7 +353,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     return () => {
       document.removeEventListener('copy', handleCopy);
     };
-  }, [isStarted, isFinished, assessment?.disableCopyPaste]);
+  }, [assessment?.disableCopyPaste]);
 
 
   const handlePasscodeSubmit = (values: z.infer<typeof passcodeSchema>) => {
@@ -762,28 +762,34 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                         )}
                     </CardContent>
                     <CardFooter className="flex justify-between">
-                       <Button 
-                          type="button" 
-                          variant="outline" 
-                          onClick={handlePrevSection}
-                          disabled={currentSectionIndex === 0}
-                        >
-                            <ArrowLeft className="mr-2 h-4 w-4" /> Previous
-                       </Button>
-
-                       {isLastSection ? (
-                            <Button type="submit" className="w-auto" disabled={isSubmitting}>
-                                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                                Submit Assessment
-                            </Button>
-                       ) : (
-                           <Button 
-                            type="button" 
-                            onClick={handleNextSection}
-                           >
-                              Next <ArrowRight className="ml-2 h-4 w-4" />
+                       <div>
+                         {currentSectionIndex > 0 && (
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              onClick={handlePrevSection}
+                            >
+                                <ArrowLeft className="mr-2 h-4 w-4" /> Previous
                            </Button>
-                       )}
+                         )}
+                       </div>
+
+                       <div>
+                           {!isLastSection && (
+                               <Button 
+                                type="button" 
+                                onClick={handleNextSection}
+                               >
+                                  Next <ArrowRight className="ml-2 h-4 w-4" />
+                               </Button>
+                           )}
+                           {isLastSection && (
+                                <Button type="submit" className="w-auto" disabled={isSubmitting}>
+                                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                    Submit Assessment
+                                </Button>
+                           )}
+                       </div>
                     </CardFooter>
                 </form>
                 </Form>
@@ -792,7 +798,5 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
-
-    
 
     
