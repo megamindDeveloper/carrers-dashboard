@@ -255,6 +255,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
   
         if (!docSnap.exists()) {
           setError('Assessment not found.');
+          setLoading(false);
           return;
         }
   
@@ -286,6 +287,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
           const submissionsSnapshot = await getDocs(submissionsQuery);
           if (!submissionsSnapshot.empty) {
             setAlreadySubmitted(true);
+            setLoading(false);
             return;
           }
         }
@@ -294,13 +296,15 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
   
         // Pre-fill form answers
         const allQuestions = data.sections?.flatMap(s => s.questions) || [];
-        answersForm.reset({
-          answers: allQuestions.map(q => ({
-            questionId: q.id,
-            questionText: q.text,
-            answer: q.type === 'checkbox' ? [] : ''
-          }))
-        });
+        if (allQuestions.length > 0) {
+            answersForm.reset({
+              answers: allQuestions.map(q => ({
+                questionId: q.id,
+                questionText: q.text,
+                answer: q.type === 'checkbox' ? [] : ''
+              }))
+            });
+        }
   
         if (data.timeLimit) {
           setTimeLeft(data.timeLimit * 60);
@@ -379,6 +383,30 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
 
     return () => clearInterval(timer);
   }, [isStarted, isFinished, assessment?.timeLimit, submitOnTimeUp, toast]);
+  
+  // Effect for tab switching
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && isStarted && !isFinished) {
+        toast({
+          title: "Tab Switched",
+          description: "Assessment submitted automatically due to tab switching.",
+          variant: "destructive"
+        });
+        submitOnTimeUp();
+      }
+    };
+
+    if (assessment?.disableCopyPaste) {
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+    }
+    
+    return () => {
+      if (assessment?.disableCopyPaste) {
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
+      }
+    };
+  }, [isStarted, isFinished, assessment?.disableCopyPaste, submitOnTimeUp, toast]);
 
 
   const handlePasscodeSubmit = (values: z.infer<typeof passcodeSchema>) => {
@@ -521,10 +549,10 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                         <form onSubmit={verificationForm.handleSubmit(handleVerificationSubmit)}>
                             <CardContent className="space-y-4">
                                 <FormField control={verificationForm.control} name="name" render={({ field }) => (
-                                    <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                                    <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} defaultValue={candidate ? ('fullName' in candidate ? candidate.fullName : candidate.name) : ''} /></FormControl><FormMessage /></FormItem>
                                 )} />
                                 <FormField control={verificationForm.control} name="email" render={({ field }) => (
-                                    <FormItem><FormLabel>Email Address</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
+                                    <FormItem><FormLabel>Email Address</FormLabel><FormControl><Input type="email" {...field} defaultValue={candidate?.email || ''}/></FormControl><FormMessage /></FormItem>
                                 )} />
                             </CardContent>
                             <CardFooter>
@@ -588,26 +616,26 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                     <CardDescription className="text-lg pt-2">Ready to begin?</CardDescription>
                 </CardHeader>
                 <CardContent className="px-8 pb-4">
-                    {assessment?.timeLimit && (
+                    {assessment && (
                         <Alert className="text-left">
                             <Timer className="h-4 w-4" />
-                            <AlertTitle>Time Limit: {assessment?.timeLimit} minutes</AlertTitle>
+                            <AlertTitle>Important Instructions</AlertTitle>
                             <AlertDescription>
-                                The timer will start as soon as you click the button below. 
-                                {assessment.disableCopyPaste && " Copying questions and pasting content is disabled."}
+                                {assessment.timeLimit && `The timer will start as soon as you click the button below. You will have ${assessment.timeLimit} minutes.`}
+                                {assessment.disableCopyPaste && " Copying questions, pasting content, and switching tabs is disabled. Doing so will automatically submit your assessment."}
                             </AlertDescription>
                         </Alert>
                     )}
                 </CardContent>
                 <CardFooter className="p-8 pt-4">
-                    <Button onClick={handleStart} className="w-full" size="lg">Apply Now</Button>
+                    <Button onClick={handleStart} className="w-full" size="lg">Start Assessment</Button>
                 </CardFooter>
             </Card>
         </div>
       );
   }
 
-  if (!assessment || !assessment.sections || assessment.sections.length === 0) {
+  if (!assessment || !assessment.sections || assessment.sections.length === 0 || allQuestions.length === 0) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-muted/40">
         <p>This assessment has no questions.</p>
@@ -877,3 +905,5 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
+
+    
