@@ -311,6 +311,10 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
   }, [params.id, searchParams, answersForm]);
 
 
+  const submitOnTimeUp = useCallback(() => {
+    answersForm.handleSubmit(onSubmit)();
+  }, [answersForm, onSubmit]);
+
   // Effect for the countdown timer
   useEffect(() => {
     if (!isStarted || isFinished || !assessment?.timeLimit) return;
@@ -324,7 +328,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
             description: "Submitting your assessment now.",
             variant: "destructive"
           });
-          answersForm.handleSubmit(onSubmit)();
+          submitOnTimeUp();
           return 0;
         }
         return prev - 1;
@@ -332,7 +336,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isStarted, isFinished, assessment?.timeLimit, answersForm, onSubmit, toast]);
+  }, [isStarted, isFinished, assessment?.timeLimit, submitOnTimeUp, toast]);
 
 
   const handlePasscodeSubmit = (values: z.infer<typeof passcodeSchema>) => {
@@ -729,5 +733,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
+
+    
 
     
