@@ -43,7 +43,7 @@ const answersSchema = z.object({
     answers: z.array(z.object({
         questionId: z.string(),
         questionText: z.string(),
-        answer: z.union([z.string(), z.array(z.string())]).optional(),
+        answer: z.any().optional(),
     })),
 });
 
@@ -179,6 +179,9 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
 
   const answersForm = useForm<AnswersFormValues>({
     resolver: zodResolver(answersSchema),
+    defaultValues: {
+      answers: [],
+    },
   });
 
   const onSubmit = useCallback(async (data: AnswersFormValues) => {
@@ -257,12 +260,8 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
         let data = { id: docSnap.id, ...docSnap.data() } as Assessment;
   
         // Handle assessments with old structure (questions at root) for backward compatibility
-        if (!data.sections || data.sections.length === 0) {
-          if ((data as any).questions && Array.isArray((data as any).questions) && (data as any).questions.length > 0) {
-            data.sections = [{ id: 'default', title: 'General Questions', questions: (data as any).questions }];
-          } else {
-            data.sections = []; // Ensure sections is an empty array if no questions found
-          }
+        if ((!data.sections || data.sections.length === 0) && (data as any).questions?.length > 0) {
+          data.sections = [{ id: 'default', title: 'General Questions', questions: (data as any).questions }];
         }
   
         if (data.disableCopyPaste) {
@@ -296,9 +295,9 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
         setAssessment(data);
   
         // Pre-fill form answers
-        const questions = data.sections?.flatMap(s => s.questions) || [];
+        const allQuestions = data.sections?.flatMap(s => s.questions) || [];
         answersForm.reset({
-          answers: questions.map(q => ({
+          answers: allQuestions.map(q => ({
             questionId: q.id,
             questionText: q.text,
             answer: q.type === 'checkbox' ? [] : ''
@@ -327,7 +326,6 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
             if (!authRequired) {
               setIsAuthenticated(true);
             } else {
-                // Pre-fill verification form
                 verificationForm.reset({
                     name: 'fullName' in candidateData ? candidateData.fullName : candidateData.name,
                     email: candidateData.email
@@ -397,7 +395,6 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
       }
       const candidateName = 'fullName' in candidate ? (candidate as Candidate).fullName : (candidate as CollegeCandidate).name;
       
-      // Case-insensitive comparison
       const isNameMatch = values.name.toLowerCase() === candidateName.toLowerCase();
       const isEmailMatch = values.email.toLowerCase() === candidate.email.toLowerCase();
 
@@ -431,9 +428,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
             setCurrentQuestionIndex(0);
             setViewingSectionIntro(true);
         }
-        // If it's the last question of all, the "Submit" button will be shown, so this handler isn't even called.
     } else {
-        // Move to next question in the same section
         setCurrentQuestionIndex(prev => prev + 1);
     }
   };
@@ -443,10 +438,11 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
         setCurrentQuestionIndex(prev => prev - 1);
     } else {
         if (currentSectionIndex > 0) {
-            // Go to previous section's intro card
-            setCurrentSectionIndex(prev => prev - 1);
-            // This will show the intro card, from which user can start section
-            setViewingSectionIntro(true);
+            const prevSectionIndex = currentSectionIndex - 1;
+            const prevSection = assessment!.sections![prevSectionIndex];
+            setCurrentSectionIndex(prevSectionIndex);
+            setCurrentQuestionIndex(prevSection.questions.length -1);
+            setViewingSectionIntro(false);
         }
     }
   };
@@ -608,29 +604,34 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
 
   const allQuestions = assessment.sections.flatMap(section => section.questions || []);
   const totalQuestions = allQuestions.length;
-  const overallQuestionIndex = assessment.sections.slice(0, currentSectionIndex).reduce((acc, sec) => acc + (sec.questions?.length || 0), 0) + currentQuestionIndex;
   
   const currentSection = assessment.sections[currentSectionIndex];
   if (!currentSection || !currentSection.questions || currentSection.questions.length === 0) {
-    // This case should be handled gracefully, e.g., by skipping the section
-    // For now, we show an error, but a better implementation might auto-advance.
     if (currentSectionIndex < assessment.sections.length -1) {
       setCurrentSectionIndex(i => i + 1);
-      return <Loader2 className="h-12 w-12 animate-spin text-primary" />;
+      return <div className="flex h-screen w-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
     }
      return (
         <div className="flex h-screen w-full items-center justify-center">
-            <p>End of assessment. Please submit.</p>
-             <Button onClick={() => answersForm.handleSubmit(onSubmit)()} disabled={isSubmitting}>
-                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Submit Assessment
-            </Button>
+            <Card className="w-full max-w-md text-center">
+                <CardHeader>
+                    <CardTitle>End of Assessment</CardTitle>
+                    <CardDescription>You have reached the end. Please submit your answers.</CardDescription>
+                </CardHeader>
+                <CardFooter>
+                    <Button onClick={() => answersForm.handleSubmit(onSubmit)()} disabled={isSubmitting} className="w-full">
+                        {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        Submit Assessment
+                    </Button>
+                </CardFooter>
+            </Card>
         </div>
      );
   }
+
+  const overallQuestionIndex = assessment.sections.slice(0, currentSectionIndex).reduce((acc, sec) => acc + (sec.questions?.length || 0), 0) + currentQuestionIndex;
   const currentQuestion = currentSection.questions[currentQuestionIndex];
   const AnswerComponent = assessment.disableCopyPaste ? PasteDisabledTextarea : Textarea;
-
   const isLastQuestionOfAll = overallQuestionIndex === totalQuestions - 1;
 
 
@@ -662,7 +663,6 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     );
   }
 
-
   return (
     <div className="min-h-screen bg-muted/40 p-4 sm:p-8 flex items-center justify-center">
         <div className="mx-auto max-w-3xl w-full">
@@ -685,7 +685,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                 <Form {...answersForm}>
                 <form onSubmit={answersForm.handleSubmit(onSubmit)}>
                     <CardContent className="space-y-8 pt-4">
-                       <FormField
+                       {currentQuestion && <FormField
                           key={currentQuestion.id}
                           control={answersForm.control}
                           name={`answers.${overallQuestionIndex}.answer`}
@@ -733,7 +733,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                                                                           <Checkbox
                                                                               checked={(field.value as string[])?.includes(option)}
                                                                               onCheckedChange={(checked) => {
-                                                                                  const currentValue = (field.value as string[]) || [];
+                                                                                  const currentValue = Array.isArray(field.value) ? field.value : [];
                                                                                   return checked
                                                                                   ? field.onChange([...currentValue, option])
                                                                                   : field.onChange(
@@ -821,7 +821,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                               <FormMessage />
                           </FormItem>
                           )}
-                      />
+                      />}
                     </CardContent>
                     <CardFooter className="flex justify-between">
                        <div>
