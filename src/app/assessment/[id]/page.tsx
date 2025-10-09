@@ -161,6 +161,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [viewingSectionIntro, setViewingSectionIntro] = useState(true);
+  const [alreadySubmitted, setAlreadySubmitted] = useState(false);
 
   const { toast } = useToast();
   const startTimeRef = useRef<number | null>(null);
@@ -180,8 +181,8 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     resolver: zodResolver(answersSchema),
   });
 
- const onSubmit = useCallback(async (data: AnswersFormValues) => {
-    if (!assessment || isSubmitting) return;
+  const onSubmit = useCallback(async (data: AnswersFormValues) => {
+    if (!assessment || isSubmitting || alreadySubmitted) return;
 
     setIsSubmitting(true);
     const timeTaken = startTimeRef.current ? Math.floor((Date.now() - startTimeRef.current) / 1000) : 0;
@@ -234,7 +235,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     } finally {
         setIsSubmitting(false);
     }
-  }, [assessment, candidate, isSubmitting, searchParams, toast]);
+  }, [assessment, candidate, isSubmitting, searchParams, toast, alreadySubmitted]);
 
   // Effect for fetching the assessment and candidate data
   useEffect(() => {
@@ -260,8 +261,6 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
             data.sections = [{ id: 'default', title: 'General Questions', questions: (data as any).questions }];
         }
 
-        setAssessment(data);
-        
         if (data.disableCopyPaste) {
             const handleCopy = (e: ClipboardEvent) => {
                 e.preventDefault();
@@ -271,6 +270,26 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
             // Cleanup on component unmount
             return () => document.removeEventListener('copy', handleCopy);
         }
+
+        const candidateId = searchParams.get('candidateId');
+        const collegeId = searchParams.get('collegeId');
+
+        // Check for existing submissions first if we have a candidate ID
+        if (candidateId) {
+            const submissionsQuery = query(
+              collection(db, 'assessmentSubmissions'),
+              where('assessmentId', '==', params.id),
+              where(collegeId ? 'collegeCandidateId' : 'candidateId', '==', candidateId)
+            );
+            const submissionsSnapshot = await getDocs(submissionsQuery);
+            if (!submissionsSnapshot.empty) {
+                setAlreadySubmitted(true);
+                setLoading(false);
+                return;
+            }
+        }
+        
+        setAssessment(data);
 
         // Pre-fill form answers
         const questions = data.sections?.flatMap(s => s.questions) || [];
@@ -289,9 +308,6 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
         const authRequired = data.authentication === 'email_verification';
         const hasPasscode = !!data.passcode;
         
-        const candidateId = searchParams.get('candidateId');
-        const collegeId = searchParams.get('collegeId');
-
         // Try to find candidate from either college or general pool
         if (candidateId) {
             let candidateDoc;
@@ -438,6 +454,20 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
         <Card className="w-full max-w-md">
             <CardHeader><CardTitle>Error</CardTitle></CardHeader>
             <CardContent><p>{error}</p></CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+    if (alreadySubmitted) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-muted/40 p-4">
+        <Card className="w-full max-w-md text-center">
+            <CardHeader>
+                <Image height={50} width={200} src={mmLogo} alt="MegaMind Careers Logo" className="mx-auto mb-4" />
+                <CardTitle>Submission Received</CardTitle>
+            </CardHeader>
+            <CardContent><p>Thank you. We have already received your submission for this assessment.</p></CardContent>
         </Card>
       </div>
     );
@@ -806,10 +836,3 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
-
-    
-
-    
-
-    
-
