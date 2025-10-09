@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
@@ -178,27 +177,43 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     resolver: zodResolver(answersSchema),
   });
 
-  const onSubmit = useCallback(async (data: AnswersFormValues) => {
+ const onSubmit = useCallback(async (data: AnswersFormValues) => {
     if (!assessment || isSubmitting) return;
 
     setIsSubmitting(true);
     const timeTaken = startTimeRef.current ? Math.floor((Date.now() - startTimeRef.current) / 1000) : 0;
     const collegeId = searchParams.get('collegeId');
-    const candidateId = searchParams.get('candidateId');
+    const candidateIdParam = searchParams.get('candidateId'); // Can be college candidate or general candidate
 
-    try {
-      await addDoc(collection(db, 'assessmentSubmissions'), {
+    let submissionData: any = {
         assessmentId: assessment.id,
         assessmentTitle: assessment.title,
-        candidateId: candidate?.id, // Main candidate ID
-        candidateName: candidate?.name || (candidate as Candidate)?.fullName || 'N/A',
-        candidateEmail: candidate?.email || 'N/A',
         answers: data.answers,
         submittedAt: serverTimestamp(),
         timeTaken,
         collegeId: collegeId || null,
-        collegeCandidateId: collegeId ? candidateId : null, // only set if it's a college link
-      });
+    };
+    
+    if (candidate) {
+        submissionData = {
+            ...submissionData,
+            candidateId: (candidate as Candidate).type ? candidate.id : null, // General candidate ID
+            collegeCandidateId: collegeId ? candidateIdParam : null, // College candidate ID
+            candidateName: 'fullName' in candidate ? (candidate as Candidate).fullName : candidate.name,
+            candidateEmail: candidate.email,
+        };
+    } else {
+        submissionData = {
+            ...submissionData,
+            candidateId: null,
+            collegeCandidateId: null,
+            candidateName: 'N/A',
+            candidateEmail: 'N/A',
+        }
+    }
+
+    try {
+      await addDoc(collection(db, 'assessmentSubmissions'), submissionData);
       
       toast({
         title: 'Submission Successful!',
@@ -207,6 +222,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
       setIsFinished(true);
 
     } catch (e: any) {
+      console.error("Submission error:", e);
       toast({
         variant: 'destructive',
         title: 'Submission Failed',
@@ -713,3 +729,5 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
+
+    
