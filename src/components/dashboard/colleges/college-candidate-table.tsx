@@ -164,7 +164,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
         transformHeader: header => header.trim().toLowerCase(),
         complete: async (results) => {
             const parsedData = results.data as Record<string, string>[];
-            const emailKeys = ['email', 'email address', 'personal email'];
+            const emailKeys = ['email', 'email address', 'personal email', 'candidate email'];
             
             const emailsToUpdate = parsedData
                 .map(row => getColumnData(row, emailKeys))
@@ -232,9 +232,9 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
                 first: ['first name', 'firstname'],
                 middle: ['middle name', 'middlename'],
                 last: ['last name', 'lastname'],
-                full: ['full name', 'name'],
+                full: ['full name', 'name', 'candidate name'],
             };
-            const emailKeys = ['email', 'email address', 'personal email'];
+            const emailKeys = ['email', 'email address', 'personal email', 'candidate email'];
 
             const validCandidates = parsedData.map(row => {
                 const firstName = getColumnData(row, nameKeys.first);
@@ -746,3 +746,4 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
     </>
   );
 }
+
