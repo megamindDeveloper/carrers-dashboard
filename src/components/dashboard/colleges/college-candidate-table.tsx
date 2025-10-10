@@ -353,13 +353,13 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
   
   const handleOpenResetDialog = (submission: AssessmentSubmission, candidate: CollegeCandidate) => {
     setConfirmation({
-        isOpen: true,
-        title: `Reset assessment for ${candidate.name}?`,
-        description: `This will delete their current submission for "${submission.assessmentTitle}" and allow them to retake it. An email notification will be sent. Do you want to proceed?`,
-        onConfirm: () => {
-            setConfirmation({ isOpen: false, title: '', description: '', onConfirm: () => {} });
-            setResetDialogState({ isOpen: true, submission, candidate });
-        }
+      isOpen: true,
+      title: `Reset assessment for ${candidate.name}?`,
+      description: `This will delete their current submission for "${submission.assessmentTitle}" and allow them to retake it. An email notification will be sent. Do you want to proceed?`,
+      onConfirm: () => {
+        setConfirmation({ isOpen: false, title: '', description: '', onConfirm: () => {} });
+        setResetDialogState({ isOpen: true, submission, candidate });
+      }
     });
   };
 
@@ -450,12 +450,9 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
     return data;
   }, [data, selectedAssessmentId, activeTab]);
 
-  const notSubmittedCount = assessmentStats ? assessmentStats.totalCandidates - assessmentStats.submissionsReceived : data.length;
-
-  const selectedCandidatesCount = Object.keys(rowSelection).length;
-  const sendButtonText = selectedCandidatesCount > 0 
-    ? `Send to ${selectedCandidatesCount} Selected`
-    : `Send to ${notSubmittedCount} Pending Candidates`;
+  const sendButtonText = Object.keys(rowSelection).length > 0 
+    ? `Send to ${Object.keys(rowSelection).length} Selected` 
+    : `Send to All Pending (${filteredData.filter(c => !c.submissions?.some(s => s.assessmentId === selectedAssessmentId)).length})`;
 
 
   if (loading) return <p className="p-4">Loading candidates...</p>;
@@ -517,7 +514,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
                             )}
                           </SelectContent>
                         </Select>
-                        <Button onClick={handleOpenSendDialog} disabled={isSending || !selectedAssessmentId || (notSubmittedCount === 0 && selectedCandidatesCount === 0)}>
+                        <Button onClick={handleOpenSendDialog} disabled={isSending || !selectedAssessmentId || (filteredData.filter(c => !c.submissions?.some(s => s.assessmentId === selectedAssessmentId)).length === 0 && Object.keys(rowSelection).length === 0)}>
                             <Send className="mr-2 h-4 w-4" />
                             {sendButtonText}
                         </Button>
@@ -538,7 +535,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
                     <TabsList>
                         <TabsTrigger value="all">All Candidates ({data.length})</TabsTrigger>
                         <TabsTrigger value="submitted">Submitted ({assessmentStats?.submissionsReceived || 0})</TabsTrigger>
-                        <TabsTrigger value="not-submitted">Not Submitted ({notSubmittedCount})</TabsTrigger>
+                        <TabsTrigger value="not-submitted">Not Submitted ({assessmentStats?.totalCandidates ? assessmentStats.totalCandidates - assessmentStats.submissionsReceived : data.length})</TabsTrigger>
                     </TabsList>
                 </Tabs>
             ) : (
