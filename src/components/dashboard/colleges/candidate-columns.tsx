@@ -22,16 +22,41 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface GetCandidateColumnsProps {
     onViewSubmission: (submission: AssessmentSubmission) => void;
     onDelete: (candidateId: string, candidateName: string) => void;
-    onResetSubmission: (submissionId: string, candidateName: string) => void;
+    onResetSubmission: (submission: AssessmentSubmission, candidate: CollegeCandidate) => void;
     selectedAssessmentId: string;
 }
 
 export const getCandidateColumns = ({ onViewSubmission, onDelete, onResetSubmission, selectedAssessmentId }: GetCandidateColumnsProps): ColumnDef<CollegeCandidate>[] => {
   const columns: ColumnDef<CollegeCandidate>[] = [
+    {
+      id: 'select',
+      header: ({ table }) => (
+        <Checkbox
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && 'indeterminate')
+          }
+          onCheckedChange={value => table.toggleAllPageRowsSelected(!!value)}
+          aria-label="Select all"
+          onClick={e => e.stopPropagation()}
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={value => row.toggleSelected(!!value)}
+          aria-label="Select row"
+          onClick={e => e.stopPropagation()}
+        />
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
     {
       accessorKey: 'name',
       header: ({ column }) => (
@@ -126,7 +151,7 @@ export const getCandidateColumns = ({ onViewSubmission, onDelete, onResetSubmiss
                 </DropdownMenuItem>
               )}
                {submission && (
-                <DropdownMenuItem onClick={() => onResetSubmission(submission.id, candidate.name)}>
+                <DropdownMenuItem onClick={() => onResetSubmission(submission, candidate)}>
                     <RefreshCcw className="mr-2 h-4 w-4" />
                     Reset Submission
                 </DropdownMenuItem>

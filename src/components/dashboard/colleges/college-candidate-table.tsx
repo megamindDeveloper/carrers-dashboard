@@ -47,6 +47,8 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
   const [isExportDialogOpen, setExportDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'submitted' | 'not-submitted'>('all');
   const [confirmation, setConfirmation] = useState<{ isOpen: boolean; title: string; description: string; onConfirm: () => void; }>({ isOpen: false, title: '', description: '', onConfirm: () => {} });
+  const [rowSelection, setRowSelection] = useState({});
+
   const { toast } = useToast();
   
   useEffect(() => {
@@ -217,22 +219,33 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
   }
 
   const handleOpenSendDialog = () => {
+    const selectedIndices = Object.keys(rowSelection).map(Number);
+    const candidatesToSend = selectedIndices.length > 0
+        ? selectedIndices.map(i => filteredData[i])
+        : data.filter(c => !c.submissions?.some(s => s.assessmentId === selectedAssessmentId));
+
     if (!selectedAssessmentId) {
         toast({ variant: 'destructive', title: 'No Assessment Selected', description: 'Please select an assessment to send.' });
         return;
     }
-    const candidatesToSend = data.filter(c => !c.submissions?.some(s => s.assessmentId === selectedAssessmentId));
+    
     if (candidatesToSend.length === 0) {
-        toast({ title: 'All Candidates Have Submitted', description: 'There are no pending submissions for this assessment.' });
+        toast({ title: 'No Candidates to Send To', description: 'All selected or pending candidates have already submitted this assessment.' });
         return;
     }
+
     setSendAssessmentDialogOpen(true);
   }
 
   const handleSendAssessment = async ({ subject, body, buttonText }: { subject: string, body: string, buttonText: string }) => {
     
-    const candidatesToSend = data.filter(c => !c.submissions?.some(s => s.assessmentId === selectedAssessmentId));
+    const selectedIndices = Object.keys(rowSelection).map(Number);
+    const candidatesToSend = selectedIndices.length > 0
+      ? selectedIndices.map(i => filteredData[i])
+      : data.filter(c => !c.submissions?.some(s => s.assessmentId === selectedAssessmentId));
+
     const selectedAssessment = assessments.find(a => a.id === selectedAssessmentId);
+
     if (!selectedAssessment) {
         toast({ variant: 'destructive', title: 'Error', description: 'Selected assessment could not be found.' });
         return;
@@ -332,17 +345,38 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
     });
   };
 
-  const handleResetSubmission = (submissionId: string, candidateName: string) => {
+  const handleResetSubmission = (submission: AssessmentSubmission, candidate: CollegeCandidate) => {
     setConfirmation({
         isOpen: true,
-        title: `Reset submission for ${candidateName}?`,
-        description: `This will permanently delete this candidate's submission and allow them to take the assessment again. This action cannot be undone.`,
+        title: `Reset submission for ${candidate.name}?`,
+        description: `This will permanently delete this candidate's submission and allow them to take the assessment again. An email notification will be sent. Do you want to proceed?`,
         onConfirm: async () => {
             try {
-                await deleteDoc(doc(db, 'assessmentSubmissions', submissionId));
+                // Send email first
+                const assessmentLink = `${process.env.NEXT_PUBLIC_BASE_URL}/assessment/${submission.assessmentId}?candidateId=${candidate.id}&collegeId=${collegeId}`;
+
+                const emailResponse = await fetch('/api/reset-assessment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        candidateName: candidate.name,
+                        candidateEmail: candidate.email,
+                        assessmentName: submission.assessmentTitle,
+                        assessmentLink: assessmentLink,
+                    })
+                });
+
+                if (!emailResponse.ok) {
+                    const errorResult = await emailResponse.json();
+                    throw new Error(errorResult.message || 'Failed to send reset email.');
+                }
+
+                // Then delete the submission
+                await deleteDoc(doc(db, 'assessmentSubmissions', submission.id));
+
                 toast({
-                    title: 'Submission Reset',
-                    description: `${candidateName}'s assessment submission has been reset. They can now take it again.`,
+                    title: 'Submission Reset & Email Sent',
+                    description: `${candidate.name}'s assessment submission has been reset. They have been notified to take it again.`,
                 });
             } catch (error: any) {
                 toast({
@@ -401,6 +435,11 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
 
   const notSubmittedCount = assessmentStats ? assessmentStats.totalCandidates - assessmentStats.submissionsReceived : data.length;
 
+  const selectedCandidatesCount = Object.keys(rowSelection).length;
+  const sendButtonText = selectedCandidatesCount > 0 
+    ? `Send to ${selectedCandidatesCount} Selected`
+    : `Send to ${notSubmittedCount} Pending`;
+
 
   if (loading) return <p className="p-4">Loading candidates...</p>;
 
@@ -442,10 +481,10 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
                  <Card className="mb-6 bg-muted/40">
                     <CardHeader>
                         <CardTitle>Send Assessment & View Stats</CardTitle>
-                        <CardDescription>Select an assessment to view stats, send invitations, and filter candidates by submission status.</CardDescription>
+                        <CardDescription>Select candidates and an assessment, then click send. If no candidates are selected, the email will be sent to all who have not yet submitted.</CardDescription>
                     </CardHeader>
                     <CardContent className="flex flex-col sm:flex-row gap-4 items-center">
-                       <Select value={selectedAssessmentId} onValueChange={setSelectedAssessmentId}>
+                       <Select value={selectedAssessmentId} onValueChange={(value) => { setSelectedAssessmentId(value); setRowSelection({}); }}>
                           <SelectTrigger className="w-full sm:w-[280px]">
                             <SelectValue placeholder="Select an assessment..." />
                           </SelectTrigger>
@@ -461,9 +500,9 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
                             )}
                           </SelectContent>
                         </Select>
-                        <Button onClick={handleOpenSendDialog} disabled={isSending || !selectedAssessmentId || (notSubmittedCount === 0)}>
+                        <Button onClick={handleOpenSendDialog} disabled={isSending || !selectedAssessmentId || (notSubmittedCount === 0 && selectedCandidatesCount === 0)}>
                             <Send className="mr-2 h-4 w-4" />
-                            {`Send to ${notSubmittedCount} Candidates`}
+                            {sendButtonText}
                         </Button>
                          <Button onClick={() => setExportDialogOpen(true)} variant="outline" disabled={filteredData.length === 0}>
                             <Download className="mr-2 h-4 w-4" />
@@ -478,7 +517,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
             )}
             
             {selectedAssessmentId ? (
-                 <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)} className="mb-4">
+                 <Tabs value={activeTab} onValueChange={(value) => {setActiveTab(value as any); setRowSelection({});}} className="mb-4">
                     <TabsList>
                         <TabsTrigger value="all">All Candidates ({data.length})</TabsTrigger>
                         <TabsTrigger value="submitted">Submitted ({assessmentStats?.submissionsReceived || 0})</TabsTrigger>
@@ -491,7 +530,13 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
                 </div>
             )}
 
-          <DataTable columns={columns} data={filteredData} onRowClick={() => {}} />
+          <DataTable 
+            columns={columns} 
+            data={filteredData} 
+            onRowClick={() => {}}
+            rowSelection={rowSelection}
+            setRowSelection={setRowSelection}
+            />
         </CardContent>
       </Card>
       <SubmissionDetailsModal
