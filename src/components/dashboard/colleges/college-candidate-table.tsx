@@ -23,6 +23,7 @@ import {
 import { SubmissionDetailsModal } from '../submissions/submission-details-modal';
 import { SendAssessmentDialog } from './send-assessment-dialog';
 import { AddCollegeCandidateSheet } from './add-college-candidate-sheet';
+import { AssessmentStatsCard } from './assessment-stats-card';
 
 
 interface CollegeCandidateTableProps {
@@ -286,10 +287,26 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
     selectedAssessmentId,
   }), [selectedAssessmentId]);
 
-  const candidatesToReceive = useMemo(() => {
-    if (!selectedAssessmentId) return data.length;
-    return data.filter(c => !c.submissions?.some(s => s.assessmentId === selectedAssessmentId)).length;
-  }, [data, selectedAssessmentId]);
+  const assessmentStats = useMemo(() => {
+    if (!selectedAssessmentId) return null;
+    const selectedAssessment = assessments.find(a => a.id === selectedAssessmentId);
+    if (!selectedAssessment) return null;
+
+    const allCandidateIdsWithInvitation = new Set<string>();
+    data.forEach(c => {
+        // Assume an invite is sent if they have a submission or are pending
+        allCandidateIdsWithInvitation.add(c.id);
+    });
+
+    const submittedCount = data.filter(c => c.submissions?.some(s => s.assessmentId === selectedAssessmentId)).length;
+    
+    return {
+        assessmentTitle: selectedAssessment.title,
+        totalCandidates: data.length,
+        invitationsSent: data.length, // Simplified for now, can be enhanced with invitation tracking
+        submissionsReceived: submittedCount,
+    };
+  }, [data, selectedAssessmentId, assessments]);
 
 
   if (loading) return <p className="p-4">Loading candidates...</p>;
@@ -332,7 +349,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
                  <Card className="mb-6 bg-muted/40">
                     <CardHeader>
                         <CardTitle>Send Assessment</CardTitle>
-                        <CardDescription>Select an assessment and send it to candidates who haven't submitted it yet.</CardDescription>
+                        <CardDescription>Select an assessment to view stats and send to candidates who haven't submitted it yet.</CardDescription>
                     </CardHeader>
                     <CardContent className="flex flex-col sm:flex-row gap-4">
                        <Select value={selectedAssessmentId} onValueChange={setSelectedAssessmentId}>
@@ -351,13 +368,18 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
                             )}
                           </SelectContent>
                         </Select>
-                        <Button onClick={handleOpenSendDialog} disabled={isSending || !selectedAssessmentId || candidatesToReceive === 0}>
+                        <Button onClick={handleOpenSendDialog} disabled={isSending || !selectedAssessmentId || (assessmentStats?.invitationsSent === assessmentStats?.submissionsReceived)}>
                             <Send className="mr-2 h-4 w-4" />
-                            {`Send to ${candidatesToReceive} Candidates`}
+                            {`Send to ${assessmentStats ? assessmentStats.invitationsSent - assessmentStats.submissionsReceived : data.length} Candidates`}
                         </Button>
                     </CardContent>
                 </Card>
             )}
+
+            {assessmentStats && (
+                <AssessmentStatsCard stats={assessmentStats} className="mb-6" />
+            )}
+
           <DataTable columns={columns} data={data} onRowClick={() => {}} />
         </CardContent>
       </Card>
