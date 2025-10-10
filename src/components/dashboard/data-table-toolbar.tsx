@@ -34,7 +34,8 @@ export function DataTableToolbar<TData>({
 
   const isJobTable = table.options.data.length > 0 && 'openings' in table.options.data[0];
   const isSubmissionTable = table.options.data.length > 0 && 'assessmentId' in table.options.data[0];
-  const isCandidateTable = !isJobTable && !isSubmissionTable;
+  const isCollegeCandidateTable = table.options.data.length > 0 && 'importedAt' in table.options.data[0];
+  const isCandidateTable = !isJobTable && !isSubmissionTable && !isCollegeCandidateTable;
 
 
   const statusOptions = isJobTable ? JOB_STATUSES : CANDIDATE_STATUSES;
@@ -62,6 +63,18 @@ export function DataTableToolbar<TData>({
             }
             onChange={event =>
               table.getColumn('candidateName')?.setFilterValue(event.target.value)
+            }
+            className="h-8 w-[150px] lg:w-[250px]"
+          />
+        )}
+         {isCollegeCandidateTable && columnExists('name') && (
+          <Input
+            placeholder="Filter by name..."
+            value={
+              (table.getColumn('name')?.getFilterValue() as string) ?? ''
+            }
+            onChange={event =>
+              table.getColumn('name')?.setFilterValue(event.target.value)
             }
             className="h-8 w-[150px] lg:w-[250px]"
           />

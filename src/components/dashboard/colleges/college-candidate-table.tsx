@@ -1,4 +1,5 @@
 
+
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
 import Papa from 'papaparse';
@@ -10,7 +11,7 @@ import { collection, onSnapshot, writeBatch, serverTimestamp, doc, getDocs, quer
 import { db } from '@/app/utils/firebase/firebaseConfig';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Upload, Send, PlusCircle } from 'lucide-react';
+import { Upload, Send, PlusCircle, Download } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Loader2 } from 'lucide-react';
 import {
@@ -25,6 +26,7 @@ import { SendAssessmentDialog } from './send-assessment-dialog';
 import { AddCollegeCandidateSheet } from './add-college-candidate-sheet';
 import { AssessmentStatsCard } from './assessment-stats-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ExportCollegeCandidatesDialog } from './export-college-candidates-dialog';
 
 
 interface CollegeCandidateTableProps {
@@ -41,6 +43,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
   const [selectedSubmission, setSelectedSubmission] = useState<AssessmentSubmission | null>(null);
   const [isSendAssessmentDialogOpen, setSendAssessmentDialogOpen] = useState(false);
   const [isAddSheetOpen, setAddSheetOpen] = useState(false);
+  const [isExportDialogOpen, setExportDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'submitted' | 'not-submitted'>('all');
   const { toast } = useToast();
   
@@ -365,10 +368,10 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
             {data.length > 0 && (
                  <Card className="mb-6 bg-muted/40">
                     <CardHeader>
-                        <CardTitle>Send Assessment</CardTitle>
+                        <CardTitle>Send Assessment & View Stats</CardTitle>
                         <CardDescription>Select an assessment to view stats and send to candidates who haven't submitted it yet.</CardDescription>
                     </CardHeader>
-                    <CardContent className="flex flex-col sm:flex-row gap-4">
+                    <CardContent className="flex flex-col sm:flex-row gap-4 items-center">
                        <Select value={selectedAssessmentId} onValueChange={setSelectedAssessmentId}>
                           <SelectTrigger className="w-full sm:w-[280px]">
                             <SelectValue placeholder="Select an assessment..." />
@@ -388,6 +391,10 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
                         <Button onClick={handleOpenSendDialog} disabled={isSending || !selectedAssessmentId || (notSubmittedCount === 0)}>
                             <Send className="mr-2 h-4 w-4" />
                             {`Send to ${notSubmittedCount} Candidates`}
+                        </Button>
+                         <Button onClick={() => setExportDialogOpen(true)} variant="outline" disabled={filteredData.length === 0}>
+                            <Download className="mr-2 h-4 w-4" />
+                            Export to CSV
                         </Button>
                     </CardContent>
                 </Card>
@@ -430,6 +437,12 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
         isOpen={isAddSheetOpen}
         onClose={() => setAddSheetOpen(false)}
         onSave={handleSaveIndividualCandidate}
+      />
+       <ExportCollegeCandidatesDialog
+        isOpen={isExportDialogOpen}
+        onClose={() => setExportDialogOpen(false)}
+        candidates={filteredData}
+        selectedAssessment={assessments.find(a => a.id === selectedAssessmentId) || null}
       />
     </>
   );

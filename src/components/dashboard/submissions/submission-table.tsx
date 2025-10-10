@@ -1,4 +1,5 @@
 
+
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
 import type { AssessmentSubmission } from '@/lib/types';
@@ -11,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { SubmissionDetailsModal } from './submission-details-modal';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
+import { ExportSubmissionsDialog } from './export-submissions-dialog';
 
 
 interface SubmissionTableProps {
@@ -22,6 +24,7 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
   const [loading, setLoading] = useState(true);
   const [selectedSubmission, setSelectedSubmission] = useState<AssessmentSubmission | null>(null);
   const { toast } = useToast();
+  const [isExportDialogOpen, setExportDialogOpen] = useState(false);
   
   useEffect(() => {
     if (!assessmentId) return;
@@ -74,7 +77,7 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
             <CardTitle className="mb-1">Submissions</CardTitle>
             <CardDescription>A list of all candidate submissions for this assessment.</CardDescription>
           </div>
-          <Button onClick={() => {}} variant="outline" disabled={data.length === 0}>
+          <Button onClick={() => setExportDialogOpen(true)} variant="outline" disabled={data.length === 0}>
               <Download className="mr-2 h-4 w-4" />
               Export to CSV
           </Button>
@@ -87,6 +90,11 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
         isOpen={!!selectedSubmission}
         onClose={handleCloseModal}
         submission={selectedSubmission}
+      />
+       <ExportSubmissionsDialog
+        isOpen={isExportDialogOpen}
+        onClose={() => setExportDialogOpen(false)}
+        submissions={data}
       />
     </>
   );
