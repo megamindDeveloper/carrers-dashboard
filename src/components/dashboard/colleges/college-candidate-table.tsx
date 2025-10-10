@@ -3,7 +3,7 @@
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
 import Papa from 'papaparse';
-import type { Assessment, CollegeCandidate, AssessmentSubmission } from '@/lib/types';
+import type { Assessment, CollegeCandidate, AssessmentSubmission, AssessmentQuestion } from '@/lib/types';
 import { DataTable } from '@/components/dashboard/data-table';
 import { getCandidateColumns } from './candidate-columns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -35,6 +35,13 @@ interface CollegeCandidateTableProps {
   collegeId: string;
 }
 
+const isAnswered = (answer: any): boolean => {
+    if (!answer) return false;
+    if (Array.isArray(answer) && answer.length === 0) return false;
+    if (typeof answer === 'string' && answer.trim() === '') return false;
+    return true;
+};
+
 export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps) {
   const [data, setData] = useState<CollegeCandidate[]>([]);
   const [assessments, setAssessments] = useState<Assessment[]>([]);
@@ -46,7 +53,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
   const [isSendAssessmentDialogOpen, setSendAssessmentDialogOpen] = useState(false);
   const [isAddSheetOpen, setAddSheetOpen] = useState(false);
   const [isExportDialogOpen, setExportDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'all' | 'submitted' | 'not-submitted'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'submitted' | 'not-submitted' | 'completed'>('all');
   const [confirmation, setConfirmation] = useState<{ isOpen: boolean; title: string; description: string; onConfirm: () => void; }>({ isOpen: false, title: '', description: '', onConfirm: () => {} });
   const [rowSelection, setRowSelection] = useState({});
   const [resetDialogState, setResetDialogState] = useState<{
@@ -352,18 +359,10 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
   };
   
   const handleOpenResetDialog = (submission: AssessmentSubmission, candidate: CollegeCandidate) => {
-    setConfirmation({
-      isOpen: true,
-      title: `Reset assessment for ${candidate.name}?`,
-      description: `This will delete their current submission for "${submission.assessmentTitle}" and allow them to retake it. An email notification will be sent. Do you want to proceed?`,
-      onConfirm: () => {
-        setConfirmation({ isOpen: false, title: '', description: '', onConfirm: () => {} });
-        setResetDialogState({ isOpen: true, submission, candidate });
-      }
-    });
+     setResetDialogState({ isOpen: true, submission, candidate });
   };
 
-  const handleResetSubmission = async ({ subject, body }: { subject: string, body: string }) => {
+ const handleResetSubmission = async ({ subject, body }: { subject: string; body: string }) => {
     const { submission, candidate } = resetDialogState;
     if (!submission || !candidate) return;
 
@@ -438,22 +437,66 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
   }, [data, selectedAssessmentId, assessments]);
 
   const filteredData = useMemo(() => {
+    const selectedAssessment = assessments.find(a => a.id === selectedAssessmentId);
+
     if (!selectedAssessmentId || activeTab === 'all') {
       return data;
     }
+    
     if (activeTab === 'submitted') {
       return data.filter(c => c.submissions?.some(s => s.assessmentId === selectedAssessmentId));
     }
+    
     if (activeTab === 'not-submitted') {
       return data.filter(c => !c.submissions?.some(s => s.assessmentId === selectedAssessmentId));
     }
+    
+    if (activeTab === 'completed') {
+        if (!selectedAssessment) return [];
+        
+        const requiredQuestions = selectedAssessment.sections?.flatMap(s => s.questions).filter(q => q.isRequired) || [];
+        if (requiredQuestions.length === 0) {
+            // If no required questions, all submitted are considered complete
+            return data.filter(c => c.submissions?.some(s => s.assessmentId === selectedAssessmentId));
+        }
+
+        return data.filter(c => {
+            const submission = c.submissions?.find(s => s.assessmentId === selectedAssessmentId);
+            if (!submission) return false;
+
+            return requiredQuestions.every(q => {
+                const answer = submission.answers.find(a => a.questionId === q.id)?.answer;
+                return isAnswered(answer);
+            });
+        });
+    }
+    
     return data;
-  }, [data, selectedAssessmentId, activeTab]);
+  }, [data, selectedAssessmentId, activeTab, assessments]);
 
   const sendButtonText = Object.keys(rowSelection).length > 0 
     ? `Send to ${Object.keys(rowSelection).length} Selected` 
     : `Send to All Pending (${filteredData.filter(c => !c.submissions?.some(s => s.assessmentId === selectedAssessmentId)).length})`;
 
+  const completedCount = useMemo(() => {
+    if (!selectedAssessmentId) return 0;
+    const selectedAssessment = assessments.find(a => a.id === selectedAssessmentId);
+    if (!selectedAssessment) return 0;
+    
+    const requiredQuestions = selectedAssessment.sections?.flatMap(s => s.questions).filter(q => q.isRequired) || [];
+
+    return data.filter(c => {
+        const submission = c.submissions?.find(s => s.assessmentId === selectedAssessmentId);
+        if (!submission) return false;
+        
+        if (requiredQuestions.length === 0) return true; // All submitted are complete if no required questions
+
+        return requiredQuestions.every(q => {
+            const answer = submission.answers.find(a => a.questionId === q.id)?.answer;
+            return isAnswered(answer);
+        });
+    }).length;
+  }, [data, selectedAssessmentId, assessments]);
 
   if (loading) return <p className="p-4">Loading candidates...</p>;
 
@@ -535,6 +578,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
                     <TabsList>
                         <TabsTrigger value="all">All Candidates ({data.length})</TabsTrigger>
                         <TabsTrigger value="submitted">Submitted ({assessmentStats?.submissionsReceived || 0})</TabsTrigger>
+                        <TabsTrigger value="completed">Completed ({completedCount})</TabsTrigger>
                         <TabsTrigger value="not-submitted">Not Submitted ({assessmentStats?.totalCandidates ? assessmentStats.totalCandidates - assessmentStats.submissionsReceived : data.length})</TabsTrigger>
                     </TabsList>
                 </Tabs>

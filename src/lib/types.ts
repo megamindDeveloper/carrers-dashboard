@@ -1,4 +1,5 @@
 
+
 import { z } from 'zod';
 
 export const CANDIDATE_STATUSES = [
@@ -149,7 +150,7 @@ export type AssessmentSubmission = {
   answers: {
     questionId: string;
     questionText: string;
-    answer: string | string[];
+    answer: any;
   }[];
   submittedAt: any;
   timeTaken: number; // in seconds
