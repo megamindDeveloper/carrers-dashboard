@@ -4,6 +4,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Papa from 'papaparse';
 import type { Assessment, CollegeCandidate, AssessmentSubmission, AssessmentQuestion, CandidateStatus } from '@/lib/types';
+import { CANDIDATE_STATUSES } from '@/lib/types';
 import { DataTable } from '@/components/dashboard/data-table';
 import { getCandidateColumns } from './candidate-columns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -29,6 +30,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ExportCollegeCandidatesDialog } from './export-college-candidates-dialog';
 import { ConfirmationDialog } from '../confirmation-dialog';
 import { ResetAssessmentDialog } from './reset-assessment-dialog';
+import { Label } from '@/components/ui/label';
 
 
 interface CollegeCandidateTableProps {
@@ -61,6 +63,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
     submission: AssessmentSubmission | null;
     candidate: CollegeCandidate | null;
   }>({ isOpen: false, submission: null, candidate: null });
+  const [statusForUpload, setStatusForUpload] = useState<CandidateStatus>('Shortlisted');
 
   const { toast } = useToast();
   
@@ -163,18 +166,18 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
             const parsedData = results.data as Record<string, string>[];
             const emailKeys = ['email', 'email address', 'personal email'];
             
-            const emailsToShortlist = parsedData
+            const emailsToUpdate = parsedData
                 .map(row => getColumnData(row, emailKeys))
                 .filter((email): email is string => !!email)
                 .map(email => email.toLowerCase());
 
-            if (emailsToShortlist.length === 0) {
+            if (emailsToUpdate.length === 0) {
                 toast({ variant: 'destructive', title: 'Update Failed', description: 'No valid email addresses found in the CSV.' });
                 setIsUploading(false);
                 return;
             }
 
-            const candidatesToUpdate = data.filter(c => emailsToShortlist.includes(c.email.toLowerCase()));
+            const candidatesToUpdate = data.filter(c => emailsToUpdate.includes(c.email.toLowerCase()));
 
             if (candidatesToUpdate.length === 0) {
                  toast({ title: 'No Matches Found', description: 'No candidates in the current list matched the emails from the CSV.' });
@@ -186,11 +189,11 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
                 const batch = writeBatch(db);
                 candidatesToUpdate.forEach(candidate => {
                     const docRef = doc(db, `colleges/${collegeId}/candidates`, candidate.id);
-                    batch.update(docRef, { status: 'Shortlisted' });
+                    batch.update(docRef, { status: statusForUpload });
                 });
                 await batch.commit();
 
-                toast({ title: 'Status Update Successful', description: `${candidatesToUpdate.length} candidates have been marked as "Shortlisted".` });
+                toast({ title: 'Status Update Successful', description: `${candidatesToUpdate.length} candidates have been updated to "${statusForUpload}".` });
 
             } catch (error) {
                 console.error("Error updating candidate statuses:", error);
@@ -602,49 +605,75 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
                     </label>
                 </Button>
                 <Input id="csv-upload" type="file" accept=".csv" className="hidden" onChange={handleFileUpload} disabled={isUploading} />
-                 <Button asChild variant="outline" className="w-full sm:w-auto">
-                    <label htmlFor="csv-status-upload">
-                        {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileUp className="mr-2 h-4 w-4" />}
-                        {isUploading ? 'Updating...' : 'Update Status via CSV'}
-                    </label>
-                </Button>
-                <Input id="csv-status-upload" type="file" accept=".csv" className="hidden" onChange={handleStatusUpdateUpload} disabled={isUploading} />
             </div>
         </CardHeader>
         <CardContent>
             {data.length > 0 && (
-                 <Card className="mb-6 bg-muted/40">
-                    <CardHeader>
-                        <CardTitle>Send Assessment & View Stats</CardTitle>
-                        <CardDescription>Select an assessment to view statistics and send invitations. Select candidates in the table to send to a specific group.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex flex-col sm:flex-row gap-4 items-center">
-                       <Select value={selectedAssessmentId} onValueChange={(value) => { setSelectedAssessmentId(value); setRowSelection({}); }}>
-                          <SelectTrigger className="w-full sm:w-[280px]">
-                            <SelectValue placeholder="Select an assessment..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {assessments.length > 0 ? (
-                                assessments.map(assessment => (
-                                    <SelectItem key={assessment.id} value={assessment.id}>
-                                        {assessment.title}
-                                    </SelectItem>
-                                ))
-                            ) : (
-                                <div className="p-4 text-sm text-muted-foreground">No assessments found.</div>
-                            )}
-                          </SelectContent>
-                        </Select>
-                        <Button onClick={handleOpenSendDialog} disabled={isSending || !selectedAssessmentId || (filteredData.filter(c => !c.submissions?.some(s => s.assessmentId === selectedAssessmentId)).length === 0 && Object.keys(rowSelection).length === 0)}>
-                            <Send className="mr-2 h-4 w-4" />
-                            {sendButtonText}
-                        </Button>
-                         <Button onClick={() => setExportDialogOpen(true)} variant="outline" disabled={filteredData.length === 0}>
-                            <Download className="mr-2 h-4 w-4" />
-                            Export to CSV
-                        </Button>
-                    </CardContent>
-                </Card>
+                 <>
+                    <Card className="mb-6 bg-muted/40">
+                        <CardHeader>
+                            <CardTitle>Bulk Status Update</CardTitle>
+                            <CardDescription>Update the status of multiple candidates by uploading a CSV with their email addresses.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex flex-col sm:flex-row gap-4 items-end">
+                            <div className="grid w-full max-w-sm items-center gap-1.5">
+                                <Label htmlFor="status-select">Select Status to Apply</Label>
+                                <Select value={statusForUpload} onValueChange={(value) => setStatusForUpload(value as CandidateStatus)}>
+                                    <SelectTrigger id="status-select">
+                                        <SelectValue placeholder="Select a status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {CANDIDATE_STATUSES.map(status => (
+                                            <SelectItem key={status} value={status}>
+                                                {status}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <Button asChild>
+                                <label htmlFor="csv-status-upload">
+                                    {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileUp className="mr-2 h-4 w-4" />}
+                                    {isUploading ? 'Updating...' : 'Upload CSV & Update'}
+                                </label>
+                            </Button>
+                            <Input id="csv-status-upload" type="file" accept=".csv" className="hidden" onChange={handleStatusUpdateUpload} disabled={isUploading} />
+                        </CardContent>
+                    </Card>
+
+                    <Card className="mb-6 bg-muted/40">
+                        <CardHeader>
+                            <CardTitle>Send Assessment & View Stats</CardTitle>
+                            <CardDescription>Select an assessment to view statistics and send invitations. Select candidates in the table to send to a specific group.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex flex-col sm:flex-row gap-4 items-center">
+                        <Select value={selectedAssessmentId} onValueChange={(value) => { setSelectedAssessmentId(value); setRowSelection({}); }}>
+                            <SelectTrigger className="w-full sm:w-[280px]">
+                                <SelectValue placeholder="Select an assessment..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {assessments.length > 0 ? (
+                                    assessments.map(assessment => (
+                                        <SelectItem key={assessment.id} value={assessment.id}>
+                                            {assessment.title}
+                                        </SelectItem>
+                                    ))
+                                ) : (
+                                    <div className="p-4 text-sm text-muted-foreground">No assessments found.</div>
+                                )}
+                            </SelectContent>
+                            </Select>
+                            <Button onClick={handleOpenSendDialog} disabled={isSending || !selectedAssessmentId || (filteredData.filter(c => !c.submissions?.some(s => s.assessmentId === selectedAssessmentId)).length === 0 && Object.keys(rowSelection).length === 0)}>
+                                <Send className="mr-2 h-4 w-4" />
+                                {sendButtonText}
+                            </Button>
+                            <Button onClick={() => setExportDialogOpen(true)} variant="outline" disabled={filteredData.length === 0}>
+                                <Download className="mr-2 h-4 w-4" />
+                                Export to CSV
+                            </Button>
+                        </CardContent>
+                    </Card>
+                 </>
             )}
 
             {assessmentStats && (
