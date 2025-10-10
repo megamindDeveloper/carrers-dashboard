@@ -352,7 +352,15 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
   };
   
   const handleOpenResetDialog = (submission: AssessmentSubmission, candidate: CollegeCandidate) => {
-    setResetDialogState({ isOpen: true, submission, candidate });
+    setConfirmation({
+        isOpen: true,
+        title: `Reset assessment for ${candidate.name}?`,
+        description: `This will delete their current submission for "${submission.assessmentTitle}" and allow them to retake it. An email notification will be sent. Do you want to proceed?`,
+        onConfirm: () => {
+            setConfirmation({ isOpen: false, title: '', description: '', onConfirm: () => {} });
+            setResetDialogState({ isOpen: true, submission, candidate });
+        }
+    });
   };
 
   const handleResetSubmission = async ({ subject, body }: { subject: string, body: string }) => {
@@ -447,7 +455,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
   const selectedCandidatesCount = Object.keys(rowSelection).length;
   const sendButtonText = selectedCandidatesCount > 0 
     ? `Send to ${selectedCandidatesCount} Selected`
-    : `Send to ${notSubmittedCount} Pending`;
+    : `Send to ${notSubmittedCount} Pending Candidates`;
 
 
   if (loading) return <p className="p-4">Loading candidates...</p>;
