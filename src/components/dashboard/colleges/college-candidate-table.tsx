@@ -53,6 +53,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
   const [isSending, setIsSending] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<AssessmentSubmission | null>(null);
   const [isSendAssessmentDialogOpen, setSendAssessmentDialogOpen] = useState(false);
+  const [sendDialogTrigger, setSendDialogTrigger] = useState<'selection' | 'status' | null>(null);
   const [isAddSheetOpen, setAddSheetOpen] = useState(false);
   const [isExportDialogOpen, setExportDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'submitted' | 'not-submitted' | 'completed'>('all');
@@ -64,6 +65,8 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
     candidate: CollegeCandidate | null;
   }>({ isOpen: false, submission: null, candidate: null });
   const [statusForUpload, setStatusForUpload] = useState<CandidateStatus>('Shortlisted');
+  const [statusToSend, setStatusToSend] = useState<CandidateStatus | ''>('');
+  const [assessmentToSendByStatus, setAssessmentToSendByStatus] = useState<string>('');
 
   const { toast } = useToast();
   
@@ -164,7 +167,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
         transformHeader: header => header.trim().toLowerCase(),
         complete: async (results) => {
             const parsedData = results.data as Record<string, string>[];
-            const emailKeys = ['email', 'email address', 'personal email', 'candidate email'];
+            const emailKeys = ['email', 'email address', 'personal email', 'candidate email', 'candidate email'];
             
             const emailsToUpdate = parsedData
                 .map(row => getColumnData(row, emailKeys))
@@ -298,33 +301,51 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
     });
   }
 
-  const handleOpenSendDialog = () => {
-    const selectedIndices = Object.keys(rowSelection).map(Number);
-    const candidatesToSend = selectedIndices.length > 0
-        ? selectedIndices.map(i => filteredData[i])
-        : data.filter(c => !c.submissions?.some(s => s.assessmentId === selectedAssessmentId));
+  const handleOpenSendDialog = (trigger: 'selection' | 'status') => {
+    let assessmentId: string | null = null;
+    let candidatesToSend: CollegeCandidate[] = [];
 
-    if (!selectedAssessmentId) {
+    if (trigger === 'selection') {
+        assessmentId = selectedAssessmentId;
+        const selectedIndices = Object.keys(rowSelection).map(Number);
+        candidatesToSend = selectedIndices.length > 0
+            ? selectedIndices.map(i => filteredData[i])
+            : data.filter(c => !c.submissions?.some(s => s.assessmentId === assessmentId));
+    } else if (trigger === 'status') {
+        assessmentId = assessmentToSendByStatus;
+        candidatesToSend = data.filter(c => c.status === statusToSend && !c.submissions?.some(s => s.assessmentId === assessmentId));
+    }
+
+    if (!assessmentId) {
         toast({ variant: 'destructive', title: 'No Assessment Selected', description: 'Please select an assessment to send.' });
         return;
     }
     
     if (candidatesToSend.length === 0) {
-        toast({ title: 'No Candidates to Send To', description: 'All selected or pending candidates have already submitted this assessment.' });
+        toast({ title: 'No Candidates to Send To', description: 'All candidates in this group have already received or submitted this assessment.' });
         return;
     }
 
+    setSendDialogTrigger(trigger);
     setSendAssessmentDialogOpen(true);
   }
 
   const handleSendAssessment = async ({ subject, body, buttonText }: { subject: string, body: string, buttonText: string }) => {
-    
-    const selectedIndices = Object.keys(rowSelection).map(Number);
-    const candidatesToSend = selectedIndices.length > 0
-      ? selectedIndices.map(i => filteredData[i])
-      : data.filter(c => !c.submissions?.some(s => s.assessmentId === selectedAssessmentId));
+    let candidatesToSend: CollegeCandidate[] = [];
+    let assessmentId: string | null = null;
 
-    const selectedAssessment = assessments.find(a => a.id === selectedAssessmentId);
+    if (sendDialogTrigger === 'selection') {
+        assessmentId = selectedAssessmentId;
+        const selectedIndices = Object.keys(rowSelection).map(Number);
+        candidatesToSend = selectedIndices.length > 0
+            ? selectedIndices.map(i => filteredData[i])
+            : data.filter(c => !c.submissions?.some(s => s.assessmentId === assessmentId));
+    } else if (sendDialogTrigger === 'status') {
+        assessmentId = assessmentToSendByStatus;
+        candidatesToSend = data.filter(c => c.status === statusToSend && !c.submissions?.some(s => s.assessmentId === assessmentId));
+    }
+    
+    const selectedAssessment = assessments.find(a => a.id === assessmentId);
 
     if (!selectedAssessment) {
         toast({ variant: 'destructive', title: 'Error', description: 'Selected assessment could not be found.' });
@@ -610,41 +631,73 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
         <CardContent>
             {data.length > 0 && (
                  <>
-                    <Card className="mb-6 bg-muted/40">
-                        <CardHeader>
-                            <CardTitle>Bulk Status Update</CardTitle>
-                            <CardDescription>Update the status of multiple candidates by uploading a CSV with their email addresses.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="flex flex-col sm:flex-row gap-4 items-end">
-                            <div className="grid w-full max-w-sm items-center gap-1.5">
-                                <Label htmlFor="status-select">Select Status to Apply</Label>
-                                <Select value={statusForUpload} onValueChange={(value) => setStatusForUpload(value as CandidateStatus)}>
-                                    <SelectTrigger id="status-select">
-                                        <SelectValue placeholder="Select a status" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {CANDIDATE_STATUSES.map(status => (
-                                            <SelectItem key={status} value={status}>
-                                                {status}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <Button asChild>
-                                <label htmlFor="csv-status-upload">
-                                    {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileUp className="mr-2 h-4 w-4" />}
-                                    {isUploading ? 'Updating...' : 'Upload CSV & Update'}
-                                </label>
-                            </Button>
-                            <Input id="csv-status-upload" type="file" accept=".csv" className="hidden" onChange={handleStatusUpdateUpload} disabled={isUploading} />
-                        </CardContent>
-                    </Card>
+                    <div className="grid md:grid-cols-2 gap-6 mb-6">
+                        <Card className="bg-muted/40">
+                            <CardHeader>
+                                <CardTitle>Bulk Status Update</CardTitle>
+                                <CardDescription>Update candidate statuses by uploading a CSV of emails.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="flex flex-col sm:flex-row gap-4 items-end">
+                                <div className="grid w-full max-w-sm items-center gap-1.5">
+                                    <Label htmlFor="status-select">Select Status to Apply</Label>
+                                    <Select value={statusForUpload} onValueChange={(value) => setStatusForUpload(value as CandidateStatus)}>
+                                        <SelectTrigger id="status-select">
+                                            <SelectValue placeholder="Select a status" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {CANDIDATE_STATUSES.map(status => (
+                                                <SelectItem key={status} value={status}>
+                                                    {status}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <Button asChild className="w-full sm:w-auto">
+                                    <label htmlFor="csv-status-upload">
+                                        {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileUp className="mr-2 h-4 w-4" />}
+                                        {isUploading ? 'Updating...' : 'Upload & Update'}
+                                    </label>
+                                </Button>
+                                <Input id="csv-status-upload" type="file" accept=".csv" className="hidden" onChange={handleStatusUpdateUpload} disabled={isUploading} />
+                            </CardContent>
+                        </Card>
+
+                        <Card className="bg-muted/40">
+                            <CardHeader>
+                                <CardTitle>Send Assessment by Status</CardTitle>
+                                <CardDescription>Send an assessment to all candidates with a specific status.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="flex flex-col sm:flex-row gap-4 items-end">
+                                <div className="grid w-full items-center gap-1.5">
+                                    <Label>Select Status & Assessment</Label>
+                                    <div className="flex gap-2">
+                                        <Select value={statusToSend} onValueChange={(value) => setStatusToSend(value as CandidateStatus)}>
+                                            <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
+                                            <SelectContent>
+                                                {CANDIDATE_STATUSES.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                        <Select value={assessmentToSendByStatus} onValueChange={setAssessmentToSendByStatus}>
+                                            <SelectTrigger><SelectValue placeholder="Select assessment" /></SelectTrigger>
+                                            <SelectContent>
+                                                {assessments.map(a => <SelectItem key={a.id} value={a.id}>{a.title}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                                <Button onClick={() => handleOpenSendDialog('status')} disabled={isSending || !statusToSend || !assessmentToSendByStatus} className="w-full sm:w-auto">
+                                    <Send className="mr-2 h-4 w-4" />
+                                    Send
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    </div>
 
                     <Card className="mb-6 bg-muted/40">
                         <CardHeader>
-                            <CardTitle>Send Assessment & View Stats</CardTitle>
-                            <CardDescription>Select an assessment to view statistics and send invitations. Select candidates in the table to send to a specific group.</CardDescription>
+                            <CardTitle>Send Assessment to Selected / Pending</CardTitle>
+                            <CardDescription>Select an assessment to view stats and send to candidates. Select candidates in the table to send to a specific group, or send to all pending.</CardDescription>
                         </CardHeader>
                         <CardContent className="flex flex-col sm:flex-row gap-4 items-center">
                         <Select value={selectedAssessmentId} onValueChange={(value) => { setSelectedAssessmentId(value); setRowSelection({}); }}>
@@ -663,7 +716,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
                                 )}
                             </SelectContent>
                             </Select>
-                            <Button onClick={handleOpenSendDialog} disabled={isSending || !selectedAssessmentId || (filteredData.filter(c => !c.submissions?.some(s => s.assessmentId === selectedAssessmentId)).length === 0 && Object.keys(rowSelection).length === 0)}>
+                            <Button onClick={() => handleOpenSendDialog('selection')} disabled={isSending || !selectedAssessmentId || (filteredData.filter(c => !c.submissions?.some(s => s.assessmentId === selectedAssessmentId)).length === 0 && Object.keys(rowSelection).length === 0)}>
                                 <Send className="mr-2 h-4 w-4" />
                                 {sendButtonText}
                             </Button>
@@ -714,7 +767,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
         onClose={() => setSendAssessmentDialogOpen(false)}
         onSend={handleSendAssessment}
         isSending={isSending}
-        assessment={assessments.find(a => a.id === selectedAssessmentId)}
+        assessment={assessments.find(a => a.id === (sendDialogTrigger === 'selection' ? selectedAssessmentId : assessmentToSendByStatus))}
       />
        <ResetAssessmentDialog
         isOpen={resetDialogState.isOpen}
@@ -746,4 +799,3 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
     </>
   );
 }
-
