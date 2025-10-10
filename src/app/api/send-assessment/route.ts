@@ -1,12 +1,38 @@
-
-
 import { NextResponse } from "next/server";
-import { sendEmail } from "@/lib/mail";
 import { collection, doc, writeBatch } from "firebase/firestore";
 import { db } from "@/app/utils/firebase/firebaseConfig";
 import path from "path";
 import fs from "fs/promises";
 import type { AuthenticationType } from "@/lib/types";
+import { SendMailClient } from "zeptomail";
+
+// ZeptoMail Configuration
+const url = process.env.ZEPTOMAIL_URL || "https://api.zeptomail.in/";
+const token = process.env.ZEPTOMAIL_TOKEN;
+
+const client = token ? new SendMailClient({ url, token }) : null;
+
+async function sendEmail({ to, subject, htmlBody }: { to: { email: string; name: string }; subject: string; htmlBody: string }) {
+  if (!client) {
+    throw new Error("ZeptoMail client is not initialized. Check server environment variables.");
+  }
+  return client.sendMail({
+    from: {
+      address: "no-reply@megamind.studio",
+      name: "Megamind",
+    },
+    to: [
+      {
+        email_address: {
+          address: to.email,
+          name: to.name,
+        },
+      },
+    ],
+    subject,
+    htmlbody: htmlBody,
+  });
+}
 
 export async function POST(req: Request) {
   try {

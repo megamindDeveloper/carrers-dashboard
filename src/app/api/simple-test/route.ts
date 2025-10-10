@@ -1,5 +1,33 @@
 import { NextResponse } from "next/server";
-import { sendEmail } from "@/lib/mail"; // Assuming your helper is here
+import { SendMailClient } from "zeptomail";
+
+// ZeptoMail Configuration
+const url = process.env.ZEPTOMAIL_URL || "https://api.zeptomail.in/";
+const token = process.env.ZEPTOMAIL_TOKEN;
+
+const client = token ? new SendMailClient({ url, token }) : null;
+
+async function sendEmail({ to, subject, htmlBody }: { to: { email: string; name: string }; subject: string; htmlBody: string }) {
+  if (!client) {
+    throw new Error("ZeptoMail client is not initialized. Check server environment variables.");
+  }
+  return client.sendMail({
+    from: {
+      address: "no-reply@megamind.studio",
+      name: "Megamind",
+    },
+    to: [
+      {
+        email_address: {
+          address: to.email,
+          name: to.name,
+        },
+      },
+    ],
+    subject,
+    htmlbody: htmlBody,
+  });
+}
 
 export async function GET() { // Use GET for easy testing in the browser
   try {
@@ -9,12 +37,7 @@ export async function GET() { // Use GET for easy testing in the browser
       htmlBody: "<h1>Did this work?</h1>",
     });
 
-    if (!result.success) {
-      console.error("Simple test failed:", result.error);
-      return NextResponse.json({ message: "Failed", error: result.error }, { status: 500 });
-    }
-
-    return NextResponse.json({ success: true, message: "Email sent successfully from isolated route!" });
+    return NextResponse.json({ success: true, message: "Email sent successfully from isolated route!", data: result });
 
   } catch (error: any) {
     console.error("Error in simple test route:", error);
