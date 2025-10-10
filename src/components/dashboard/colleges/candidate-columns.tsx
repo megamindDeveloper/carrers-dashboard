@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import type { ColumnDef } from '@tanstack/react-table';
@@ -17,6 +18,7 @@ import {
   ClipboardList,
   MoreHorizontal,
   Trash2,
+  RefreshCcw,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
@@ -24,10 +26,11 @@ import { Badge } from '@/components/ui/badge';
 interface GetCandidateColumnsProps {
     onViewSubmission: (submission: AssessmentSubmission) => void;
     onDelete: (candidateId: string, candidateName: string) => void;
+    onResetSubmission: (submissionId: string, candidateName: string) => void;
     selectedAssessmentId: string;
 }
 
-export const getCandidateColumns = ({ onViewSubmission, onDelete, selectedAssessmentId }: GetCandidateColumnsProps): ColumnDef<CollegeCandidate>[] => {
+export const getCandidateColumns = ({ onViewSubmission, onDelete, onResetSubmission, selectedAssessmentId }: GetCandidateColumnsProps): ColumnDef<CollegeCandidate>[] => {
   const columns: ColumnDef<CollegeCandidate>[] = [
     {
       accessorKey: 'name',
@@ -104,6 +107,8 @@ export const getCandidateColumns = ({ onViewSubmission, onDelete, selectedAssess
       id: 'actions',
       cell: ({ row }) => {
         const candidate = row.original;
+        const submission = candidate.submissions?.find(s => s.assessmentId === selectedAssessmentId);
+
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -114,6 +119,19 @@ export const getCandidateColumns = ({ onViewSubmission, onDelete, selectedAssess
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
+               {submission && (
+                <DropdownMenuItem onClick={() => onViewSubmission(submission)}>
+                    <ClipboardList className="mr-2 h-4 w-4" />
+                    View Submission
+                </DropdownMenuItem>
+              )}
+               {submission && (
+                <DropdownMenuItem onClick={() => onResetSubmission(submission.id, candidate.name)}>
+                    <RefreshCcw className="mr-2 h-4 w-4" />
+                    Reset Submission
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => onDelete(candidate.id, candidate.name)}
                 className="text-red-600 focus:text-red-600 focus:bg-red-50"

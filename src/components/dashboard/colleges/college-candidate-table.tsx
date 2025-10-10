@@ -332,10 +332,36 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
     });
   };
 
+  const handleResetSubmission = (submissionId: string, candidateName: string) => {
+    setConfirmation({
+        isOpen: true,
+        title: `Reset submission for ${candidateName}?`,
+        description: `This will permanently delete this candidate's submission and allow them to take the assessment again. This action cannot be undone.`,
+        onConfirm: async () => {
+            try {
+                await deleteDoc(doc(db, 'assessmentSubmissions', submissionId));
+                toast({
+                    title: 'Submission Reset',
+                    description: `${candidateName}'s assessment submission has been reset. They can now take it again.`,
+                });
+            } catch (error: any) {
+                toast({
+                    variant: 'destructive',
+                    title: 'Reset Failed',
+                    description: error.message || 'Could not reset the submission.',
+                });
+            } finally {
+                setConfirmation({ ...confirmation, isOpen: false });
+            }
+        },
+    });
+  };
+
 
   const columns = useMemo(() => getCandidateColumns({ 
     onViewSubmission: (sub) => setSelectedSubmission(sub),
     onDelete: handleDeleteCandidate,
+    onResetSubmission: handleResetSubmission,
     selectedAssessmentId,
   }), [selectedAssessmentId]);
 
