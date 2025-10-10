@@ -529,8 +529,9 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
             <CardHeader>
                 <Image height={50} width={200} src={mmLogo} alt="Megamind Careers Logo" className="mx-auto mb-4" />
                 <CardTitle className="mb-1">{assessment?.successTitle || 'Assessment Complete'}</CardTitle>
+                <CardDescription className="pt-2">{assessment?.successMessage || 'Thank you for your submission. The hiring team will get back to you soon.'}</CardDescription>
             </CardHeader>
-            <CardContent><p>{assessment?.successMessage || 'Thank you for your submission. The hiring team will get back to you soon.'}</p></CardContent>
+            <CardContent></CardContent>
         </Card>
       </div>
     );
@@ -625,13 +626,12 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                     <CardDescription className="text-lg pt-2 whitespace-pre-wrap">{assessment?.startPageInstructions || 'Ready to begin?'}</CardDescription>
                 </CardHeader>
                 <CardContent className="px-8 pb-4">
-                    {assessment && (
+                    {assessment && (assessment.startPageImportantInstructions) && (
                         <Alert className="text-left">
                             <Timer className="h-4 w-4" />
                             <AlertTitle>Important Instructions</AlertTitle>
-                            <AlertDescription>
-                                {assessment.timeLimit && `The timer will start as soon as you click the button below. You will have ${assessment.timeLimit} minutes.`}
-                                {assessment.disableCopyPaste && " Copying questions, pasting content, and switching tabs is disabled. Doing so will automatically submit your assessment."}
+                            <AlertDescription className="whitespace-pre-wrap">
+                                {assessment.startPageImportantInstructions}
                             </AlertDescription>
                         </Alert>
                     )}

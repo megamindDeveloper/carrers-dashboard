@@ -75,9 +75,21 @@ const assessmentSchema = z.object({
   startPageTitle: z.string().optional(),
   startPageInstructions: z.string().optional(),
   startButtonText: z.string().optional(),
+  startPageImportantInstructions: z.string().optional(),
 });
 
 const generatePasscode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
+
+const getDefaultImportantInstructions = (timeLimit?: number, disableCopyPaste?: boolean) => {
+  const parts = [];
+  if (timeLimit) {
+    parts.push(`The timer will start as soon as you click the button below. You will have ${timeLimit} minutes.`);
+  }
+  if (disableCopyPaste) {
+    parts.push("Copying questions, pasting content, and switching tabs is disabled. Doing so will automatically submit your assessment.");
+  }
+  return parts.join('\n');
+};
 
 export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: AddEditAssessmentSheetProps) {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -121,14 +133,17 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
           startPageTitle: assessment.startPageTitle || assessment.title,
           startPageInstructions: assessment.startPageInstructions || 'Ready to begin?',
           startButtonText: assessment.startButtonText || 'Start Assessment',
+          startPageImportantInstructions: assessment.startPageImportantInstructions || getDefaultImportantInstructions(assessment.timeLimit, assessment.disableCopyPaste),
         });
       } else {
+        const defaultTimeLimit = 30;
+        const defaultCopyPaste = true;
         form.reset({
           title: '',
           passcode: '',
-          timeLimit: 30,
+          timeLimit: defaultTimeLimit,
           authentication: 'none',
-          disableCopyPaste: true,
+          disableCopyPaste: defaultCopyPaste,
           sections: [{ 
               id: uuidv4(), 
               title: 'General Questions', 
@@ -139,6 +154,7 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
           startPageTitle: '',
           startPageInstructions: 'Ready to begin?',
           startButtonText: 'Start Assessment',
+          startPageImportantInstructions: getDefaultImportantInstructions(defaultTimeLimit, defaultCopyPaste),
         });
       }
     }
@@ -193,7 +209,7 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
       <SheetContent className="w-full sm:max-w-4xl flex flex-col">
         <SheetHeader>
           <SheetTitle>{assessment ? 'Edit Assessment' : 'Create New Assessment'}</SheetTitle>
-          <SheetDescription>
+          <SheetDescription className="mb-1">
             Fill in the details below. You can add multiple sections with questions.
           </SheetDescription>
         </SheetHeader>
@@ -295,6 +311,14 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
                   <FormItem>
                     <FormLabel>Start Page Instructions</FormLabel>
                     <FormControl><Textarea {...field} placeholder="Add instructions for the candidate before they begin..."/></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="startPageImportantInstructions" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Important Instructions Box</FormLabel>
+                    <FormControl><Textarea {...field} className="min-h-[100px]" placeholder="Add critical instructions like time limits or proctoring rules..."/></FormControl>
+                    <FormDescription>This text will appear in the yellow "Important Instructions" box.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )} />

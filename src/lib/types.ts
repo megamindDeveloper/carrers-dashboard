@@ -133,6 +133,7 @@ export type Assessment = {
   startPageTitle?: string;
   startPageInstructions?: string;
   startButtonText?: string;
+  startPageImportantInstructions?: string;
 };
 
 
