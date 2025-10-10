@@ -14,17 +14,11 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
-import type { Job } from '@/lib/types';
+import type { Job, AssessmentSubmission } from '@/lib/types';
 
 interface DataTableToolbarProps<TData> {
   table: Table<TData>;
   filterType?: CandidateType;
-}
-
-function isJobData<TData>(data: TData[]): data is Job[] {
-    if (data.length === 0) return false;
-    const firstItem = data[0] as any;
-    return 'position' in firstItem && 'openings' in firstItem && 'responsibilities' in firstItem;
 }
 
 export function DataTableToolbar<TData>({
@@ -39,13 +33,16 @@ export function DataTableToolbar<TData>({
   }
 
   const isJobTable = table.options.data.length > 0 && 'openings' in table.options.data[0];
+  const isSubmissionTable = table.options.data.length > 0 && 'assessmentId' in table.options.data[0];
+  const isCandidateTable = !isJobTable && !isSubmissionTable;
+
 
   const statusOptions = isJobTable ? JOB_STATUSES : CANDIDATE_STATUSES;
 
   return (
     <div className="flex items-center justify-between gap-2">
       <div className="flex flex-1 flex-wrap items-center gap-2">
-        {columnExists('fullName') && (
+        {isCandidateTable && columnExists('fullName') && (
           <Input
             placeholder="Filter by name..."
             value={
@@ -57,7 +54,19 @@ export function DataTableToolbar<TData>({
             className="h-8 w-[150px] lg:w-[250px]"
           />
         )}
-        {columnExists('position') && (
+         {isSubmissionTable && columnExists('candidateName') && (
+          <Input
+            placeholder="Filter by name..."
+            value={
+              (table.getColumn('candidateName')?.getFilterValue() as string) ?? ''
+            }
+            onChange={event =>
+              table.getColumn('candidateName')?.setFilterValue(event.target.value)
+            }
+            className="h-8 w-[150px] lg:w-[250px]"
+          />
+        )}
+        {isCandidateTable && columnExists('position') && (
            <Input
             placeholder="Filter by position..."
             value={(table.getColumn('position')?.getFilterValue() as string) ?? ''}
