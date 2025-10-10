@@ -40,7 +40,7 @@ export async function POST(req: Request) {
 
         let finalBody = body;
         if (authentication === 'email_verification') {
-            finalBody = `Please note: You will need to verify your name and email address to access this assessment. Use the following credentials:\n\nFull Name: ${candidate.name}\nEmail: ${candidate.email}\n\n${body}`;
+            finalBody = `<p>Please note: You will need to verify your name and email address to access this assessment. Use the following credentials:<br><br><b>Full Name:</b> ${candidate.name}<br><b>Email:</b> ${candidate.email}</p><br>${body}`;
         }
 
         // Replace all placeholders for the specific candidate
@@ -49,7 +49,7 @@ export async function POST(req: Request) {
           .replace(/<<Assessment Name>>/g, assessmentTitle)
           .replace(/<<Assessment Link>>/g, assessmentLink)
           .replace(/<<Passcode>>/g, passcode || 'N/A')
-          .replace(/<<EMAIL_BODY>>/g, finalBody.replace(/\n/g, '<br />')) // Replace custom body content
+          .replace(/<<EMAIL_BODY>>/g, finalBody) // Replace custom body content
           .replace(/<<BUTTON_TEXT>>/g, buttonText);
 
 

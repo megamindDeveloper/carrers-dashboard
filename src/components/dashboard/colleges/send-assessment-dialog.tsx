@@ -23,7 +23,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import RichTextEditor from '@/components/ui/rich-text-editor';
 import type { Assessment } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -42,11 +42,7 @@ const emailSchema = z.object({
   buttonText: z.string().min(1, 'Button text is required'),
 });
 
-const defaultEmailBody = `As part of our evaluation process, we would like to invite you to complete an online assessment. This will help us better understand your skills and how they align with our requirements.
-
-Please complete the assessment at your earliest convenience. We wish you the best of luck!
-
-If you have any questions, please don't hesitate to contact our recruiting team.`;
+const defaultEmailBody = `<p>As part of our evaluation process, we would like to invite you to complete an online assessment. This will help us better understand your skills and how they align with our requirements.</p><p>Please complete the assessment at your earliest convenience. We wish you the best of luck!</p><p>If you have any questions, please don't hesitate to contact our recruiting team.</p>`;
 
 
 export function SendAssessmentDialog({ isOpen, onClose, onSend, isSending, assessment }: SendAssessmentDialogProps) {
@@ -56,7 +52,7 @@ export function SendAssessmentDialog({ isOpen, onClose, onSend, isSending, asses
   });
 
   useEffect(() => {
-    if (assessment) {
+    if (assessment && isOpen) {
       form.reset({
         subject: `Invitation to complete assessment for ${assessment.title}`,
         body: defaultEmailBody,
@@ -106,13 +102,15 @@ export function SendAssessmentDialog({ isOpen, onClose, onSend, isSending, asses
                   <FormField control={form.control} name="body" render={({ field }) => (
                       <FormItem>
                       <FormLabel>Email Body</FormLabel>
-                      <FormControl><Textarea {...field} className="min-h-[300px]" /></FormControl>
+                      <FormControl>
+                        <RichTextEditor content={field.value} onChange={field.onChange} />
+                      </FormControl>
                       <FormMessage />
                       </FormItem>
                   )} />
               </div>
             </ScrollArea>
-            <DialogFooter className="pt-4">
+            <DialogFooter className="pt-4 border-t">
               <Button type="button" variant="outline" onClick={onClose} disabled={isSending}>
                 Cancel
               </Button>
