@@ -281,7 +281,10 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
   };
 
 
-  const columns = useMemo(() => getCandidateColumns({ onViewSubmission: (sub) => setSelectedSubmission(sub) }), []);
+  const columns = useMemo(() => getCandidateColumns({ 
+    onViewSubmission: (sub) => setSelectedSubmission(sub),
+    selectedAssessmentId,
+  }), [selectedAssessmentId]);
 
   const candidatesToReceive = useMemo(() => {
     if (!selectedAssessmentId) return data.length;

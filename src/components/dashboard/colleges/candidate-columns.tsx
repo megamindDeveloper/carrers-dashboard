@@ -11,8 +11,12 @@ import {
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 
+interface GetCandidateColumnsProps {
+    onViewSubmission: (submission: AssessmentSubmission) => void;
+    selectedAssessmentId: string;
+}
 
-export const getCandidateColumns = ({ onViewSubmission }: { onViewSubmission: (submission: AssessmentSubmission) => void }): ColumnDef<CollegeCandidate>[] => {
+export const getCandidateColumns = ({ onViewSubmission, selectedAssessmentId }: GetCandidateColumnsProps): ColumnDef<CollegeCandidate>[] => {
   const columns: ColumnDef<CollegeCandidate>[] = [
     {
       accessorKey: 'name',
@@ -38,24 +42,27 @@ export const getCandidateColumns = ({ onViewSubmission }: { onViewSubmission: (s
       },
     },
     {
-      accessorKey: 'submissions',
-      header: 'Submissions',
-      cell: ({ row }) => {
-          const { submissions } = row.original;
-          if (!submissions || submissions.length === 0) {
-              return <Badge variant="secondary">None</Badge>;
-          }
-          return (
-              <div className="flex flex-wrap gap-1">
-                  {submissions.map(sub => (
-                       <Button key={sub.id} variant="outline" size="sm" className="h-auto" onClick={(e) => { e.stopPropagation(); onViewSubmission(sub); }}>
-                          <ClipboardList className="mr-2 h-3 w-3" />
-                          <span>{sub.assessmentTitle}</span>
-                      </Button>
-                  ))}
-              </div>
-          )
-      }
+        id: 'assessmentStatus',
+        header: 'Assessment Status',
+        cell: ({ row }) => {
+            const { submissions } = row.original;
+            if (!selectedAssessmentId) {
+                return <span className="text-xs text-muted-foreground">Select an assessment</span>;
+            }
+
+            const submission = submissions?.find(s => s.assessmentId === selectedAssessmentId);
+
+            if (submission) {
+                return (
+                    <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); onViewSubmission(submission); }}>
+                        <ClipboardList className="mr-2 h-4 w-4 text-green-600" />
+                        Submitted
+                    </Button>
+                )
+            }
+            
+            return <Badge variant="outline">Pending</Badge>;
+        }
     },
     {
       accessorKey: 'importedAt',
