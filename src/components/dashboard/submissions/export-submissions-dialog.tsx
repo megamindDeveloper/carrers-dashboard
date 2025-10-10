@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Papa from 'papaparse';
 import {
   Dialog,
@@ -57,6 +57,13 @@ export function ExportSubmissionsDialog({ isOpen, onClose, submissions }: Export
 
     return [...BASE_HEADERS, ...dynamicHeaders];
   }, [submissions]);
+
+  useEffect(() => {
+    // Pre-select all headers when the dialog opens or submissions change
+    if (isOpen) {
+      setSelectedHeaders(allPossibleHeaders.map(h => h.key));
+    }
+  }, [isOpen, allPossibleHeaders]);
 
   const handleExport = () => {
     if (selectedHeaders.length === 0) {
@@ -135,7 +142,7 @@ export function ExportSubmissionsDialog({ isOpen, onClose, submissions }: Export
             <Checkbox
                 id="select-all"
                 checked={allSelected}
-                onCheckedChange={handleSelectAll}
+                onCheckedChange={(checked) => handleSelectAll(Boolean(checked))}
             />
             <Label htmlFor="select-all" className="font-bold">
                 Select All Fields
