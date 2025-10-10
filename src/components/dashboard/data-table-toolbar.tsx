@@ -121,7 +121,7 @@ export function DataTableToolbar<TData>({
             </SelectContent>
           </Select>
         )}
-        {columnExists('status') && (
+        {isCandidateTable && columnExists('status') && (
           <Select
             value={(table.getColumn('status')?.getFilterValue() as string) ?? 'all'}
             onValueChange={value =>
