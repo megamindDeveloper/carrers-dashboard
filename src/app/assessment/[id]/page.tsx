@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
@@ -42,6 +43,7 @@ const answersSchema = z.object({
     answers: z.array(z.object({
         questionId: z.string(),
         questionText: z.string(),
+        isRequired: z.boolean().optional(),
         answer: z.any().optional(),
     })),
 });
@@ -183,8 +185,52 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     },
   });
 
+  const validateRequiredAnswers = (data: AnswersFormValues): boolean => {
+    if (!assessment) return false;
+    
+    for (let i = 0; i < data.answers.length; i++) {
+        const formAnswer = data.answers[i];
+        if (formAnswer.isRequired) {
+            const answerValue = formAnswer.answer;
+            const isAnswerEmpty = !answerValue || (Array.isArray(answerValue) && answerValue.length === 0);
+            
+            if (isAnswerEmpty) {
+                toast({
+                    variant: 'destructive',
+                    title: 'Required Question',
+                    description: `Question "${formAnswer.questionText}" must be answered.`,
+                });
+                
+                // Find the question in the assessment structure to navigate to it
+                let questionFound = false;
+                for (let secIdx = 0; secIdx < assessment.sections!.length; secIdx++) {
+                    const section = assessment.sections![secIdx];
+                    for (let qIdx = 0; qIdx < section.questions.length; qIdx++) {
+                        if (section.questions[qIdx].id === formAnswer.questionId) {
+                            setCurrentSectionIndex(secIdx);
+                            setCurrentQuestionIndex(qIdx);
+                            setViewingSectionIntro(false);
+                            questionFound = true;
+                            break;
+                        }
+                    }
+                    if (questionFound) break;
+                }
+                return false;
+            }
+        }
+    }
+    return true;
+  };
+
+
   const onSubmit = useCallback(async (data: AnswersFormValues) => {
     if (!assessment || isSubmitting || alreadySubmitted) return;
+
+    if (!validateRequiredAnswers(data)) {
+        setIsSubmitting(false);
+        return;
+    }
 
     setIsSubmitting(true);
     const timeTaken = startTimeRef.current ? Math.floor((Date.now() - startTimeRef.current) / 1000) : 0;
@@ -194,7 +240,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     let submissionData: any = {
         assessmentId: assessment.id,
         assessmentTitle: assessment.title,
-        answers: data.answers,
+        answers: data.answers.map(({questionId, questionText, answer}) => ({questionId, questionText, answer})),
         submittedAt: serverTimestamp(),
         timeTaken,
         collegeId: collegeId || null,
@@ -302,6 +348,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
               answers: allQuestions.map(q => ({
                 questionId: q.id,
                 questionText: q.text,
+                isRequired: q.isRequired || false,
                 answer: q.type === 'checkbox' ? [] : ''
               }))
             });
@@ -681,6 +728,10 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
   const AnswerComponent = assessment.disableCopyPaste ? PasteDisabledTextarea : Textarea;
   const isLastQuestionOfAll = overallQuestionIndex === totalQuestions - 1;
 
+  const currentAnswerValue = answersForm.watch(`answers.${overallQuestionIndex}.answer`);
+  const isCurrentAnswerEmpty = !currentAnswerValue || (Array.isArray(currentAnswerValue) && currentAnswerValue.length === 0);
+  const isNextButtonDisabled = currentQuestion.isRequired && isCurrentAnswerEmpty;
+
 
   if (viewingSectionIntro) {
     return (
@@ -747,6 +798,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                           <FormItem className="space-y-3">
                               <FormLabel className="text-base font-semibold">
                                   {currentQuestionIndex + 1}. {currentQuestion.text}
+                                  {currentQuestion.isRequired && <span className="text-destructive"> *</span>}
                               </FormLabel>
                               <FormControl>
                                   <div className="w-full">
@@ -873,6 +925,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                                   </div>
                               </FormControl>
                               <FormMessage />
+                               {isNextButtonDisabled && <p className="text-sm font-medium text-destructive">This question is required.</p>}
                           </FormItem>
                           )}
                       />}
@@ -895,6 +948,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
                                <Button 
                                 type="button" 
                                 onClick={handleNextQuestion}
+                                disabled={isNextButtonDisabled}
                                >
                                   Next <ArrowRight className="ml-2 h-4 w-4" />
                                </Button>
@@ -914,3 +968,4 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
+
