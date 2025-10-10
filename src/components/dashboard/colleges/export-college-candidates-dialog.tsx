@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Papa from 'papaparse';
 import {
   Dialog,
@@ -26,7 +26,7 @@ interface ExportCollegeCandidatesDialogProps {
   selectedAssessment: Assessment | null;
 }
 
-type HeaderKey = keyof CollegeCandidate | 'assessmentStatus';
+type HeaderKey = keyof CollegeCandidate | 'assessmentStatus' | `answer_${string}`;
 
 const BASE_HEADERS: { key: HeaderKey; label: string }[] = [
     { key: 'name', label: 'Candidate Name' },
@@ -39,11 +39,25 @@ export function ExportCollegeCandidatesDialog({ isOpen, onClose, candidates, sel
   const { toast } = useToast();
 
   const allPossibleHeaders = useMemo(() => {
+    const headers = [...BASE_HEADERS];
     if (selectedAssessment) {
-      return [...BASE_HEADERS, { key: 'assessmentStatus', label: `Status for '${selectedAssessment.title}'` }];
+      headers.push({ key: 'assessmentStatus', label: `Status for '${selectedAssessment.title}'` });
+
+      const allQuestions = selectedAssessment.sections?.flatMap(s => s.questions) || [];
+      allQuestions.forEach(q => {
+        headers.push({ key: `answer_${q.id}`, label: `Q: ${q.text}` });
+      });
     }
-    return BASE_HEADERS;
+    return headers;
   }, [selectedAssessment]);
+
+  useEffect(() => {
+    // Pre-select all headers when the dialog opens or the assessment changes
+    if (isOpen) {
+      setSelectedHeaders(allPossibleHeaders.map(h => h.key));
+    }
+  }, [isOpen, allPossibleHeaders]);
+
 
   const handleExport = () => {
     if (selectedHeaders.length === 0) {
@@ -62,8 +76,18 @@ export function ExportCollegeCandidatesDialog({ isOpen, onClose, candidates, sel
             if (!headerInfo) return;
 
             if (key === 'assessmentStatus') {
-                const hasSubmitted = selectedAssessment && candidate.submissions?.some(s => s.assessmentId === selectedAssessment.id);
-                row[headerInfo.label] = hasSubmitted ? 'Submitted' : 'Not Submitted';
+                const submission = selectedAssessment ? candidate.submissions?.find(s => s.assessmentId === selectedAssessment.id) : null;
+                row[headerInfo.label] = submission ? 'Submitted' : 'Not Submitted';
+            } else if (key.startsWith('answer_')) {
+                 const submission = selectedAssessment ? candidate.submissions?.find(s => s.assessmentId === selectedAssessment.id) : null;
+                 if (submission) {
+                     const questionId = key.replace('answer_', '');
+                     const answerObj = submission.answers.find(a => a.questionId === questionId);
+                     const answer = answerObj?.answer;
+                     row[headerInfo.label] = Array.isArray(answer) ? answer.join('; ') : (answer ?? '');
+                 } else {
+                     row[headerInfo.label] = ''; // No submission, so empty answer
+                 }
             } else {
                  let value = candidate[key as keyof CollegeCandidate] as any;
                  if (key === 'importedAt' && value?.toDate) {
@@ -120,7 +144,7 @@ export function ExportCollegeCandidatesDialog({ isOpen, onClose, candidates, sel
             <Checkbox
                 id="select-all-export"
                 checked={allSelected}
-                onCheckedChange={handleSelectAll}
+                onCheckedChange={(checked) => handleSelectAll(Boolean(checked))}
             />
             <Label htmlFor="select-all-export" className="font-bold">
                 Select All Fields
