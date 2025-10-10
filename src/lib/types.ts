@@ -109,6 +109,7 @@ export type AssessmentQuestion = {
   text: string;
   type: QuestionType;
   options?: string[];
+  isRequired?: boolean;
 };
 
 export type AssessmentSection = {

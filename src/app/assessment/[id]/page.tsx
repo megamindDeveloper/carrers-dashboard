@@ -968,4 +968,3 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
-

@@ -47,6 +47,7 @@ const questionSchema = z.object({
   text: z.string().min(1, "Question text cannot be empty"),
   type: z.enum(QUESTION_TYPES),
   options: z.array(z.object({ value: z.string().min(1, "Option cannot be empty") })).optional(),
+  isRequired: z.boolean().optional(),
 }).superRefine((data, ctx) => {
     if ((data.type === 'multiple-choice' || data.type === 'checkbox') && (!data.options || data.options.length < 2)) {
         ctx.addIssue({
@@ -125,6 +126,7 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
               ...s,
               questions: s.questions?.map(q => ({
                   ...q,
+                  isRequired: q.isRequired || false,
                   options: q.options?.map(opt => ({ value: opt }))
               })) || []
           })) || [],
@@ -147,7 +149,7 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
           sections: [{ 
               id: uuidv4(), 
               title: 'General Questions', 
-              questions: [{ id: uuidv4(), text: 'Please introduce yourself and walk us through your resume.', type: 'textarea' }]
+              questions: [{ id: uuidv4(), text: 'Please introduce yourself and walk us through your resume.', type: 'textarea', isRequired: true }]
           }],
           successTitle: 'Assessment Complete',
           successMessage: 'Thank you for your submission. The hiring team will get back to you soon.',
@@ -189,7 +191,7 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
   
   const handleGeneratePasscode = () => form.setValue('passcode', generatePasscode());
 
-  const addSection = () => appendSection({ id: uuidv4(), title: `New Section ${sectionsFields.length + 1}`, questions: [{ id: uuidv4(), text: '', type: 'text' }] });
+  const addSection = () => appendSection({ id: uuidv4(), title: `New Section ${sectionsFields.length + 1}`, questions: [{ id: uuidv4(), text: '', type: 'text', isRequired: false }] });
 
   const deleteSection = (index: number) => {
       if (sectionsFields.length > 1) {
@@ -427,37 +429,56 @@ function QuestionsField({ sectionIndex, control, form }: { sectionIndex: number,
                             </FormItem>
                         )}
                     />
-                    <FormField
-                        control={control}
-                        name={`sections.${sectionIndex}.questions.${questionIndex}.type`}
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Answer Type</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl><SelectTrigger><SelectValue placeholder="Select an answer type" /></SelectTrigger></FormControl>
-                                    <SelectContent>
-                                        <SelectItem value="textarea">Text Area (Multi-line)</SelectItem>
-                                        <SelectItem value="text">Text (Single line)</SelectItem>
-                                        <SelectItem value="multiple-choice">Multiple Choice (Single Answer)</SelectItem>
-                                        <SelectItem value="checkbox">Checkboxes (Multiple Answers)</SelectItem>
-                                        <SelectItem value="file-upload">File Upload</SelectItem>
-                                        <SelectItem value="date">Date</SelectItem>
-                                        <SelectItem value="email">Email</SelectItem>
-                                        <SelectItem value="number">Number</SelectItem>
-                                        <SelectItem value="tel">Phone Number</SelectItem>
-                                        <SelectItem value="url">URL</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                      <FormField
+                          control={control}
+                          name={`sections.${sectionIndex}.questions.${questionIndex}.type`}
+                          render={({ field }) => (
+                              <FormItem>
+                                  <FormLabel>Answer Type</FormLabel>
+                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                      <FormControl><SelectTrigger><SelectValue placeholder="Select an answer type" /></SelectTrigger></FormControl>
+                                      <SelectContent>
+                                          <SelectItem value="textarea">Text Area (Multi-line)</SelectItem>
+                                          <SelectItem value="text">Text (Single line)</SelectItem>
+                                          <SelectItem value="multiple-choice">Multiple Choice (Single Answer)</SelectItem>
+                                          <SelectItem value="checkbox">Checkboxes (Multiple Answers)</SelectItem>
+                                          <SelectItem value="file-upload">File Upload</SelectItem>
+                                          <SelectItem value="date">Date</SelectItem>
+                                          <SelectItem value="email">Email</SelectItem>
+                                          <SelectItem value="number">Number</SelectItem>
+                                          <SelectItem value="tel">Phone Number</SelectItem>
+                                          <SelectItem value="url">URL</SelectItem>
+                                      </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                              </FormItem>
+                          )}
+                      />
+                      <FormField
+                          control={form.control}
+                          name={`sections.${sectionIndex}.questions.${questionIndex}.isRequired`}
+                          render={({ field }) => (
+                              <FormItem className="flex flex-row items-center justify-start gap-x-3 space-y-0 rounded-md border p-3 mt-7">
+                                  <FormControl>
+                                      <Switch
+                                          checked={field.value}
+                                          onCheckedChange={field.onChange}
+                                      />
+                                  </FormControl>
+                                  <div className="space-y-0.5">
+                                      <FormLabel>Required</FormLabel>
+                                  </div>
+                              </FormItem>
+                          )}
+                      />
+                    </div>
                      {(form.watch(`sections.${sectionIndex}.questions.${questionIndex}.type`) === 'multiple-choice' || form.watch(`sections.${sectionIndex}.questions.${questionIndex}.type`) === 'checkbox') && (
                         <OptionsField sectionIndex={sectionIndex} questionIndex={questionIndex} control={control} />
                     )}
                 </div>
             ))}
-            <Button type="button" variant="outline" size="sm" onClick={() => append({ id: uuidv4(), text: '', type: 'text' })}>
+            <Button type="button" variant="outline" size="sm" onClick={() => append({ id: uuidv4(), text: '', type: 'text', isRequired: false })}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Add Question
             </Button>
         </div>
