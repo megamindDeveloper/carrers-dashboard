@@ -33,7 +33,7 @@ export function DataTableToolbar<TData>({
   }
 
   const isJobTable = table.options.data.length > 0 && 'openings' in table.options.data[0];
-  const isSubmissionTable = table.options.data.length > 0 && 'assessmentId' in table.options.data[0];
+  const isSubmissionTable = table.options.data.length > 0 && 'assessmentId' in table.options.data[0] && 'timeTaken' in table.options.data[0];
   const isCollegeCandidateTable = table.options.data.length > 0 && 'importedAt' in table.options.data[0];
   const isCandidateTable = !isJobTable && !isSubmissionTable && !isCollegeCandidateTable;
 
