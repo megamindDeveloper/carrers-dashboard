@@ -360,6 +360,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
     if (!submission || !candidate) return;
 
     setIsSending(true);
+    setResetDialogState({ isOpen: false, submission: null, candidate: null });
 
     try {
         const assessmentLink = `${process.env.NEXT_PUBLIC_BASE_URL}/assessment/${submission.assessmentId}?candidateId=${candidate.id}&collegeId=${collegeId}`;
@@ -372,8 +373,8 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
                 candidateEmail: candidate.email,
                 assessmentName: submission.assessmentTitle,
                 assessmentLink: assessmentLink,
-                subject: subject,
-                body: body,
+                subject,
+                body,
             })
         });
 
@@ -396,7 +397,6 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
         });
     } finally {
         setIsSending(false);
-        setResetDialogState({ isOpen: false, submission: null, candidate: null });
     }
 };
 
