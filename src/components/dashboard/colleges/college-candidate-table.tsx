@@ -24,6 +24,7 @@ import { SubmissionDetailsModal } from '../submissions/submission-details-modal'
 import { SendAssessmentDialog } from './send-assessment-dialog';
 import { AddCollegeCandidateSheet } from './add-college-candidate-sheet';
 import { AssessmentStatsCard } from './assessment-stats-card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
 interface CollegeCandidateTableProps {
@@ -40,6 +41,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
   const [selectedSubmission, setSelectedSubmission] = useState<AssessmentSubmission | null>(null);
   const [isSendAssessmentDialogOpen, setSendAssessmentDialogOpen] = useState(false);
   const [isAddSheetOpen, setAddSheetOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'all' | 'submitted' | 'not-submitted'>('all');
   const { toast } = useToast();
   
   useEffect(() => {
@@ -308,6 +310,21 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
     };
   }, [data, selectedAssessmentId, assessments]);
 
+  const filteredData = useMemo(() => {
+    if (!selectedAssessmentId || activeTab === 'all') {
+      return data;
+    }
+    if (activeTab === 'submitted') {
+      return data.filter(c => c.submissions?.some(s => s.assessmentId === selectedAssessmentId));
+    }
+    if (activeTab === 'not-submitted') {
+      return data.filter(c => !c.submissions?.some(s => s.assessmentId === selectedAssessmentId));
+    }
+    return data;
+  }, [data, selectedAssessmentId, activeTab]);
+
+  const notSubmittedCount = assessmentStats ? assessmentStats.totalCandidates - assessmentStats.submissionsReceived : data.length;
+
 
   if (loading) return <p className="p-4">Loading candidates...</p>;
 
@@ -368,9 +385,9 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
                             )}
                           </SelectContent>
                         </Select>
-                        <Button onClick={handleOpenSendDialog} disabled={isSending || !selectedAssessmentId || (assessmentStats?.invitationsSent === assessmentStats?.submissionsReceived)}>
+                        <Button onClick={handleOpenSendDialog} disabled={isSending || !selectedAssessmentId || (notSubmittedCount === 0)}>
                             <Send className="mr-2 h-4 w-4" />
-                            {`Send to ${assessmentStats ? assessmentStats.invitationsSent - assessmentStats.submissionsReceived : data.length} Candidates`}
+                            {`Send to ${notSubmittedCount} Candidates`}
                         </Button>
                     </CardContent>
                 </Card>
@@ -379,8 +396,22 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
             {assessmentStats && (
                 <AssessmentStatsCard stats={assessmentStats} className="mb-6" />
             )}
+            
+            {selectedAssessmentId ? (
+                 <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)} className="mb-4">
+                    <TabsList>
+                        <TabsTrigger value="all">All Candidates ({data.length})</TabsTrigger>
+                        <TabsTrigger value="submitted">Submitted ({assessmentStats?.submissionsReceived || 0})</TabsTrigger>
+                        <TabsTrigger value="not-submitted">Not Submitted ({notSubmittedCount})</TabsTrigger>
+                    </TabsList>
+                </Tabs>
+            ) : (
+                 <div className="p-4 text-center text-sm text-muted-foreground bg-muted/40 rounded-md mb-4">
+                    Select an assessment to filter candidates by submission status.
+                </div>
+            )}
 
-          <DataTable columns={columns} data={data} onRowClick={() => {}} />
+          <DataTable columns={columns} data={filteredData} onRowClick={() => {}} />
         </CardContent>
       </Card>
       <SubmissionDetailsModal
