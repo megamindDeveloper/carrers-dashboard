@@ -3,7 +3,7 @@
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
 import Papa from 'papaparse';
-import type { Assessment, CollegeCandidate, AssessmentSubmission, AssessmentQuestion } from '@/lib/types';
+import type { Assessment, CollegeCandidate, AssessmentSubmission, AssessmentQuestion, CandidateStatus } from '@/lib/types';
 import { DataTable } from '@/components/dashboard/data-table';
 import { getCandidateColumns } from './candidate-columns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -11,7 +11,7 @@ import { collection, onSnapshot, writeBatch, serverTimestamp, doc, getDocs, quer
 import { db } from '@/app/utils/firebase/firebaseConfig';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Upload, Send, PlusCircle, Download } from 'lucide-react';
+import { Upload, Send, PlusCircle, Download, FileUp } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Loader2 } from 'lucide-react';
 import {
@@ -95,6 +95,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
         // Match submissions to candidates
         const candidatesWithSubmissions = candidatesData.map(candidate => ({
             ...candidate,
+            status: candidate.status || 'Applied',
             submissions: submissionsByCandidate[candidate.id] || [],
         }));
 
@@ -146,6 +147,68 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
     }
     return undefined;
   };
+
+  const handleStatusUpdateUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    toast({ title: 'Processing CSV for Status Updates...', description: 'Please wait.' });
+
+    Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        transformHeader: header => header.trim().toLowerCase(),
+        complete: async (results) => {
+            const parsedData = results.data as Record<string, string>[];
+            const emailKeys = ['email', 'email address', 'personal email'];
+            
+            const emailsToShortlist = parsedData
+                .map(row => getColumnData(row, emailKeys))
+                .filter((email): email is string => !!email)
+                .map(email => email.toLowerCase());
+
+            if (emailsToShortlist.length === 0) {
+                toast({ variant: 'destructive', title: 'Update Failed', description: 'No valid email addresses found in the CSV.' });
+                setIsUploading(false);
+                return;
+            }
+
+            const candidatesToUpdate = data.filter(c => emailsToShortlist.includes(c.email.toLowerCase()));
+
+            if (candidatesToUpdate.length === 0) {
+                 toast({ title: 'No Matches Found', description: 'No candidates in the current list matched the emails from the CSV.' });
+                setIsUploading(false);
+                return;
+            }
+
+            try {
+                const batch = writeBatch(db);
+                candidatesToUpdate.forEach(candidate => {
+                    const docRef = doc(db, `colleges/${collegeId}/candidates`, candidate.id);
+                    batch.update(docRef, { status: 'Shortlisted' });
+                });
+                await batch.commit();
+
+                toast({ title: 'Status Update Successful', description: `${candidatesToUpdate.length} candidates have been marked as "Shortlisted".` });
+
+            } catch (error) {
+                console.error("Error updating candidate statuses:", error);
+                toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not update candidate statuses in the database.' });
+            } finally {
+                setIsUploading(false);
+                 if (event.target) {
+                    event.target.value = '';
+                }
+            }
+        },
+        error: (error) => {
+            console.error("CSV parsing error:", error);
+            toast({ variant: 'destructive', title: 'CSV Parse Error', description: error.message });
+            setIsUploading(false);
+        }
+    });
+  }
 
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -204,6 +267,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
                     batch.set(docRef, { 
                         name: candidate.name, 
                         email: candidate.email,
+                        status: 'Applied',
                         importedAt: serverTimestamp(),
                     });
                 });
@@ -304,6 +368,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
     try {
         const docRef = await addDoc(collection(db, `colleges/${collegeId}/candidates`), {
             ...candidate,
+            status: 'Applied',
             importedAt: serverTimestamp(),
         });
         toast({ title: 'Candidate Added', description: `${candidate.name} has been added successfully.` });
@@ -407,11 +472,28 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
     }
 };
 
+ const handleStatusChange = async (candidateId: string, status: CandidateStatus) => {
+    try {
+      await updateDoc(doc(db, `colleges/${collegeId}/candidates`, candidateId), { status });
+      toast({
+        title: 'Status Updated',
+        description: `Candidate status has been changed to ${status}.`,
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Update Failed',
+        description: 'Could not update candidate status.',
+      });
+    }
+  };
+
 
   const columns = useMemo(() => getCandidateColumns({ 
     onViewSubmission: (sub) => setSelectedSubmission(sub),
     onDelete: handleDeleteCandidate,
     onResetSubmission: handleOpenResetDialog,
+    onStatusChange: handleStatusChange,
     selectedAssessmentId,
   }), [selectedAssessmentId]);
 
@@ -508,29 +590,25 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
                 <CardTitle>Imported Candidates</CardTitle>
                 <CardDescription>A list of all candidates imported for this college.</CardDescription>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
                  <Button onClick={() => setAddSheetOpen(true)} variant="outline" className="w-full sm:w-auto">
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Add Candidate
                 </Button>
                 <Button asChild className="w-full sm:w-auto">
                     <label htmlFor="csv-upload">
-                        {isUploading ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                            <Upload className="mr-2 h-4 w-4" />
-                        )}
+                        {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
                         {isUploading ? 'Importing...' : 'Import from CSV'}
                     </label>
                 </Button>
-                <Input 
-                    id="csv-upload" 
-                    type="file" 
-                    accept=".csv" 
-                    className="hidden"
-                    onChange={handleFileUpload}
-                    disabled={isUploading}
-                />
+                <Input id="csv-upload" type="file" accept=".csv" className="hidden" onChange={handleFileUpload} disabled={isUploading} />
+                 <Button asChild variant="outline" className="w-full sm:w-auto">
+                    <label htmlFor="csv-status-upload">
+                        {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileUp className="mr-2 h-4 w-4" />}
+                        {isUploading ? 'Updating...' : 'Update Status via CSV'}
+                    </label>
+                </Button>
+                <Input id="csv-status-upload" type="file" accept=".csv" className="hidden" onChange={handleStatusUpdateUpload} disabled={isUploading} />
             </div>
         </CardHeader>
         <CardContent>

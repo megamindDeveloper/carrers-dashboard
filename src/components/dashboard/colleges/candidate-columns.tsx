@@ -3,7 +3,8 @@
 'use client';
 
 import type { ColumnDef } from '@tanstack/react-table';
-import type { CollegeCandidate, AssessmentSubmission } from '@/lib/types';
+import type { CollegeCandidate, AssessmentSubmission, CandidateStatus } from '@/lib/types';
+import { CANDIDATE_STATUSES } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -12,6 +13,11 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from '@/components/ui/dropdown-menu';
 import {
   ArrowUpDown,
@@ -28,10 +34,16 @@ interface GetCandidateColumnsProps {
     onViewSubmission: (submission: AssessmentSubmission) => void;
     onDelete: (candidateId: string, candidateName: string) => void;
     onResetSubmission: (submission: AssessmentSubmission, candidate: CollegeCandidate) => void;
+    onStatusChange: (candidateId: string, status: CandidateStatus) => void;
     selectedAssessmentId: string;
 }
 
-export const getCandidateColumns = ({ onViewSubmission, onDelete, onResetSubmission, selectedAssessmentId }: GetCandidateColumnsProps): ColumnDef<CollegeCandidate>[] => {
+const toTitleCase = (str: string | undefined): string => {
+    if (!str) return '';
+    return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
+};
+
+export const getCandidateColumns = ({ onViewSubmission, onDelete, onResetSubmission, onStatusChange, selectedAssessmentId }: GetCandidateColumnsProps): ColumnDef<CollegeCandidate>[] => {
   const columns: ColumnDef<CollegeCandidate>[] = [
     {
       id: 'select',
@@ -78,6 +90,33 @@ export const getCandidateColumns = ({ onViewSubmission, onDelete, onResetSubmiss
             </span>
           </div>
         );
+      },
+    },
+     {
+      accessorKey: 'status',
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Status
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => {
+        const { status } = row.original;
+        const safeStatus = toTitleCase(status as string) ?? 'Applied';
+        
+        let variant: 'default' | 'secondary' | 'destructive' | 'outline' = 'secondary';
+
+        switch (safeStatus) {
+            case 'Applied': variant = 'secondary'; break;
+            case 'Shortlisted': variant = 'default'; break;
+            case 'Rejected': variant = 'destructive'; break;
+            default: variant = 'outline'; break;
+        }
+
+        return <Badge variant={variant}>{safeStatus}</Badge>;
       },
     },
     {
@@ -156,6 +195,25 @@ export const getCandidateColumns = ({ onViewSubmission, onDelete, onResetSubmiss
                     Reset Submission
                 </DropdownMenuItem>
               )}
+               <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <span>Change Status</span>
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuRadioGroup
+                      value={toTitleCase(candidate.status as string)}
+                      onValueChange={(value) =>
+                        onStatusChange(candidate.id, value as CandidateStatus)
+                      }
+                    >
+                      {CANDIDATE_STATUSES.map((status) => (
+                        <DropdownMenuRadioItem key={status} value={status}>
+                          {status}
+                        </DropdownMenuRadioItem>
+                      ))}
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={() => onDelete(candidate.id, candidate.name)}

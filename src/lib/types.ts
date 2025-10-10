@@ -175,6 +175,7 @@ export type CollegeCandidate = {
     id: string;
     name: string;
     email: string;
+    status: CandidateStatus | string;
     importedAt?: any;
     submissions?: AssessmentSubmission[];
 };
