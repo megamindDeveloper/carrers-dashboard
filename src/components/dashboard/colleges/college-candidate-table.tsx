@@ -349,7 +349,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
     setConfirmation({
         isOpen: true,
         title: `Reset submission for ${candidate.name}?`,
-        description: `This will permanently delete this candidate's submission and allow them to take the assessment again. An email notification will be sent. Do you want to proceed?`,
+        description: `This will delete the candidate's current submission and send them an email notification to retake the assessment. This action cannot be undone.`,
         onConfirm: async () => {
             try {
                 // Send email first
@@ -481,7 +481,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
                  <Card className="mb-6 bg-muted/40">
                     <CardHeader>
                         <CardTitle>Send Assessment & View Stats</CardTitle>
-                        <CardDescription>Select candidates and an assessment, then click send. If no candidates are selected, the email will be sent to all who have not yet submitted.</CardDescription>
+                        <CardDescription>Select an assessment to view statistics and send invitations. Select candidates in the table to send to a specific group.</CardDescription>
                     </CardHeader>
                     <CardContent className="flex flex-col sm:flex-row gap-4 items-center">
                        <Select value={selectedAssessmentId} onValueChange={(value) => { setSelectedAssessmentId(value); setRowSelection({}); }}>
