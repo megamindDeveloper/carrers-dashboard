@@ -47,6 +47,10 @@ const defaultEmailBody = `<p>We've received your request to retake the assessmen
 export function ResetAssessmentDialog({ isOpen, onClose, onSend, isSending, candidate, submission }: ResetAssessmentDialogProps) {
   const form = useForm<z.infer<typeof emailSchema>>({
     resolver: zodResolver(emailSchema),
+    defaultValues: {
+        subject: '',
+        body: '',
+    }
   });
 
   useEffect(() => {
