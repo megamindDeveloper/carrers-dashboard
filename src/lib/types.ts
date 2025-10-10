@@ -136,6 +136,7 @@ export type Assessment = {
   startPageInstructions?: string;
   startButtonText?: string;
   startPageImportantInstructions?: string;
+  isActive?: boolean;
 };
 
 

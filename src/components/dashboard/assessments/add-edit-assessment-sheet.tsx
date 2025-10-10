@@ -70,6 +70,7 @@ const assessmentSchema = z.object({
   timeLimit: z.coerce.number().optional(),
   authentication: z.enum(AUTHENTICATION_TYPES),
   disableCopyPaste: z.boolean().optional(),
+  isActive: z.boolean().optional(),
   sections: z.array(sectionSchema).min(1, "At least one section is required"),
   successTitle: z.string().optional(),
   successMessage: z.string().optional(),
@@ -122,6 +123,7 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
           timeLimit: assessment.timeLimit || undefined,
           authentication: assessment.authentication || 'none',
           disableCopyPaste: assessment.disableCopyPaste || false,
+          isActive: assessment.isActive === false ? false : true,
           sections: sections?.map(s => ({
               ...s,
               questions: s.questions?.map(q => ({
@@ -146,6 +148,7 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
           timeLimit: defaultTimeLimit,
           authentication: 'none',
           disableCopyPaste: defaultCopyPaste,
+          isActive: true,
           sections: [{ 
               id: uuidv4(), 
               title: 'General Questions', 
@@ -225,13 +228,33 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
               {/* Assessment Details */}
               <div className="space-y-4 p-4 border rounded-lg">
                   <h3 className="text-lg font-medium mb-1">General Settings</h3>
-                  <FormField control={form.control} name="title" render={({ field }) => (
-                  <FormItem>
-                  <FormLabel>Assessment Title</FormLabel>
-                  <FormControl><Input placeholder="e.g., Frontend Developer Screening" {...field} /></FormControl>
-                  <FormMessage />
-                  </FormItem>
-              )} />
+                  <div className="flex items-center justify-between">
+                     <FormField control={form.control} name="title" render={({ field }) => (
+                        <FormItem className="flex-grow">
+                        <FormLabel>Assessment Title</FormLabel>
+                        <FormControl><Input placeholder="e.g., Frontend Developer Screening" {...field} /></FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )} />
+                     <FormField
+                        control={form.control}
+                        name="isActive"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-col items-center ml-8">
+                                <FormLabel>Status</FormLabel>
+                                <div className="flex items-center gap-2">
+                                <FormControl>
+                                    <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    />
+                                </FormControl>
+                                <FormDescription>{field.value ? 'Active' : 'Inactive'}</FormDescription>
+                                </div>
+                            </FormItem>
+                        )}
+                        />
+                  </div>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                  <FormField control={form.control} name="authentication" render={({ field }) => (

@@ -305,6 +305,12 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
         }
   
         const data = { id: docSnap.id, ...docSnap.data() } as Assessment;
+
+        if (data.isActive === false) {
+             setError('This assessment is no longer active.');
+             setLoading(false);
+             return;
+        }
   
         // Handle assessments with old structure (questions at root) for backward compatibility
         if ((!data.sections || data.sections.length === 0) && (data as any).questions?.length > 0) {

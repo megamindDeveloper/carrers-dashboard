@@ -23,6 +23,7 @@ import {
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { Badge } from '@/components/ui/badge';
 
 type GetColumnsProps = {
   onEdit: (assessment: Assessment) => void;
@@ -91,6 +92,18 @@ export const getColumns = ({ onEdit, onDelete }: GetColumnsProps): ColumnDef<Ass
             <div className="text-center">{row.original.submissionCount || 0}</div>
         ),
       sortingFn: 'basic',
+    },
+    {
+        accessorKey: 'isActive',
+        header: 'Status',
+        cell: ({ row }) => {
+            const isActive = row.original.isActive;
+            return (
+                <Badge variant={isActive ? 'default' : 'secondary'} className={isActive ? 'bg-green-500' : ''}>
+                    {isActive ? 'Active' : 'Inactive'}
+                </Badge>
+            );
+        },
     },
     {
         accessorKey: 'timeLimit',
