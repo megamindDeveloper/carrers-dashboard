@@ -7,7 +7,7 @@ import type { Assessment, CollegeCandidate, AssessmentSubmission } from '@/lib/t
 import { DataTable } from '@/components/dashboard/data-table';
 import { getCandidateColumns } from './candidate-columns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { collection, onSnapshot, writeBatch, serverTimestamp, doc, getDocs, query, where, updateDoc, addDoc } from 'firebase/firestore';
+import { collection, onSnapshot, writeBatch, serverTimestamp, doc, getDocs, query, where, updateDoc, addDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/app/utils/firebase/firebaseConfig';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,7 @@ import { AddCollegeCandidateSheet } from './add-college-candidate-sheet';
 import { AssessmentStatsCard } from './assessment-stats-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ExportCollegeCandidatesDialog } from './export-college-candidates-dialog';
+import { ConfirmationDialog } from '../confirmation-dialog';
 
 
 interface CollegeCandidateTableProps {
@@ -45,6 +46,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
   const [isAddSheetOpen, setAddSheetOpen] = useState(false);
   const [isExportDialogOpen, setExportDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'submitted' | 'not-submitted'>('all');
+  const [confirmation, setConfirmation] = useState<{ isOpen: boolean; title: string; description: string; onConfirm: () => void; }>({ isOpen: false, title: '', description: '', onConfirm: () => {} });
   const { toast } = useToast();
   
   useEffect(() => {
@@ -286,9 +288,54 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
     }
   };
 
+  const handleDeleteCandidate = (candidateId: string, candidateName: string) => {
+    setConfirmation({
+      isOpen: true,
+      title: `Delete ${candidateName}?`,
+      description: `Are you sure you want to delete this candidate? This will also remove their assessment submissions for this college. This action cannot be undone.`,
+      onConfirm: async () => {
+        try {
+          const batch = writeBatch(db);
+
+          // Delete candidate document
+          const candidateRef = doc(db, `colleges/${collegeId}/candidates`, candidateId);
+          batch.delete(candidateRef);
+
+          // Find and delete associated submissions for this college
+          const submissionsQuery = query(
+              collection(db, 'assessmentSubmissions'),
+              where('collegeId', '==', collegeId),
+              where('collegeCandidateId', '==', candidateId)
+          );
+          const submissionsSnapshot = await getDocs(submissionsQuery);
+          submissionsSnapshot.forEach(subDoc => {
+              batch.delete(subDoc.ref);
+          });
+          
+          await batch.commit();
+
+          toast({
+            title: 'Candidate Deleted',
+            description: `${candidateName} has been removed from this college.`,
+          });
+        } catch (error: any) {
+          console.error("Error deleting college candidate:", error);
+          toast({
+            variant: 'destructive',
+            title: 'Deletion Failed',
+            description: error.message || 'Could not delete the candidate.',
+          });
+        } finally {
+          setConfirmation({ ...confirmation, isOpen: false });
+        }
+      },
+    });
+  };
+
 
   const columns = useMemo(() => getCandidateColumns({ 
     onViewSubmission: (sub) => setSelectedSubmission(sub),
+    onDelete: handleDeleteCandidate,
     selectedAssessmentId,
   }), [selectedAssessmentId]);
 
@@ -369,7 +416,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
                  <Card className="mb-6 bg-muted/40">
                     <CardHeader>
                         <CardTitle>Send Assessment & View Stats</CardTitle>
-                        <CardDescription>Select an assessment to view stats and send to candidates who haven't submitted it yet.</CardDescription>
+                        <CardDescription>Select an assessment to view stats, send invitations, and filter candidates by submission status.</CardDescription>
                     </CardHeader>
                     <CardContent className="flex flex-col sm:flex-row gap-4 items-center">
                        <Select value={selectedAssessmentId} onValueChange={setSelectedAssessmentId}>
@@ -443,6 +490,14 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
         onClose={() => setExportDialogOpen(false)}
         candidates={filteredData}
         selectedAssessment={assessments.find(a => a.id === selectedAssessmentId) || null}
+      />
+       <ConfirmationDialog
+        isOpen={confirmation.isOpen}
+        onOpenChange={(isOpen) => setConfirmation({ ...confirmation, isOpen })}
+        title={confirmation.title}
+        description={confirmation.description}
+        onConfirm={confirmation.onConfirm}
+        onCancel={() => setConfirmation({ ...confirmation, isOpen: false })}
       />
     </>
   );
