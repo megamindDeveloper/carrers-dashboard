@@ -28,6 +28,7 @@ import { AssessmentStatsCard } from './assessment-stats-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ExportCollegeCandidatesDialog } from './export-college-candidates-dialog';
 import { ConfirmationDialog } from '../confirmation-dialog';
+import { ResetAssessmentDialog } from './reset-assessment-dialog';
 
 
 interface CollegeCandidateTableProps {
@@ -48,6 +49,11 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
   const [activeTab, setActiveTab] = useState<'all' | 'submitted' | 'not-submitted'>('all');
   const [confirmation, setConfirmation] = useState<{ isOpen: boolean; title: string; description: string; onConfirm: () => void; }>({ isOpen: false, title: '', description: '', onConfirm: () => {} });
   const [rowSelection, setRowSelection] = useState({});
+  const [resetDialogState, setResetDialogState] = useState<{
+    isOpen: boolean;
+    submission: AssessmentSubmission | null;
+    candidate: CollegeCandidate | null;
+  }>({ isOpen: false, submission: null, candidate: null });
 
   const { toast } = useToast();
   
@@ -344,58 +350,61 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
       },
     });
   };
-
-  const handleResetSubmission = (submission: AssessmentSubmission, candidate: CollegeCandidate) => {
-    setConfirmation({
-        isOpen: true,
-        title: `Reset submission for ${candidate.name}?`,
-        description: `This will delete the candidate's current submission and send them an email notification to retake the assessment. This action cannot be undone.`,
-        onConfirm: async () => {
-            try {
-                // Send email first
-                const assessmentLink = `${process.env.NEXT_PUBLIC_BASE_URL}/assessment/${submission.assessmentId}?candidateId=${candidate.id}&collegeId=${collegeId}`;
-
-                const emailResponse = await fetch('/api/reset-assessment', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        candidateName: candidate.name,
-                        candidateEmail: candidate.email,
-                        assessmentName: submission.assessmentTitle,
-                        assessmentLink: assessmentLink,
-                    })
-                });
-
-                if (!emailResponse.ok) {
-                    const errorResult = await emailResponse.json();
-                    throw new Error(errorResult.message || 'Failed to send reset email.');
-                }
-
-                // Then delete the submission
-                await deleteDoc(doc(db, 'assessmentSubmissions', submission.id));
-
-                toast({
-                    title: 'Submission Reset & Email Sent',
-                    description: `${candidate.name}'s assessment submission has been reset. They have been notified to take it again.`,
-                });
-            } catch (error: any) {
-                toast({
-                    variant: 'destructive',
-                    title: 'Reset Failed',
-                    description: error.message || 'Could not reset the submission.',
-                });
-            } finally {
-                setConfirmation({ ...confirmation, isOpen: false });
-            }
-        },
-    });
+  
+  const handleOpenResetDialog = (submission: AssessmentSubmission, candidate: CollegeCandidate) => {
+    setResetDialogState({ isOpen: true, submission, candidate });
   };
+
+  const handleResetSubmission = async ({ subject, body }: { subject: string, body: string }) => {
+    const { submission, candidate } = resetDialogState;
+    if (!submission || !candidate) return;
+
+    setIsSending(true);
+
+    try {
+        const assessmentLink = `${process.env.NEXT_PUBLIC_BASE_URL}/assessment/${submission.assessmentId}?candidateId=${candidate.id}&collegeId=${collegeId}`;
+
+        const emailResponse = await fetch('/api/reset-assessment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                candidateName: candidate.name,
+                candidateEmail: candidate.email,
+                assessmentName: submission.assessmentTitle,
+                assessmentLink: assessmentLink,
+                subject: subject,
+                body: body,
+            })
+        });
+
+        if (!emailResponse.ok) {
+            const errorResult = await emailResponse.json();
+            throw new Error(errorResult.message || 'Failed to send reset email.');
+        }
+
+        await deleteDoc(doc(db, 'assessmentSubmissions', submission.id));
+
+        toast({
+            title: 'Submission Reset & Email Sent',
+            description: `${candidate.name}'s assessment submission has been reset.`,
+        });
+    } catch (error: any) {
+        toast({
+            variant: 'destructive',
+            title: 'Reset Failed',
+            description: error.message || 'Could not reset the submission.',
+        });
+    } finally {
+        setIsSending(false);
+        setResetDialogState({ isOpen: false, submission: null, candidate: null });
+    }
+};
 
 
   const columns = useMemo(() => getCandidateColumns({ 
     onViewSubmission: (sub) => setSelectedSubmission(sub),
     onDelete: handleDeleteCandidate,
-    onResetSubmission: handleResetSubmission,
+    onResetSubmission: handleOpenResetDialog,
     selectedAssessmentId,
   }), [selectedAssessmentId]);
 
@@ -550,6 +559,14 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
         onSend={handleSendAssessment}
         isSending={isSending}
         assessment={assessments.find(a => a.id === selectedAssessmentId)}
+      />
+       <ResetAssessmentDialog
+        isOpen={resetDialogState.isOpen}
+        onClose={() => setResetDialogState({ isOpen: false, submission: null, candidate: null })}
+        isSending={isSending}
+        onSend={handleResetSubmission}
+        candidate={resetDialogState.candidate}
+        submission={resetDialogState.submission}
       />
       <AddCollegeCandidateSheet
         isOpen={isAddSheetOpen}
