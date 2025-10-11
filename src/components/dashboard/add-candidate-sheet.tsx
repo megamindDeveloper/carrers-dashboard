@@ -239,7 +239,10 @@ export function AddCandidateSheet({}: AddCandidateSheetProps) {
                         className="pr-12"
                       />
                       {isProcessing && (
-                        <Loader2 className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 animate-spin text-muted-foreground" />
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2 text-muted-foreground">
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                            <span className="text-xs">AI Parsing...</span>
+                        </div>
                       )}
                     </div>
                   </FormControl>
