@@ -4,10 +4,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth-context';
-import { Loader2, Briefcase, Users, GraduationCap, ClipboardList, FileText, UserCheck } from 'lucide-react';
-import { onSnapshot, collection, query, orderBy, limit } from 'firebase/firestore';
+import { Loader2, Briefcase, Users, GraduationCap, ClipboardList, FileText, UserCheck, Building2 } from 'lucide-react';
+import { onSnapshot, collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/app/utils/firebase/firebaseConfig';
-import type { Candidate, Job, Assessment, AssessmentSubmission } from '@/lib/types';
+import type { Candidate, Job, Assessment, AssessmentSubmission, College } from '@/lib/types';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, Sector } from 'recharts';
@@ -79,6 +79,8 @@ export default function DashboardPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [submissions, setSubmissions] = useState<AssessmentSubmission[]>([]);
+  const [colleges, setColleges] = useState<College[]>([]);
+  const [collegeCandidateCount, setCollegeCandidateCount] = useState(0);
   const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
@@ -100,6 +102,16 @@ export default function DashboardPage() {
             onSnapshot(collection(db, 'assessmentSubmissions'), snapshot => {
                 setSubmissions(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as AssessmentSubmission)));
             }),
+             onSnapshot(collection(db, 'colleges'), async (snapshot) => {
+                const collegesData = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as College));
+                setColleges(collegesData);
+                let totalCandidates = 0;
+                for (const college of collegesData) {
+                    const candidatesSnapshot = await getDocs(collection(db, `colleges/${college.id}/candidates`));
+                    totalCandidates += candidatesSnapshot.size;
+                }
+                setCollegeCandidateCount(totalCandidates);
+            }),
         ];
 
         Promise.all([
@@ -107,6 +119,7 @@ export default function DashboardPage() {
             new Promise(res => onSnapshot(collection(db, 'jobs'), res)),
             new Promise(res => onSnapshot(collection(db, 'assessments'), res)),
             new Promise(res => onSnapshot(collection(db, 'assessmentSubmissions'), res)),
+            new Promise(res => onSnapshot(collection(db, 'colleges'), res)),
         ]).then(() => setLoadingData(false));
         
         return () => unsubscribers.forEach(unsub => unsub());
@@ -149,7 +162,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between space-y-2">
           <h2 className="text-3xl font-bold tracking-tight">Overview</h2>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Applications</CardTitle>
@@ -157,7 +170,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{candidates.length}</div>
-              <p className="text-xs text-muted-foreground">Total candidates in pipeline</p>
+              <p className="text-xs text-muted-foreground">General candidate pipeline</p>
             </CardContent>
           </Card>
            <Card>
@@ -178,6 +191,26 @@ export default function DashboardPage() {
             <CardContent>
               <div className="text-2xl font-bold">{internCount}</div>
               <p className="text-xs text-muted-foreground">Total intern applicants</p>
+            </CardContent>
+          </Card>
+           <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Colleges</CardTitle>
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{colleges.length}</div>
+              <p className="text-xs text-muted-foreground">Partner colleges</p>
+            </CardContent>
+          </Card>
+           <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">College Candidates</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{collegeCandidateCount}</div>
+              <p className="text-xs text-muted-foreground">Candidates from colleges</p>
             </CardContent>
           </Card>
           <Card>
