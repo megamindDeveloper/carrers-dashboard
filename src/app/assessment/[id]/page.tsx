@@ -25,7 +25,7 @@ import { Progress } from '@/components/ui/progress';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { cn, gradeSubmission } from '@/lib/utils';
 import Image from 'next/image';
 import mmLogo from '../../../../.idx/mmLogo.png';
 
@@ -148,45 +148,6 @@ const FileUploadInput = ({
   );
 };
 
-const gradeSubmission = (
-    answers: AnswersFormValues['answers'],
-    questions: AssessmentQuestion[]
-): { score: number; maxScore: number; gradedAnswers: any[] } => {
-    let score = 0;
-    let maxScore = 0;
-
-    const gradedAnswers = answers.map(formAnswer => {
-        const question = questions.find(q => q.id === formAnswer.questionId);
-        if (!question || !question.correctAnswer || question.points === 0) {
-            return { ...formAnswer, isCorrect: undefined, points: 0 };
-        }
-
-        const questionPoints = question.points || 1;
-        maxScore += questionPoints;
-
-        let isCorrect = false;
-        if (question.type === 'multiple-choice') {
-            isCorrect = formAnswer.answer === question.correctAnswer;
-        } else if (question.type === 'checkbox') {
-            const correctAnswers = Array.isArray(question.correctAnswer) ? question.correctAnswer : [question.correctAnswer];
-            const studentAnswers = Array.isArray(formAnswer.answer) ? formAnswer.answer : [];
-            isCorrect = correctAnswers.length === studentAnswers.length && correctAnswers.every(ans => studentAnswers.includes(ans));
-        }
-
-        if (isCorrect) {
-            score += questionPoints;
-        }
-
-        return {
-            ...formAnswer,
-            isCorrect,
-            points: isCorrect ? questionPoints : 0,
-        };
-    });
-
-    return { score, maxScore, gradedAnswers };
-};
-
 
 export default function AssessmentPage({ params }: { params: { id: string } }) {
   const [assessment, setAssessment] = useState<Assessment | null>(null);
@@ -292,7 +253,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
             ...submissionData,
             score,
             maxScore,
-            answers: gradedAnswers.map(({ answer, ...rest }) => ({ ...rest, answer })), // Keep full graded info
+            answers: gradedAnswers,
         };
     } else {
         submissionData.answers = data.answers.map(({questionId, questionText, answer}) => ({questionId, questionText, answer}));
@@ -1026,3 +987,5 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
+
+    
