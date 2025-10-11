@@ -19,6 +19,7 @@ interface SubmissionTableProps {
 
 export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
   const [data, setData] = useState<AssessmentSubmission[]>([]);
+  const [allSubmissions, setAllSubmissions] = useState<AssessmentSubmission[]>([]);
   const [colleges, setColleges] = useState<College[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSubmission, setSelectedSubmission] = useState<AssessmentSubmission | null>(null);
@@ -34,55 +35,19 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
     const unsubSubmissions = onSnapshot(
       allSubmissionsQuery,
       async (allSubmissionsSnapshot) => {
-        const allSubmissions = allSubmissionsSnapshot.docs.map(d => ({
+        const allSubmissionsData = allSubmissionsSnapshot.docs.map(d => ({
           id: d.id,
           ...(d.data() as Omit<AssessmentSubmission, 'id'>),
         }));
 
+        setAllSubmissions(allSubmissionsData);
+
         // Filter for the current assessment's submissions
-        const currentAssessmentSubmissions = allSubmissions
+        const currentAssessmentSubmissions = allSubmissionsData
           .filter(sub => sub.assessmentId === assessmentId)
           .sort((a, b) => (b.submittedAt?.toDate() ?? 0) - (a.submittedAt?.toDate() ?? 0));
         
-        // Group all submissions by candidate email
-        const submissionsByEmail = allSubmissions.reduce((acc, sub) => {
-            if (sub.candidateEmail) {
-                const email = sub.candidateEmail.toLowerCase();
-                if (!acc[email]) acc[email] = [];
-                acc[email].push(sub);
-            }
-            return acc;
-        }, {} as Record<string, AssessmentSubmission[]>);
-
-        // Enhance current assessment submissions with position from ANY of their submissions
-        const enhancedSubmissions = currentAssessmentSubmissions.map(sub => {
-            let positionAnswer = sub.answers.find(a => a.questionText?.toLowerCase().includes('position applying for'));
-            
-            // If not found in the current submission, check others
-            if (!positionAnswer?.answer) {
-                 const candidateEmail = sub.candidateEmail.toLowerCase();
-                 const allCandidateSubmissions = submissionsByEmail[candidateEmail] || [];
-                 for (const otherSub of allCandidateSubmissions) {
-                     const otherPositionAnswer = otherSub.answers.find(a => a.questionText?.toLowerCase().includes('position applying for'));
-                     if (otherPositionAnswer?.answer) {
-                         // Create a synthetic answer object to store this info
-                         const syntheticAnswer = {
-                             questionId: 'synthetic-position',
-                             questionText: 'Position Applying For',
-                             answer: otherPositionAnswer.answer,
-                         };
-                         // Add it to the current submission's answers for filtering/display
-                         if (!sub.answers.some(a => a.questionId === 'synthetic-position')) {
-                            sub.answers.push(syntheticAnswer);
-                         }
-                         break;
-                     }
-                 }
-            }
-            return sub;
-        });
-
-        setData(enhancedSubmissions);
+        setData(currentAssessmentSubmissions);
         setLoading(false);
       },
       error => {
@@ -122,15 +87,16 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
     }, {} as Record<string, number>);
   }, [data]);
   
-  const positionCounts = useMemo(() => {
-    return data.reduce((acc, sub) => {
+ const positionCounts = useMemo(() => {
+    // This should count positions from ALL submissions to be accurate in the filter dropdown
+    return allSubmissions.reduce((acc, sub) => {
       const positionAnswer = sub.answers.find(a => a.questionText?.toLowerCase().includes('position applying for'))?.answer;
-      if (positionAnswer) {
+      if (positionAnswer && typeof positionAnswer === 'string') {
         acc[positionAnswer] = (acc[positionAnswer] || 0) + 1;
       }
       return acc;
     }, {} as Record<string, number>);
-  }, [data]);
+  }, [allSubmissions]);
 
 
   const columns = useMemo(() => getColumns(colleges), [colleges]);
@@ -158,6 +124,7 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
             colleges={colleges}
             collegeCounts={collegeCounts}
             positionCounts={positionCounts}
+            allSubmissionsForFiltering={allSubmissions}
            />
         </CardContent>
       </Card>

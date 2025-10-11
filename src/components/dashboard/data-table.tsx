@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { DataTableToolbar } from './data-table-toolbar';
-import type { CandidateType, College } from '@/lib/types';
+import type { CandidateType, College, AssessmentSubmission } from '@/lib/types';
 import {
   Select,
   SelectContent,
@@ -45,6 +45,7 @@ interface DataTableProps<TData, TValue> {
   colleges?: College[];
   collegeCounts?: Record<string, number>;
   positionCounts?: Record<string, number>;
+  allSubmissionsForFiltering?: AssessmentSubmission[];
 }
 
 const toTitleCase = (str: string) => {
@@ -63,6 +64,7 @@ export function DataTable<TData extends {id: string}, TValue>({
   colleges,
   collegeCounts,
   positionCounts,
+  allSubmissionsForFiltering,
 }: DataTableProps<TData, TValue>) {
 
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -112,6 +114,7 @@ export function DataTable<TData extends {id: string}, TValue>({
         colleges={colleges} 
         collegeCounts={collegeCounts} 
         positionCounts={positionCounts} 
+        allSubmissionsForFiltering={allSubmissionsForFiltering}
         />
       <div className="rounded-md border">
         <Table>

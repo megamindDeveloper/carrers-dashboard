@@ -22,6 +22,7 @@ interface DataTableToolbarProps<TData> {
   colleges?: College[];
   collegeCounts?: Record<string, number>;
   positionCounts?: Record<string, number>;
+  allSubmissionsForFiltering?: AssessmentSubmission[];
 }
 
 export function DataTableToolbar<TData>({
@@ -30,6 +31,7 @@ export function DataTableToolbar<TData>({
   colleges,
   collegeCounts,
   positionCounts,
+  allSubmissionsForFiltering,
 }: DataTableToolbarProps<TData>) {
   const isFiltered =
     table.getState().columnFilters.length > 0;
@@ -44,18 +46,18 @@ export function DataTableToolbar<TData>({
   const isCandidateTable = !isJobTable && !isSubmissionTable && !isCollegeCandidateTable;
 
   const positionOptions = useMemo(() => {
-    if (!isSubmissionTable) return [];
+    if (!isSubmissionTable || !allSubmissionsForFiltering) return [];
     const positions = new Set<string>();
-    const allRows = table.getCoreRowModel().rows;
-    allRows.forEach(row => {
-      const submission = row.original as AssessmentSubmission;
+    
+    // Use the comprehensive list of all submissions for the filter
+    allSubmissionsForFiltering.forEach(submission => {
       const positionAnswer = submission.answers.find(a => a.questionText?.toLowerCase().includes('position applying for'));
-      if (positionAnswer?.answer) {
+      if (positionAnswer?.answer && typeof positionAnswer.answer === 'string') {
         positions.add(positionAnswer.answer);
       }
     });
     return Array.from(positions);
-  }, [isSubmissionTable, table.getCoreRowModel().rows]);
+  }, [isSubmissionTable, allSubmissionsForFiltering]);
 
 
   const statusOptions = isJobTable ? JOB_STATUSES : CANDIDATE_STATUSES;
@@ -111,9 +113,9 @@ export function DataTableToolbar<TData>({
         )}
          {isSubmissionTable && columnExists('answers') && positionOptions.length > 0 && (
             <Select
-                value={(table.getColumn('answers')?.getFilterValue()?.[0] as string) ?? 'all'}
+                value={(table.getColumn('answers')?.getFilterValue() as string) ?? 'all'}
                 onValueChange={value =>
-                table.getColumn('answers')?.setFilterValue(value === 'all' ? null : [value])
+                    table.getColumn('answers')?.setFilterValue(value === 'all' ? null : value)
                 }
             >
                 <SelectTrigger className="h-8 w-[200px]">
@@ -129,9 +131,9 @@ export function DataTableToolbar<TData>({
          )}
           {isSubmissionTable && columnExists('collegeId') && colleges && colleges.length > 0 && (
             <Select
-                value={(table.getColumn('collegeId')?.getFilterValue()?.[0] as string) ?? 'all'}
+                value={(table.getColumn('collegeId')?.getFilterValue() as string) ?? 'all'}
                 onValueChange={value =>
-                table.getColumn('collegeId')?.setFilterValue(value === 'all' ? null : [value])
+                    table.getColumn('collegeId')?.setFilterValue(value === 'all' ? null : value)
                 }
             >
                 <SelectTrigger className="h-8 w-[200px]">
