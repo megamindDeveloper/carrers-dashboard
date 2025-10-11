@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { AssessmentSubmission } from '@/lib/types';
@@ -8,9 +9,11 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { ExternalLink, FileText, Phone, Mail } from 'lucide-react';
+import { ExternalLink, FileText, Phone, Mail, Check, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { Progress } from '@/components/ui/progress';
 
 interface SubmissionDetailsModalProps {
   isOpen: boolean;
@@ -50,6 +53,8 @@ export function SubmissionDetailsModal({ isOpen, onClose, submission }: Submissi
   if (!submission) return null;
 
   const showCandidateInfo = submission.candidateEmail !== 'N/A';
+  const hasScore = typeof submission.score === 'number' && typeof submission.maxScore === 'number';
+  const scorePercentage = hasScore && submission.maxScore! > 0 ? (submission.score! / submission.maxScore!) * 100 : 0;
 
 
   return (
@@ -64,6 +69,17 @@ export function SubmissionDetailsModal({ isOpen, onClose, submission }: Submissi
                 </div>
             </DialogDescription>
         </DialogHeader>
+        
+        {hasScore && (
+          <div className="p-4 border rounded-lg bg-muted/50">
+            <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold">Score</h3>
+                <span className="font-mono text-lg">{submission.score} / {submission.maxScore}</span>
+            </div>
+            <Progress value={scorePercentage} />
+             <p className="text-sm text-right text-muted-foreground mt-1">{scorePercentage.toFixed(0)}%</p>
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto pr-6 space-y-6 py-4">
             {showCandidateInfo && (
@@ -76,7 +92,7 @@ export function SubmissionDetailsModal({ isOpen, onClose, submission }: Submissi
                       </div>
                       <div className="flex items-center gap-2">
                           <Phone className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm">{submission.candidateContact}</span>
+                          <span className="text-sm">{submission.candidateContact || 'N/A'}</span>
                       </div>
                   </div>
                   {submission.candidateResumeUrl && submission.candidateResumeUrl !== 'N/A' && (
@@ -94,8 +110,16 @@ export function SubmissionDetailsModal({ isOpen, onClose, submission }: Submissi
             <div className="space-y-4">
                  <h3 className="font-semibold">Answers</h3>
                 {submission.answers.map((item, index) => (
-                    <div key={item.questionId} className="space-y-2">
-                        <p className="font-medium">{index + 1}. {item.questionText}</p>
+                    <div key={item.questionId} className={cn(
+                        "space-y-2 p-4 rounded-md border",
+                        item.isCorrect === true && "bg-green-50 border-green-200",
+                        item.isCorrect === false && "bg-red-50 border-red-200"
+                    )}>
+                        <div className="flex justify-between items-start">
+                           <p className="font-medium">{index + 1}. {item.questionText}</p>
+                           {item.isCorrect === true && <div className="flex items-center gap-1 text-green-600"><Check className="h-4 w-4" /> Correct (+{item.points || 0})</div>}
+                           {item.isCorrect === false && <div className="flex items-center gap-1 text-red-600"><X className="h-4 w-4" /> Incorrect</div>}
+                        </div>
                         {isUrl(item.answer) ? (
                             <Button variant="outline" asChild>
                                 <a href={item.answer} target="_blank" rel="noopener noreferrer">
@@ -103,8 +127,8 @@ export function SubmissionDetailsModal({ isOpen, onClose, submission }: Submissi
                                 </a>
                             </Button>
                         ) : (
-                            <div className="text-sm text-muted-foreground p-3 bg-muted/50 rounded-md whitespace-pre-wrap">
-                                {item.answer || <em>No answer provided.</em>}
+                            <div className="text-sm text-muted-foreground p-3 bg-background/50 rounded-md whitespace-pre-wrap">
+                                {Array.isArray(item.answer) ? item.answer.join(', ') : (item.answer || <em>No answer provided.</em>)}
                             </div>
                         )}
                     </div>
@@ -115,5 +139,3 @@ export function SubmissionDetailsModal({ isOpen, onClose, submission }: Submissi
     </Dialog>
   );
 }
-
-    

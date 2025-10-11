@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { ColumnDef } from '@tanstack/react-table';
@@ -48,6 +49,28 @@ export const getColumns = (): ColumnDef<AssessmentSubmission>[] => {
           </div>
         );
       },
+    },
+    {
+        accessorKey: 'score',
+        header: ({ column }) => (
+            <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
+                Score
+                <ArrowUpDown className="ml-2 h-4 w-4" />
+            </Button>
+        ),
+        cell: ({ row }) => {
+            const { score, maxScore } = row.original;
+            if (typeof score !== 'number' || typeof maxScore !== 'number') {
+                return <div className="text-center text-muted-foreground">N/A</div>;
+            }
+            const percentage = maxScore > 0 ? (score / maxScore) * 100 : 0;
+            return (
+                <div className="text-center">
+                    <span className="font-mono">{score} / {maxScore}</span>
+                    <span className="text-xs text-muted-foreground ml-2">({percentage.toFixed(0)}%)</span>
+                </div>
+            );
+        },
     },
     {
       accessorKey: 'submittedAt',

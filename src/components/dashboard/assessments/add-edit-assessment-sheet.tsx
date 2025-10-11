@@ -29,11 +29,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import type { Assessment, QuestionType, AssessmentSection } from '@/lib/types';
 import { QUESTION_TYPES, AUTHENTICATION_TYPES } from '@/lib/types';
-import { Loader2, PlusCircle, Trash2, Wand2, X } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Wand2, X, CheckCircle } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface AddEditAssessmentSheetProps {
   isOpen: boolean;
@@ -48,6 +49,8 @@ const questionSchema = z.object({
   type: z.enum(QUESTION_TYPES),
   options: z.array(z.object({ value: z.string().min(1, "Option cannot be empty") })).optional(),
   isRequired: z.boolean().optional(),
+  correctAnswer: z.union([z.string(), z.array(z.string())]).optional(),
+  points: z.coerce.number().min(0, "Points cannot be negative").optional(),
 }).superRefine((data, ctx) => {
     if ((data.type === 'multiple-choice' || data.type === 'checkbox') && (!data.options || data.options.length < 2)) {
         ctx.addIssue({
@@ -78,6 +81,7 @@ const assessmentSchema = z.object({
   startPageInstructions: z.string().optional(),
   startButtonText: z.string().optional(),
   startPageImportantInstructions: z.string().optional(),
+  shouldAutoGrade: z.boolean().optional(),
 });
 
 const generatePasscode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -124,12 +128,14 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
           authentication: assessment.authentication || 'none',
           disableCopyPaste: assessment.disableCopyPaste || false,
           isActive: assessment.isActive === false ? false : true,
+          shouldAutoGrade: assessment.shouldAutoGrade || false,
           sections: sections?.map(s => ({
               ...s,
               questions: s.questions?.map(q => ({
                   ...q,
                   isRequired: q.isRequired || false,
-                  options: q.options?.map(opt => ({ value: opt }))
+                  options: q.options?.map(opt => ({ value: opt })),
+                  points: q.points ?? 1,
               })) || []
           })) || [],
           successTitle: assessment.successTitle || 'Assessment Complete',
@@ -149,10 +155,11 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
           authentication: 'none',
           disableCopyPaste: defaultCopyPaste,
           isActive: true,
+          shouldAutoGrade: false,
           sections: [{ 
               id: uuidv4(), 
               title: 'General Questions', 
-              questions: [{ id: uuidv4(), text: 'Please introduce yourself and walk us through your resume.', type: 'textarea', isRequired: true }]
+              questions: [{ id: uuidv4(), text: 'Please introduce yourself and walk us through your resume.', type: 'textarea', isRequired: true, points: 0 }]
           }],
           successTitle: 'Assessment Complete',
           successMessage: 'Thank you for your submission. The hiring team will get back to you soon.',
@@ -180,6 +187,12 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
                 } else {
                     delete newQ.options;
                 }
+                
+                if (!data.shouldAutoGrade) {
+                    delete newQ.correctAnswer;
+                    delete newQ.points;
+                }
+                
                 return newQ;
             }),
         }))
@@ -194,7 +207,7 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
   
   const handleGeneratePasscode = () => form.setValue('passcode', generatePasscode());
 
-  const addSection = () => appendSection({ id: uuidv4(), title: `New Section ${sectionsFields.length + 1}`, questions: [{ id: uuidv4(), text: '', type: 'text', isRequired: false }] });
+  const addSection = () => appendSection({ id: uuidv4(), title: `New Section ${sectionsFields.length + 1}`, questions: [{ id: uuidv4(), text: '', type: 'text', isRequired: false, points: 1 }] });
 
   const deleteSection = (index: number) => {
       if (sectionsFields.length > 1) {
@@ -208,6 +221,7 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
       }
   };
 
+ const shouldAutoGrade = form.watch('shouldAutoGrade');
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -318,6 +332,27 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
                         </FormControl>
                         </FormItem>
                     )}
+                />
+
+                <FormField
+                    control={form.control}
+                    name="shouldAutoGrade"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-blue-50 border-blue-200">
+                        <div className="space-y-0.5">
+                            <FormLabel className="text-blue-800">Enable Auto-Grading</FormLabel>
+                            <FormDescription className="text-blue-700">
+                             Allows setting correct answers and points for automatic scoring.
+                            </FormDescription>
+                        </div>
+                        <FormControl>
+                            <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            />
+                        </FormControl>
+                        </FormItem>
+                    )}
                     />
               </div>
 
@@ -402,7 +437,7 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
                                     </Button>
                                 )}
                             </div>
-                            <QuestionsField sectionIndex={sectionIndex} control={form.control} form={form} />
+                            <QuestionsField sectionIndex={sectionIndex} control={form.control} form={form} shouldAutoGrade={shouldAutoGrade} />
                         </div>
                     </div>
                 ))}
@@ -427,7 +462,7 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
   );
 }
 
-function QuestionsField({ sectionIndex, control, form }: { sectionIndex: number, control: any, form: any }) {
+function QuestionsField({ sectionIndex, control, form, shouldAutoGrade }: { sectionIndex: number, control: any, form: any, shouldAutoGrade?: boolean }) {
     const { fields, append, remove } = useFieldArray({
         control,
         name: `sections.${sectionIndex}.questions`
@@ -436,7 +471,11 @@ function QuestionsField({ sectionIndex, control, form }: { sectionIndex: number,
     return (
         <div className="space-y-4 pt-4 border-t">
             <FormLabel>Questions</FormLabel>
-            {fields.map((field, questionIndex) => (
+            {fields.map((field, questionIndex) => {
+                const questionType = form.watch(`sections.${sectionIndex}.questions.${questionIndex}.type`);
+                const options = form.watch(`sections.${sectionIndex}.questions.${questionIndex}.options`);
+
+                return (
                 <div key={field.id} className="p-4 border rounded-md bg-background/50 space-y-4 relative">
                     <Button type="button" variant="ghost" size="icon" onClick={() => remove(questionIndex)} className="absolute top-2 right-2">
                         <Trash2 className="h-4 w-4 text-red-500" />
@@ -496,12 +535,85 @@ function QuestionsField({ sectionIndex, control, form }: { sectionIndex: number,
                           )}
                       />
                     </div>
-                     {(form.watch(`sections.${sectionIndex}.questions.${questionIndex}.type`) === 'multiple-choice' || form.watch(`sections.${sectionIndex}.questions.${questionIndex}.type`) === 'checkbox') && (
+                     {(questionType === 'multiple-choice' || questionType === 'checkbox') && (
                         <OptionsField sectionIndex={sectionIndex} questionIndex={questionIndex} control={control} />
                     )}
+
+                    {shouldAutoGrade && (questionType === 'multiple-choice' || questionType === 'checkbox') && options?.length > 0 && (
+                       <div className="p-3 border-l-4 border-blue-400 bg-blue-50 rounded-md space-y-4">
+                           <FormField
+                                control={control}
+                                name={`sections.${sectionIndex}.questions.${questionIndex}.points`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-blue-800">Points for this question</FormLabel>
+                                        <FormControl><Input type="number" className="w-24" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                           {questionType === 'multiple-choice' && (
+                            <FormField
+                                control={control}
+                                name={`sections.${sectionIndex}.questions.${questionIndex}.correctAnswer`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="text-blue-800">Correct Answer</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value as string}>
+                                            <FormControl><SelectTrigger><SelectValue placeholder="Select the correct answer" /></SelectTrigger></FormControl>
+                                            <SelectContent>
+                                                {options.map((opt: { value: string }, i: number) => (
+                                                    <SelectItem key={i} value={opt.value}>{opt.value}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                             />
+                           )}
+                           {questionType === 'checkbox' && (
+                                <FormField
+                                    control={control}
+                                    name={`sections.${sectionIndex}.questions.${questionIndex}.correctAnswer`}
+                                    render={() => (
+                                        <FormItem>
+                                            <FormLabel className="text-blue-800">Correct Answers</FormLabel>
+                                            <div className="space-y-2">
+                                            {options.map((option: { value: string }, i: number) => (
+                                                <FormField
+                                                    key={i}
+                                                    control={control}
+                                                    name={`sections.${sectionIndex}.questions.${questionIndex}.correctAnswer`}
+                                                    render={({ field }) => (
+                                                        <FormItem className="flex items-center space-x-2 space-y-0">
+                                                            <FormControl>
+                                                                <Checkbox
+                                                                    checked={(field.value as string[])?.includes(option.value)}
+                                                                    onCheckedChange={(checked) => {
+                                                                        const currentAnswers = Array.isArray(field.value) ? field.value : [];
+                                                                        return checked
+                                                                            ? field.onChange([...currentAnswers, option.value])
+                                                                            : field.onChange(currentAnswers.filter(v => v !== option.value));
+                                                                    }}
+                                                                />
+                                                            </FormControl>
+                                                            <FormLabel className="font-normal">{option.value}</FormLabel>
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            ))}
+                                            </div>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                           )}
+                       </div>
+                    )}
                 </div>
-            ))}
-            <Button type="button" variant="outline" size="sm" onClick={() => append({ id: uuidv4(), text: '', type: 'text', isRequired: false })}>
+            )})}
+            <Button type="button" variant="outline" size="sm" onClick={() => append({ id: uuidv4(), text: '', type: 'text', isRequired: false, points: 1 })}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Add Question
             </Button>
         </div>

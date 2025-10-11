@@ -7,7 +7,7 @@ import { useSearchParams } from 'next/navigation';
 import { doc, getDoc, collection, addDoc, serverTimestamp, getDocs, query, where, updateDoc } from 'firebase/firestore';
 import { db, storage } from '@/app/utils/firebase/firebaseConfig';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import type { Assessment, CollegeCandidate, Candidate } from '@/lib/types';
+import type { Assessment, CollegeCandidate, Candidate, AssessmentQuestion } from '@/lib/types';
 import { Loader2, Lock, Timer, UploadCloud, CheckCircle2, AlertCircle, ArrowLeft, ArrowRight, CalendarIcon } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -148,6 +148,45 @@ const FileUploadInput = ({
   );
 };
 
+const gradeSubmission = (
+    answers: AnswersFormValues['answers'],
+    questions: AssessmentQuestion[]
+): { score: number; maxScore: number; gradedAnswers: any[] } => {
+    let score = 0;
+    let maxScore = 0;
+
+    const gradedAnswers = answers.map(formAnswer => {
+        const question = questions.find(q => q.id === formAnswer.questionId);
+        if (!question || !question.correctAnswer || question.points === 0) {
+            return { ...formAnswer, isCorrect: undefined, points: 0 };
+        }
+
+        const questionPoints = question.points || 1;
+        maxScore += questionPoints;
+
+        let isCorrect = false;
+        if (question.type === 'multiple-choice') {
+            isCorrect = formAnswer.answer === question.correctAnswer;
+        } else if (question.type === 'checkbox') {
+            const correctAnswers = Array.isArray(question.correctAnswer) ? question.correctAnswer : [question.correctAnswer];
+            const studentAnswers = Array.isArray(formAnswer.answer) ? formAnswer.answer : [];
+            isCorrect = correctAnswers.length === studentAnswers.length && correctAnswers.every(ans => studentAnswers.includes(ans));
+        }
+
+        if (isCorrect) {
+            score += questionPoints;
+        }
+
+        return {
+            ...formAnswer,
+            isCorrect,
+            points: isCorrect ? questionPoints : 0,
+        };
+    });
+
+    return { score, maxScore, gradedAnswers };
+};
+
 
 export default function AssessmentPage({ params }: { params: { id: string } }) {
   const [assessment, setAssessment] = useState<Assessment | null>(null);
@@ -246,6 +285,19 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
         collegeId: collegeId || null,
     };
     
+    if (assessment.shouldAutoGrade) {
+        const allQuestions = assessment.sections?.flatMap(s => s.questions) || [];
+        const { score, maxScore, gradedAnswers } = gradeSubmission(data.answers, allQuestions);
+        submissionData = {
+            ...submissionData,
+            score,
+            maxScore,
+            answers: gradedAnswers.map(({ answer, ...rest }) => ({ ...rest, answer })), // Keep full graded info
+        };
+    } else {
+        submissionData.answers = data.answers.map(({questionId, questionText, answer}) => ({questionId, questionText, answer}));
+    }
+
     if (candidate) {
         submissionData = {
             ...submissionData,
