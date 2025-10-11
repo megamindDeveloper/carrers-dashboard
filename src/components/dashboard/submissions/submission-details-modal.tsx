@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -47,16 +46,6 @@ const formatTime = (seconds: number) => {
     const secs = seconds % 60;
     return `${mins}m ${secs}s`;
 };
-
-const isUrl = (str: string) => {
-    if (typeof str !== 'string') return false;
-    try {
-        new URL(str);
-        return true;
-    } catch (_) {
-        return false;
-    }
-}
 
 export function SubmissionDetailsModal({ isOpen, onClose, submission, onUpdate }: SubmissionDetailsModalProps) {
   const [answers, setAnswers] = useState(submission?.answers || []);
@@ -149,27 +138,12 @@ export function SubmissionDetailsModal({ isOpen, onClose, submission, onUpdate }
 
         <div className="flex-1 overflow-y-auto pr-6 space-y-6 py-4">
             {showCandidateInfo && (
-              <div className="space-y-4 border-b pb-6">
+              <div className="space-y-2 border-b pb-4">
                   <h3 className="font-semibold">Candidate Information</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm">{submission.candidateEmail}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm">{submission.candidateContact || 'N/A'}</span>
-                      </div>
+                  <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">{submission.candidateEmail}</span>
                   </div>
-                  {submission.candidateResumeUrl && submission.candidateResumeUrl !== 'N/A' && (
-                    <div>
-                        <Button variant="outline" asChild size="sm">
-                            <a href={submission.candidateResumeUrl} target="_blank" rel="noopener noreferrer">
-                                <FileText className="mr-2 h-4 w-4" /> View Submitted Resume
-                            </a>
-                        </Button>
-                    </div>
-                  )}
               </div>
             )}
 
@@ -188,18 +162,9 @@ export function SubmissionDetailsModal({ isOpen, onClose, submission, onUpdate }
                                {item.isCorrect === true && <div className="flex items-center gap-1 text-green-600"><Check className="h-4 w-4" /> Correct (+{item.points || 0})</div>}
                                {item.isCorrect === false && <div className="flex items-center gap-1 text-red-600"><X className="h-4 w-4" /> Incorrect</div>}
                             </div>
-                            {isUrl(item.answer) ? (
-                                <Button variant="outline" asChild size="sm">
-                                    <a href={item.answer} target="_blank" rel="noopener noreferrer">
-                                        <FileText className="mr-2 h-4 w-4" /> View Uploaded File
-                                    </a>
-                                </Button>
-                            ) : (
-                                <div className="text-sm text-muted-foreground p-3 bg-background/50 rounded-md whitespace-pre-wrap">
-                                    {Array.isArray(item.answer) ? item.answer.join(', ') : (item.answer || <em>No answer provided.</em>)}
-                                </div>
-                            )}
-
+                            <div className="text-sm text-muted-foreground p-3 bg-background/50 rounded-md whitespace-pre-wrap">
+                                {Array.isArray(item.answer) ? item.answer.join(', ') : (item.answer || <em>No answer provided.</em>)}
+                            </div>
                              {isManualGrade && (
                                 <div className="pt-2">
                                     <Label htmlFor={`score-${item.questionId}`} className="text-xs font-semibold">MANUAL SCORE</Label>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -49,7 +48,7 @@ const jobSchema = z.object({
   position: z.string().min(1, 'Position is required'),
   icon: z.string().min(1, 'Icon name is required'),
   openings: z.coerce.number().min(1, 'At least one opening is required'),
-  experience: z.string(),
+  experience: z.string().min(1, 'Experience is required'),
   location: z.string().min(1, 'Location is required'),
   highlightPoints: z.array(z.object({ value: z.string().min(1, "Highlight point cannot be empty") })).min(1, "At least one highlight point is required"),
   responsibilities: z.array(z.object({ value: z.string().min(1, "Responsibility cannot be empty") })).min(1, "At least one responsibility is required"),
@@ -57,21 +56,6 @@ const jobSchema = z.object({
   status: z.enum(JOB_STATUSES),
   type: z.enum(JOB_TYPES),
   duration: z.string().optional(),
-}).superRefine((data, ctx) => {
-    if (data.type === 'full-time' && !data.experience.trim()) {
-        ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ['experience'],
-            message: 'Experience is required for full-time jobs.',
-        });
-    }
-    if (data.type === 'internship' && !data.duration?.trim()) {
-        ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ['duration'],
-            message: 'Duration is required for internships.',
-        });
-    }
 });
 
 
@@ -95,8 +79,6 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
       duration: '',
     },
   });
-  
-  const jobType = form.watch('type');
 
   const { fields: highlightPointsFields, append: appendHighlightPoint, remove: removeHighlightPoint } = useFieldArray({ control: form.control, name: "highlightPoints" });
   const { fields: respFields, append: appendResp, remove: removeResp } = useFieldArray({ control: form.control, name: "responsibilities" });
@@ -271,27 +253,21 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
                   )} />
                </div>
 
-                {jobType === 'full-time' && (
-                  <FormField control={form.control} name="experience" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Experience</FormLabel>
-                        <FormControl><Input placeholder="e.g., 2-4 years" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} 
-                  />
-                )}
+                <FormField control={form.control} name="experience" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Experience</FormLabel>
+                    <FormControl><Input placeholder="e.g., 2-4 years" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
                 
-                {jobType === 'internship' && (
-                  <FormField control={form.control} name="duration" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Duration</FormLabel>
-                        <FormControl><Input placeholder="e.g., 3 months" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )} 
-                  />
-                )}
+                <FormField control={form.control} name="duration" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Duration (for Internships)</FormLabel>
+                    <FormControl><Input placeholder="e.g., 3 months" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
 
               <div className="space-y-2">
                 <FormLabel>Highlight Points</FormLabel>
