@@ -31,11 +31,17 @@ import { ExportCollegeCandidatesDialog } from './export-college-candidates-dialo
 import { ConfirmationDialog } from '../confirmation-dialog';
 import { ResetAssessmentDialog } from './reset-assessment-dialog';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 
 
 interface CollegeCandidateTableProps {
   collegeId: string;
 }
+
+const toTitleCase = (str: string) => {
+  if (!str) return '';
+  return str.replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
+};
 
 const isAnswered = (answer: any): boolean => {
     if (!answer) return false;
@@ -147,12 +153,16 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
   
   const getColumnData = (row: Record<string, string>, keys: string[]): string | undefined => {
     for (const key of keys) {
-      if (row[key]) {
-        return row[key];
-      }
+        const lowerKey = key.toLowerCase();
+        for (const rowKey in row) {
+            if (rowKey.toLowerCase() === lowerKey) {
+                return row[rowKey];
+            }
+        }
     }
     return undefined;
-  };
+};
+
 
   const handleStatusUpdateUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -167,7 +177,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
         transformHeader: header => header.trim().toLowerCase(),
         complete: async (results) => {
             const parsedData = results.data as Record<string, string>[];
-            const emailKeys = ['email', 'email address', 'personal email', 'candidate email', 'candidate email'];
+            const emailKeys = ['email', 'email address', 'personal email', 'candidate email'];
             
             const emailsToUpdate = parsedData
                 .map(row => getColumnData(row, emailKeys))
@@ -512,6 +522,14 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
     }
   };
 
+  const statusCounts = useMemo(() => {
+    return data.reduce((acc, candidate) => {
+        const status = toTitleCase(candidate.status as string) as CandidateStatus || 'Applied';
+        acc[status] = (acc[status] || 0) + 1;
+        return acc;
+    }, {} as Record<string, number>);
+  }, [data]);
+
 
   const columns = useMemo(() => getCandidateColumns({ 
     onViewSubmission: (sub) => setSelectedSubmission(sub),
@@ -631,6 +649,26 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
         <CardContent>
             {data.length > 0 && (
                  <>
+                    <Card className="mb-6">
+                        <CardHeader>
+                            <CardTitle>Candidate Status Overview</CardTitle>
+                            <CardDescription>Total counts for each status in this college drive.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex flex-wrap gap-2">
+                           {CANDIDATE_STATUSES.map(status => {
+                                const count = statusCounts[status] || 0;
+                                if (count > 0) {
+                                    return (
+                                        <Badge key={status} variant="secondary" className="text-base py-1 px-3">
+                                            {status}: <span className="font-bold ml-2">{count}</span>
+                                        </Badge>
+                                    );
+                                }
+                                return null;
+                           })}
+                        </CardContent>
+                    </Card>
+
                     <div className="grid md:grid-cols-2 gap-6 mb-6">
                         <Card className="bg-muted/40">
                             <CardHeader>
