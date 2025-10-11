@@ -23,8 +23,10 @@ export const gradeSubmission = (
 
     const gradedAnswers = answers.map(formAnswer => {
         const question = questions.find(q => q.id === formAnswer.questionId);
-        if (!question || !question.correctAnswer || (question.points ?? 0) === 0) {
-            return { ...formAnswer, isCorrect: undefined, points: 0 };
+        // Ensure question exists and has points assigned for it to be gradable.
+        // We check for correctAnswer as well, but points are the main trigger.
+        if (!question || (question.points ?? 0) === 0 || !question.correctAnswer) {
+            return { ...formAnswer, isCorrect: null, points: 0 };
         }
 
         const questionPoints = question.points || 0;
