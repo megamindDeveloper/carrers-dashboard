@@ -56,8 +56,11 @@ export function SubmissionDetailsModal({ isOpen, onClose, submission, onUpdate }
 
   useEffect(() => {
     if (submission) {
-      setAnswers(submission.answers || []);
-      setTotalScore(submission.score || 0);
+      // Ensure answers is always an array
+      const initialAnswers = Array.isArray(submission.answers) ? submission.answers : [];
+      setAnswers(initialAnswers);
+      // Recalculate score from answers to be safe
+      setTotalScore(initialAnswers.reduce((sum, ans) => sum + (ans.points || 0), 0));
     }
   }, [submission]);
 
@@ -152,7 +155,8 @@ export function SubmissionDetailsModal({ isOpen, onClose, submission, onUpdate }
             <div className="space-y-4">
                  <h3 className="font-semibold">Answers</h3>
                 {answers.map((item, index) => {
-                    const isManualGrade = item.isCorrect === null && submission.shouldAutoGrade;
+                    // A question is manually gradable if the assessment supports grading, but the answer object's `isCorrect` is null.
+                    const isManualGrade = submission.shouldAutoGrade && item.isCorrect === null;
                     const answerValue = Array.isArray(item.answer) ? item.answer.join(', ') : (item.answer || '');
                     
                     const isLink = typeof answerValue === 'string' && (answerValue.startsWith('http://') || answerValue.startsWith('https://'));
