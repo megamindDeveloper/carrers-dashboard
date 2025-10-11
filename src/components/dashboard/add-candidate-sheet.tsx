@@ -13,6 +13,7 @@ import {
   SheetTitle,
   SheetFooter,
   SheetClose,
+  SheetTrigger,
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import {
