@@ -91,10 +91,6 @@ export function AddCandidateSheet({}: AddCandidateSheetProps) {
     if (!file) return;
 
     setIsProcessing(true);
-    toast({
-      title: 'Parsing Resume...',
-      description: 'The AI is extracting information from the resume.',
-    });
 
     try {
       const reader = new FileReader();
@@ -236,24 +232,23 @@ export function AddCandidateSheet({}: AddCandidateSheetProps) {
                 <FormItem>
                   <FormLabel>Resume (PDF, DOC, DOCX)</FormLabel>
                   <FormControl>
-                    <div className="relative">
                       <Input
                         type="file"
                         accept=".pdf,.doc,.docx"
                         onChange={handleFileChange}
                         disabled={isProcessing}
-                        className="pr-12"
                       />
-                      {isProcessing && (
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2 text-muted-foreground">
-                            <Loader2 className="h-5 w-5 animate-spin" />
-                            <span className="text-xs">AI Parsing...</span>
-                        </div>
-                      )}
-                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
+
+                {isProcessing && (
+                  <div className="flex items-center justify-center gap-2 rounded-md border bg-muted p-4 text-sm text-muted-foreground">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span>Please wait, AI is parsing the resume...</span>
+                  </div>
+                )}
+
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <FormField
