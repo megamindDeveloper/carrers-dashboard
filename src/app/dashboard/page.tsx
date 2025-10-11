@@ -141,6 +141,7 @@ export default function DashboardPage() {
   const fullTimeCount = candidates.filter(c => c.type === 'full-time').length;
   const internCount = candidates.filter(c => c.type === 'internship').length;
   const hiredCount = candidates.filter(c => c.status?.toLowerCase() === 'hired').length;
+  const openPositionsCount = jobs.filter(j => j.status === 'Open').length;
   
   const applicationsPerJob = jobs.map(job => ({
       name: job.position,
@@ -175,12 +176,12 @@ export default function DashboardPage() {
           </Card>
            <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Full-time Apps</CardTitle>
+              <CardTitle className="text-sm font-medium">Open Positions</CardTitle>
               <Briefcase className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{fullTimeCount}</div>
-              <p className="text-xs text-muted-foreground">Total full-time applicants</p>
+              <div className="text-2xl font-bold">{openPositionsCount}</div>
+              <p className="text-xs text-muted-foreground">Currently active job postings</p>
             </CardContent>
           </Card>
            <Card>
