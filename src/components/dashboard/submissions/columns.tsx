@@ -2,7 +2,7 @@
 'use client';
 
 import type { ColumnDef } from '@tanstack/react-table';
-import type { AssessmentSubmission, College } from '@/lib/types';
+import type { AssessmentSubmission } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -25,9 +25,7 @@ const formatTime = (seconds: number) => {
 };
 
 
-export const getColumns = (colleges: College[]): ColumnDef<AssessmentSubmission>[] => {
-  const collegeMap = new Map(colleges.map(c => [c.id, c.name]));
-
+export const getColumns = (): ColumnDef<AssessmentSubmission>[] => {
   const columns: ColumnDef<AssessmentSubmission>[] = [
     {
       accessorKey: 'candidateName',
@@ -51,52 +49,6 @@ export const getColumns = (colleges: College[]): ColumnDef<AssessmentSubmission>
           </div>
         );
       },
-    },
-    {
-      accessorKey: 'collegeId',
-      header: 'College',
-      cell: ({ row }) => {
-        const collegeId = row.original.collegeId;
-        return collegeMap.get(collegeId as string) || 'N/A';
-      },
-      filterFn: (row, id, value) => {
-        return value.includes(row.getValue(id));
-      },
-    },
-    {
-      accessorKey: 'answers',
-      header: 'Position Applied For',
-      cell: ({ row }) => {
-        const positionAnswer = row.original.answers.find(a => a.questionText?.toLowerCase().includes('position applying for'));
-        return positionAnswer?.answer || 'N/A';
-      },
-      filterFn: (row, id, value) => {
-        const answers = row.getValue(id) as AssessmentSubmission['answers'];
-        const positionAnswer = answers.find(a => a.questionText?.toLowerCase().includes('position applying for'));
-        return value.includes(positionAnswer?.answer);
-      },
-    },
-    {
-        accessorKey: 'score',
-        header: ({ column }) => (
-            <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
-                Score
-                <ArrowUpDown className="ml-2 h-4 w-4" />
-            </Button>
-        ),
-        cell: ({ row }) => {
-            const { score, maxScore } = row.original;
-            if (typeof score !== 'number' || typeof maxScore !== 'number') {
-                return <div className="text-center text-muted-foreground">N/A</div>;
-            }
-            const percentage = maxScore > 0 ? (score / maxScore) * 100 : 0;
-            return (
-                <div className="text-center">
-                    <span className="font-mono">{score} / {maxScore}</span>
-                    <span className="text-xs text-muted-foreground ml-2">({percentage.toFixed(0)}%)</span>
-                </div>
-            );
-        },
     },
     {
       accessorKey: 'submittedAt',
