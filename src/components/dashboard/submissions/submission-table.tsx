@@ -66,13 +66,15 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
                      const otherPositionAnswer = otherSub.answers.find(a => a.questionText?.toLowerCase().includes('position applying for'));
                      if (otherPositionAnswer?.answer) {
                          // Create a synthetic answer object to store this info
-                         positionAnswer = {
+                         const syntheticAnswer = {
                              questionId: 'synthetic-position',
                              questionText: 'Position Applying For',
                              answer: otherPositionAnswer.answer,
                          };
                          // Add it to the current submission's answers for filtering/display
-                         sub.answers.push(positionAnswer);
+                         if (!sub.answers.some(a => a.questionId === 'synthetic-position')) {
+                            sub.answers.push(syntheticAnswer);
+                         }
                          break;
                      }
                  }
@@ -111,6 +113,25 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
   const handleCloseModal = () => {
       setSelectedSubmission(null);
   }
+  
+  const collegeCounts = useMemo(() => {
+    return data.reduce((acc, sub) => {
+      const collegeId = sub.collegeId || 'Direct';
+      acc[collegeId] = (acc[collegeId] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+  }, [data]);
+  
+  const positionCounts = useMemo(() => {
+    return data.reduce((acc, sub) => {
+      const positionAnswer = sub.answers.find(a => a.questionText?.toLowerCase().includes('position applying for'))?.answer;
+      if (positionAnswer) {
+        acc[positionAnswer] = (acc[positionAnswer] || 0) + 1;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+  }, [data]);
+
 
   const columns = useMemo(() => getColumns(colleges), [colleges]);
 
@@ -130,7 +151,14 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
             </Button>
         </CardHeader>
         <CardContent>
-          <DataTable columns={columns} data={data} onRowClick={handleRowClick} colleges={colleges} />
+          <DataTable
+            columns={columns}
+            data={data}
+            onRowClick={handleRowClick}
+            colleges={colleges}
+            collegeCounts={collegeCounts}
+            positionCounts={positionCounts}
+           />
         </CardContent>
       </Card>
       <SubmissionDetailsModal 

@@ -20,12 +20,16 @@ interface DataTableToolbarProps<TData> {
   table: Table<TData>;
   filterType?: CandidateType;
   colleges?: College[];
+  collegeCounts?: Record<string, number>;
+  positionCounts?: Record<string, number>;
 }
 
 export function DataTableToolbar<TData>({
   table,
   filterType,
   colleges,
+  collegeCounts,
+  positionCounts,
 }: DataTableToolbarProps<TData>) {
   const isFiltered =
     table.getState().columnFilters.length > 0;
@@ -112,13 +116,13 @@ export function DataTableToolbar<TData>({
                 table.getColumn('answers')?.setFilterValue(value === 'all' ? null : [value])
                 }
             >
-                <SelectTrigger className="h-8 w-[150px] lg:w-[180px]">
+                <SelectTrigger className="h-8 w-[200px]">
                 <SelectValue placeholder="Filter by position" />
                 </SelectTrigger>
                 <SelectContent>
                 <SelectItem value="all">All Positions</SelectItem>
                 {positionOptions.map(pos => (
-                    <SelectItem key={pos} value={pos}>{pos}</SelectItem>
+                    <SelectItem key={pos} value={pos}>{pos} {positionCounts ? `(${positionCounts[pos] || 0})` : ''}</SelectItem>
                 ))}
                 </SelectContent>
             </Select>
@@ -130,13 +134,14 @@ export function DataTableToolbar<TData>({
                 table.getColumn('collegeId')?.setFilterValue(value === 'all' ? null : [value])
                 }
             >
-                <SelectTrigger className="h-8 w-[150px] lg:w-[180px]">
+                <SelectTrigger className="h-8 w-[200px]">
                 <SelectValue placeholder="Filter by college" />
                 </SelectTrigger>
                 <SelectContent>
                 <SelectItem value="all">All Colleges</SelectItem>
+                <SelectItem value="Direct">Direct {collegeCounts ? `(${collegeCounts['Direct'] || 0})` : ''}</SelectItem>
                 {colleges.map(college => (
-                    <SelectItem key={college.id} value={college.id}>{college.name}</SelectItem>
+                    <SelectItem key={college.id} value={college.id}>{college.name} {collegeCounts ? `(${collegeCounts[college.id] || 0})` : ''}</SelectItem>
                 ))}
                 </SelectContent>
             </Select>

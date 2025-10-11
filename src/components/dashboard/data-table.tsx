@@ -43,6 +43,8 @@ interface DataTableProps<TData, TValue> {
   rowSelection?: RowSelectionState;
   setRowSelection?: React.Dispatch<React.SetStateAction<RowSelectionState>>;
   colleges?: College[];
+  collegeCounts?: Record<string, number>;
+  positionCounts?: Record<string, number>;
 }
 
 const toTitleCase = (str: string) => {
@@ -59,6 +61,8 @@ export function DataTable<TData extends {id: string}, TValue>({
   rowSelection = {},
   setRowSelection,
   colleges,
+  collegeCounts,
+  positionCounts,
 }: DataTableProps<TData, TValue>) {
 
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -102,7 +106,13 @@ export function DataTable<TData extends {id: string}, TValue>({
 
   return (
     <div className="space-y-4">
-      <DataTableToolbar table={table} filterType={filterType} colleges={colleges} />
+      <DataTableToolbar 
+        table={table} 
+        filterType={filterType} 
+        colleges={colleges} 
+        collegeCounts={collegeCounts} 
+        positionCounts={positionCounts} 
+        />
       <div className="rounded-md border">
         <Table>
           <TableHeader>
