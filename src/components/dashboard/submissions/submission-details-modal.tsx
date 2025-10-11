@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -76,17 +77,18 @@ export function SubmissionDetailsModal({ isOpen, onClose, submission, onUpdate }
     
     try {
         const submissionRef = doc(db, 'assessmentSubmissions', submission.id);
+        const updatedSubmissionData = {
+            ...submission,
+            answers,
+            score: totalScore,
+        };
         await updateDoc(submissionRef, {
             answers: answers,
             score: totalScore,
         });
         
         if (onUpdate) {
-            onUpdate({
-                ...submission,
-                answers,
-                score: totalScore,
-            });
+            onUpdate(updatedSubmissionData);
         }
 
         toast({
@@ -151,6 +153,10 @@ export function SubmissionDetailsModal({ isOpen, onClose, submission, onUpdate }
                  <h3 className="font-semibold">Answers</h3>
                 {answers.map((item, index) => {
                     const isManualGrade = item.isCorrect === null && submission.shouldAutoGrade;
+                    const answerValue = Array.isArray(item.answer) ? item.answer.join(', ') : (item.answer || '');
+                    
+                    const isLink = typeof answerValue === 'string' && (answerValue.startsWith('http://') || answerValue.startsWith('https://'));
+
                     return (
                         <div key={item.questionId} className={cn(
                             "space-y-2 p-4 rounded-md border",
@@ -163,7 +169,16 @@ export function SubmissionDetailsModal({ isOpen, onClose, submission, onUpdate }
                                {item.isCorrect === false && <div className="flex items-center gap-1 text-red-600"><X className="h-4 w-4" /> Incorrect</div>}
                             </div>
                             <div className="text-sm text-muted-foreground p-3 bg-background/50 rounded-md whitespace-pre-wrap">
-                                {Array.isArray(item.answer) ? item.answer.join(', ') : (item.answer || <em>No answer provided.</em>)}
+                                {isLink ? (
+                                    <a href={answerValue} target="_blank" rel="noopener noreferrer" className="text-primary underline hover:text-primary/80 flex items-center gap-1">
+                                        <ExternalLink className="h-4 w-4" />
+                                        Open Link
+                                    </a>
+                                ) : answerValue ? (
+                                    answerValue
+                                ) : (
+                                    <em>No answer provided.</em>
+                                )}
                             </div>
                              {isManualGrade && (
                                 <div className="pt-2">

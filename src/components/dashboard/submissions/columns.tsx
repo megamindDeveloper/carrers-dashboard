@@ -2,7 +2,7 @@
 'use client';
 
 import type { ColumnDef } from '@tanstack/react-table';
-import type { AssessmentSubmission } from '@/lib/types';
+import type { AssessmentSubmission, College } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -16,6 +16,7 @@ import {
   MoreHorizontal,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
 
 const formatTime = (seconds: number) => {
     if (isNaN(seconds) || seconds < 0) return '0m 0s';
@@ -25,7 +26,7 @@ const formatTime = (seconds: number) => {
 };
 
 
-export const getColumns = (): ColumnDef<AssessmentSubmission>[] => {
+export const getColumns = (colleges: College[] = []): ColumnDef<AssessmentSubmission>[] => {
   const columns: ColumnDef<AssessmentSubmission>[] = [
     {
       accessorKey: 'candidateName',
@@ -49,6 +50,52 @@ export const getColumns = (): ColumnDef<AssessmentSubmission>[] => {
           </div>
         );
       },
+    },
+    {
+        accessorKey: 'collegeId',
+        header: 'College',
+        cell: ({ row }) => {
+            const collegeId = row.original.collegeId;
+            if (!collegeId) return 'Direct';
+            const college = colleges.find(c => c.id === collegeId);
+            return college ? <Badge variant="secondary">{college.name}</Badge> : 'Unknown College';
+        },
+        filterFn: (row, columnId, filterValue) => {
+            if (!filterValue || filterValue.length === 0) return true;
+            return filterValue.includes(row.original.collegeId);
+        },
+    },
+    {
+        accessorKey: 'answers',
+        header: 'Position Applied For',
+        cell: ({ row }) => {
+            const positionAnswer = row.original.answers.find(a => a.questionText?.toLowerCase().includes('position applying for'));
+            return positionAnswer?.answer || 'N/A';
+        },
+        filterFn: (row, columnId, filterValue) => {
+            if (!filterValue || filterValue.length === 0) return true;
+            const positionAnswer = row.original.answers.find(a => a.questionText?.toLowerCase().includes('position applying for'));
+            return filterValue.includes(positionAnswer?.answer);
+        },
+    },
+    {
+        accessorKey: 'score',
+        header: ({ column }) => (
+            <Button
+                variant="ghost"
+                onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+                >
+                Score
+                <ArrowUpDown className="ml-2 h-4 w-4" />
+            </Button>
+        ),
+        cell: ({ row }) => {
+            const { score, maxScore } = row.original;
+            if (typeof score !== 'number' || typeof maxScore !== 'number' || maxScore === 0) {
+                return 'N/A';
+            }
+            return `${score}/${maxScore}`;
+        },
     },
     {
       accessorKey: 'submittedAt',

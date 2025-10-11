@@ -15,9 +15,11 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import type { AssessmentSubmission } from '@/lib/types';
+import type { AssessmentSubmission, College } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '@/app/utils/firebase/firebaseConfig';
 
 interface ExportSubmissionsDialogProps {
   isOpen: boolean;
@@ -25,18 +27,29 @@ interface ExportSubmissionsDialogProps {
   submissions: AssessmentSubmission[];
 }
 
-type HeaderKey = keyof AssessmentSubmission | `answer_${string}`;
+type HeaderKey = keyof AssessmentSubmission | `answer_${string}` | 'collegeName';
 
 const BASE_HEADERS: { key: HeaderKey; label: string }[] = [
     { key: 'candidateName', label: 'Candidate Name' },
     { key: 'candidateEmail', label: 'Candidate Email' },
+    { key: 'collegeName', label: 'College' },
+    { key: 'score', label: 'Score' },
+    { key: 'maxScore', label: 'Max Score' },
     { key: 'submittedAt', label: 'Submitted At' },
     { key: 'timeTaken', label: 'Time Taken (seconds)' },
 ];
 
 export function ExportSubmissionsDialog({ isOpen, onClose, submissions }: ExportSubmissionsDialogProps) {
   const [selectedHeaders, setSelectedHeaders] = useState<HeaderKey[]>([]);
+  const [colleges, setColleges] = useState<College[]>([]);
   const { toast } = useToast();
+
+   useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'colleges'), (snapshot) => {
+        setColleges(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as College)));
+    });
+    return () => unsub();
+  }, []);
 
   const allPossibleHeaders = useMemo(() => {
     if (submissions.length === 0) return [];
@@ -75,13 +88,17 @@ export function ExportSubmissionsDialog({ isOpen, onClose, submissions }: Export
       return;
     }
 
+    const collegesMap = new Map(colleges.map(c => [c.id, c.name]));
+
     const dataToExport = submissions.map(sub => {
         const row: Record<string, any> = {};
         selectedHeaders.forEach(key => {
             const headerInfo = allPossibleHeaders.find(h => h.key === key);
             if (!headerInfo) return;
 
-            if (key.startsWith('answer_')) {
+            if (key === 'collegeName') {
+                row[headerInfo.label] = sub.collegeId ? (collegesMap.get(sub.collegeId) || 'Unknown College') : 'Direct';
+            } else if (key.startsWith('answer_')) {
                 const qId = key.replace('answer_', '');
                 const answerObj = sub.answers.find(a => a.questionId === qId);
                 const answer = answerObj?.answer;

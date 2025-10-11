@@ -105,7 +105,7 @@ export function DataTableToolbar<TData>({
             className="h-8 w-[150px] lg:w-[250px]"
           />
         )}
-         {isSubmissionTable && columnExists('answers') && (
+         {isSubmissionTable && columnExists('answers') && positionOptions.length > 0 && (
             <Select
                 value={(table.getColumn('answers')?.getFilterValue() as string) ?? 'all'}
                 onValueChange={value =>
@@ -123,7 +123,7 @@ export function DataTableToolbar<TData>({
                 </SelectContent>
             </Select>
          )}
-          {isSubmissionTable && columnExists('collegeId') && colleges && (
+          {isSubmissionTable && columnExists('collegeId') && colleges && colleges.length > 0 && (
             <Select
                 value={(table.getColumn('collegeId')?.getFilterValue() as string) ?? 'all'}
                 onValueChange={value =>
