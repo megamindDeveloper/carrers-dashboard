@@ -25,25 +25,37 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
   const [loading, setLoading] = useState(true);
   const [isRegrading, setIsRegrading] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<AssessmentSubmission | null>(null);
+  const [assessment, setAssessment] = useState<Assessment | null>(null);
   const { toast } = useToast();
   const [isExportDialogOpen, setExportDialogOpen] = useState(false);
   
   useEffect(() => {
     if (!assessmentId) return;
 
+    // Fetch assessment details
+    const assessmentRef = doc(db, 'assessments', assessmentId);
+    const unsubAssessment = onSnapshot(assessmentRef, (docSnap) => {
+        if(docSnap.exists()){
+            setAssessment({ id: docSnap.id, ...docSnap.data() } as Assessment);
+        }
+    });
+
+
     const submissionsQuery = query(
       collection(db, 'assessmentSubmissions'),
       where('assessmentId', '==', assessmentId)
     );
 
-    const unsub = onSnapshot(
+    const unsubSubmissions = onSnapshot(
       submissionsQuery,
       snapshot => {
         const submissions = snapshot.docs.map(d => ({
           id: d.id,
           ...(d.data() as Omit<AssessmentSubmission, 'id'>),
         })).sort((a, b) => (b.submittedAt?.toDate() ?? 0) - (a.submittedAt?.toDate() ?? 0));
-        setData(submissions);
+        
+        setData(submissions.map(s => ({ ...s, shouldAutoGrade: assessment?.shouldAutoGrade })));
+
         setLoading(false);
       },
       error => {
@@ -56,8 +68,11 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
         });
       }
     );
-    return () => unsub();
-  }, [assessmentId, toast]);
+    return () => {
+      unsubAssessment();
+      unsubSubmissions();
+    }
+  }, [assessmentId, toast, assessment?.shouldAutoGrade]);
 
   const handleRowClick = (submission: AssessmentSubmission) => {
     setSelectedSubmission(submission);
@@ -66,6 +81,11 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
   const handleCloseModal = () => {
       setSelectedSubmission(null);
   }
+
+  const handleSubmissionUpdate = (updatedSubmission: AssessmentSubmission) => {
+    setData(prevData => prevData.map(s => s.id === updatedSubmission.id ? updatedSubmission : s));
+  };
+
 
   const handleRegradeSubmissions = async () => {
       setIsRegrading(true);
@@ -79,8 +99,8 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
             throw new Error("Auto-grading is not enabled for this assessment.");
         }
 
-        const assessment = { id: assessmentSnap.id, ...assessmentSnap.data() } as Assessment;
-        const allQuestions = assessment.sections?.flatMap(s => s.questions) || [];
+        const currentAssessment = { id: assessmentSnap.id, ...assessmentSnap.data() } as Assessment;
+        const allQuestions = currentAssessment.sections?.flatMap(s => s.questions) || [];
 
         if (data.length === 0) {
             toast({ title: "No submissions to re-grade." });
@@ -131,10 +151,10 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
             <CardDescription>A list of all candidate submissions for this assessment.</CardDescription>
           </div>
           <div className="flex gap-2">
-            <Button onClick={handleRegradeSubmissions} variant="outline" disabled={isRegrading || data.length === 0}>
+            {assessment?.shouldAutoGrade && <Button onClick={handleRegradeSubmissions} variant="outline" disabled={isRegrading || data.length === 0}>
                 {isRegrading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
                 Re-Grade Submissions
-            </Button>
+            </Button>}
             <Button onClick={() => setExportDialogOpen(true)} variant="outline" disabled={data.length === 0}>
                 <Download className="mr-2 h-4 w-4" />
                 Export to CSV
@@ -148,7 +168,8 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
       <SubmissionDetailsModal 
         isOpen={!!selectedSubmission}
         onClose={handleCloseModal}
-        submission={selectedSubmission}
+        submission={selectedSubmission ? { ...selectedSubmission, shouldAutoGrade: assessment?.shouldAutoGrade } : null}
+        onUpdate={handleSubmissionUpdate}
       />
        <ExportSubmissionsDialog
         isOpen={isExportDialogOpen}

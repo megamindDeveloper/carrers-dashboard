@@ -155,7 +155,7 @@ export type AssessmentSubmission = {
     questionId: string;
     questionText: string;
     answer: any;
-    isCorrect?: boolean;
+    isCorrect?: boolean | null; // Allow null for non-gradable questions
     points?: number;
   }[];
   submittedAt: any;
@@ -165,6 +165,7 @@ export type AssessmentSubmission = {
   candidateId?: string | null; // Link to the main 'applications' candidate
   score?: number;
   maxScore?: number;
+  shouldAutoGrade?: boolean; // Added to pass this info to the modal
 };
 
 // College Collaboration Types
