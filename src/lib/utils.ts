@@ -25,12 +25,13 @@ export const gradeSubmission = (
     const gradedAnswers = answers.map(formAnswer => {
         const question = questions.find(q => q.id === formAnswer.questionId);
 
-        // If a question doesn't exist or has no points/autograding, it's not gradable from the start.
-        if (!question || (question.points ?? 0) === 0) {
+        if (!question) {
+            // Question not found in assessment, not gradable
             return { ...formAnswer, isCorrect: null, points: 0 };
         }
         
-        const isAutoGradable = question.correctAnswer !== undefined && question.correctAnswer !== null;
+        // A question is auto-gradable only if it has a defined correct answer.
+        const isAutoGradable = question.correctAnswer !== undefined && question.correctAnswer !== null && (Array.isArray(question.correctAnswer) ? question.correctAnswer.length > 0 : true);
         
         if (!isAutoGradable) {
             // This is a subjective, manually graded question.

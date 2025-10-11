@@ -20,6 +20,7 @@ interface SubmissionTableProps {
 export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
   const [data, setData] = useState<AssessmentSubmission[]>([]);
   const [allSubmissions, setAllSubmissions] = useState<AssessmentSubmission[]>([]);
+  const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [colleges, setColleges] = useState<College[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSubmission, setSelectedSubmission] = useState<AssessmentSubmission | null>(null);
@@ -28,6 +29,14 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
   
   useEffect(() => {
     if (!assessmentId) return;
+
+    // Fetch the current assessment to get its properties like shouldAutoGrade
+    const assessmentRef = doc(db, 'assessments', assessmentId);
+    const unsubAssessment = onSnapshot(assessmentRef, (doc) => {
+        if (doc.exists()) {
+            setAssessment({ id: doc.id, ...doc.data() } as Assessment);
+        }
+    });
 
     const allSubmissionsQuery = query(collection(db, 'assessmentSubmissions'));
 
@@ -64,13 +73,17 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
     });
 
     return () => {
+        unsubAssessment();
         unsubSubmissions();
         unsubColleges();
     };
   }, [assessmentId, toast]);
 
   const handleRowClick = (submission: AssessmentSubmission) => {
-    setSelectedSubmission(submission);
+    setSelectedSubmission({
+      ...submission,
+      shouldAutoGrade: assessment?.shouldAutoGrade || false,
+    });
   };
   
   const handleCloseModal = () => {
