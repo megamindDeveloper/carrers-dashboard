@@ -1,7 +1,7 @@
 
 
 'use client';
-
+import { useMemo } from 'react';
 import type { Table } from '@tanstack/react-table';
 import { Input } from '@/components/ui/input';
 import { CANDIDATE_STATUSES, JOB_STATUSES, JOB_TYPES, CandidateType } from '@/lib/types';
@@ -14,16 +14,18 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
-import type { Job, AssessmentSubmission } from '@/lib/types';
+import type { Job, AssessmentSubmission, College } from '@/lib/types';
 
 interface DataTableToolbarProps<TData> {
   table: Table<TData>;
   filterType?: CandidateType;
+  colleges?: College[];
 }
 
 export function DataTableToolbar<TData>({
   table,
   filterType,
+  colleges,
 }: DataTableToolbarProps<TData>) {
   const isFiltered =
     table.getState().columnFilters.length > 0;
@@ -36,6 +38,20 @@ export function DataTableToolbar<TData>({
   const isSubmissionTable = table.options.data.length > 0 && 'assessmentId' in table.options.data[0] && 'timeTaken' in table.options.data[0];
   const isCollegeCandidateTable = table.options.data.length > 0 && 'importedAt' in table.options.data[0];
   const isCandidateTable = !isJobTable && !isSubmissionTable && !isCollegeCandidateTable;
+
+  const positionOptions = useMemo(() => {
+    if (!isSubmissionTable) return [];
+    const positions = new Set<string>();
+    const allRows = table.getCoreRowModel().rows;
+    allRows.forEach(row => {
+      const submission = row.original as AssessmentSubmission;
+      const positionAnswer = submission.answers.find(a => a.questionText?.toLowerCase().includes('position applying for'));
+      if (positionAnswer?.answer) {
+        positions.add(positionAnswer.answer);
+      }
+    });
+    return Array.from(positions);
+  }, [isSubmissionTable, table.getCoreRowModel().rows]);
 
 
   const statusOptions = isJobTable ? JOB_STATUSES : CANDIDATE_STATUSES;
@@ -88,6 +104,42 @@ export function DataTableToolbar<TData>({
             }
             className="h-8 w-[150px] lg:w-[250px]"
           />
+        )}
+         {isSubmissionTable && columnExists('answers') && (
+            <Select
+                value={(table.getColumn('answers')?.getFilterValue() as string) ?? 'all'}
+                onValueChange={value =>
+                table.getColumn('answers')?.setFilterValue(value === 'all' ? null : [value])
+                }
+            >
+                <SelectTrigger className="h-8 w-[150px] lg:w-[180px]">
+                <SelectValue placeholder="Filter by position" />
+                </SelectTrigger>
+                <SelectContent>
+                <SelectItem value="all">All Positions</SelectItem>
+                {positionOptions.map(pos => (
+                    <SelectItem key={pos} value={pos}>{pos}</SelectItem>
+                ))}
+                </SelectContent>
+            </Select>
+         )}
+          {isSubmissionTable && columnExists('collegeId') && colleges && (
+            <Select
+                value={(table.getColumn('collegeId')?.getFilterValue() as string) ?? 'all'}
+                onValueChange={value =>
+                table.getColumn('collegeId')?.setFilterValue(value === 'all' ? null : [value])
+                }
+            >
+                <SelectTrigger className="h-8 w-[150px] lg:w-[180px]">
+                <SelectValue placeholder="Filter by college" />
+                </SelectTrigger>
+                <SelectContent>
+                <SelectItem value="all">All Colleges</SelectItem>
+                {colleges.map(college => (
+                    <SelectItem key={college.id} value={college.id}>{college.name}</SelectItem>
+                ))}
+                </SelectContent>
+            </Select>
         )}
         {filterType !== 'internship' && columnExists('experience') && !isJobTable && (
           <Input

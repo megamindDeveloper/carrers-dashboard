@@ -2,7 +2,7 @@
 'use client';
 
 import type { ColumnDef } from '@tanstack/react-table';
-import type { AssessmentSubmission } from '@/lib/types';
+import type { AssessmentSubmission, College } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -25,7 +25,9 @@ const formatTime = (seconds: number) => {
 };
 
 
-export const getColumns = (): ColumnDef<AssessmentSubmission>[] => {
+export const getColumns = (colleges: College[]): ColumnDef<AssessmentSubmission>[] => {
+  const collegeMap = new Map(colleges.map(c => [c.id, c.name]));
+
   const columns: ColumnDef<AssessmentSubmission>[] = [
     {
       accessorKey: 'candidateName',
@@ -48,6 +50,30 @@ export const getColumns = (): ColumnDef<AssessmentSubmission>[] => {
             </span>
           </div>
         );
+      },
+    },
+    {
+      accessorKey: 'collegeId',
+      header: 'College',
+      cell: ({ row }) => {
+        const collegeId = row.original.collegeId;
+        return collegeMap.get(collegeId as string) || 'N/A';
+      },
+      filterFn: (row, id, value) => {
+        return value.includes(row.getValue(id));
+      },
+    },
+    {
+      accessorKey: 'answers',
+      header: 'Position Applied For',
+      cell: ({ row }) => {
+        const positionAnswer = row.original.answers.find(a => a.questionText?.toLowerCase().includes('position applying for'));
+        return positionAnswer?.answer || 'N/A';
+      },
+      filterFn: (row, id, value) => {
+        const answers = row.getValue(id) as AssessmentSubmission['answers'];
+        const positionAnswer = answers.find(a => a.questionText?.toLowerCase().includes('position applying for'));
+        return value.includes(positionAnswer?.answer);
       },
     },
     {

@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { DataTableToolbar } from './data-table-toolbar';
-import type { CandidateType } from '@/lib/types';
+import type { CandidateType, College } from '@/lib/types';
 import {
   Select,
   SelectContent,
@@ -42,6 +42,7 @@ interface DataTableProps<TData, TValue> {
   filterType?: CandidateType;
   rowSelection?: RowSelectionState;
   setRowSelection?: React.Dispatch<React.SetStateAction<RowSelectionState>>;
+  colleges?: College[];
 }
 
 const toTitleCase = (str: string) => {
@@ -57,6 +58,7 @@ export function DataTable<TData extends {id: string}, TValue>({
   filterType,
   rowSelection = {},
   setRowSelection,
+  colleges,
 }: DataTableProps<TData, TValue>) {
 
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -100,7 +102,7 @@ export function DataTable<TData extends {id: string}, TValue>({
 
   return (
     <div className="space-y-4">
-      <DataTableToolbar table={table} filterType={filterType} />
+      <DataTableToolbar table={table} filterType={filterType} colleges={colleges} />
       <div className="rounded-md border">
         <Table>
           <TableHeader>

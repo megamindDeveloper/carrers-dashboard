@@ -1,8 +1,7 @@
 
-
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
-import type { Assessment, AssessmentSubmission } from '@/lib/types';
+import type { Assessment, AssessmentSubmission, College } from '@/lib/types';
 import { DataTable } from '@/components/dashboard/data-table';
 import { getColumns } from './columns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -22,6 +21,7 @@ interface SubmissionTableProps {
 
 export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
   const [data, setData] = useState<AssessmentSubmission[]>([]);
+  const [colleges, setColleges] = useState<College[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRegrading, setIsRegrading] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<AssessmentSubmission | null>(null);
@@ -39,8 +39,15 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
             setAssessment({ id: docSnap.id, ...docSnap.data() } as Assessment);
         }
     });
+    
+    // Fetch all colleges for filtering/display
+    const collegesQuery = collection(db, 'colleges');
+    const unsubColleges = onSnapshot(collegesQuery, (snapshot) => {
+        const collegeList = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as College));
+        setColleges(collegeList);
+    });
 
-
+    // Fetch submissions for the current assessment
     const submissionsQuery = query(
       collection(db, 'assessmentSubmissions'),
       where('assessmentId', '==', assessmentId)
@@ -71,6 +78,7 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
     return () => {
       unsubAssessment();
       unsubSubmissions();
+      unsubColleges();
     }
   }, [assessmentId, toast, assessment?.shouldAutoGrade]);
 
@@ -138,7 +146,7 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
   };
 
 
-  const columns = useMemo(() => getColumns(), []);
+  const columns = useMemo(() => getColumns(colleges), [colleges]);
 
   if (loading) return <p className="p-4">Loading submissions...</p>;
 
@@ -162,7 +170,12 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
           </div>
         </CardHeader>
         <CardContent>
-          <DataTable columns={columns} data={data} onRowClick={handleRowClick} />
+          <DataTable 
+            columns={columns} 
+            data={data} 
+            onRowClick={handleRowClick}
+            colleges={colleges}
+          />
         </CardContent>
       </Card>
       <SubmissionDetailsModal 
