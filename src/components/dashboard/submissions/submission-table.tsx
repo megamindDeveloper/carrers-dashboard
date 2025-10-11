@@ -28,20 +28,59 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
   useEffect(() => {
     if (!assessmentId) return;
 
-    const q = query(
-      collection(db, 'assessmentSubmissions'),
-      where('assessmentId', '==', assessmentId)
-    );
+    // Fetch all submissions to cross-reference for "Position Applying For"
+    const allSubmissionsQuery = query(collection(db, 'assessmentSubmissions'));
 
     const unsubSubmissions = onSnapshot(
-      q,
-      snapshot => {
-        const submissions = snapshot.docs.map(d => ({
+      allSubmissionsQuery,
+      async (allSubmissionsSnapshot) => {
+        const allSubmissions = allSubmissionsSnapshot.docs.map(d => ({
           id: d.id,
           ...(d.data() as Omit<AssessmentSubmission, 'id'>),
-        })).sort((a, b) => (b.submittedAt?.toDate() ?? 0) - (a.submittedAt?.toDate() ?? 0));
+        }));
+
+        // Filter for the current assessment's submissions
+        const currentAssessmentSubmissions = allSubmissions
+          .filter(sub => sub.assessmentId === assessmentId)
+          .sort((a, b) => (b.submittedAt?.toDate() ?? 0) - (a.submittedAt?.toDate() ?? 0));
         
-        setData(submissions);
+        // Group all submissions by candidate email
+        const submissionsByEmail = allSubmissions.reduce((acc, sub) => {
+            if (sub.candidateEmail) {
+                const email = sub.candidateEmail.toLowerCase();
+                if (!acc[email]) acc[email] = [];
+                acc[email].push(sub);
+            }
+            return acc;
+        }, {} as Record<string, AssessmentSubmission[]>);
+
+        // Enhance current assessment submissions with position from ANY of their submissions
+        const enhancedSubmissions = currentAssessmentSubmissions.map(sub => {
+            let positionAnswer = sub.answers.find(a => a.questionText?.toLowerCase().includes('position applying for'));
+            
+            // If not found in the current submission, check others
+            if (!positionAnswer?.answer) {
+                 const candidateEmail = sub.candidateEmail.toLowerCase();
+                 const allCandidateSubmissions = submissionsByEmail[candidateEmail] || [];
+                 for (const otherSub of allCandidateSubmissions) {
+                     const otherPositionAnswer = otherSub.answers.find(a => a.questionText?.toLowerCase().includes('position applying for'));
+                     if (otherPositionAnswer?.answer) {
+                         // Create a synthetic answer object to store this info
+                         positionAnswer = {
+                             questionId: 'synthetic-position',
+                             questionText: 'Position Applying For',
+                             answer: otherPositionAnswer.answer,
+                         };
+                         // Add it to the current submission's answers for filtering/display
+                         sub.answers.push(positionAnswer);
+                         break;
+                     }
+                 }
+            }
+            return sub;
+        });
+
+        setData(enhancedSubmissions);
         setLoading(false);
       },
       error => {
