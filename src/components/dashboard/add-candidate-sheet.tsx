@@ -11,7 +11,6 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
   SheetFooter,
   SheetClose,
 } from '@/components/ui/sheet';
@@ -121,7 +120,11 @@ export function AddCandidateSheet({}: AddCandidateSheetProps) {
             description: 'The form has been pre-filled with the extracted data.',
           });
         } else {
-          throw new Error(result.error);
+           toast({
+            variant: 'destructive',
+            title: 'Uh oh! Something went wrong.',
+            description: result.error || 'There was a problem parsing the resume.',
+          });
         }
       };
       reader.onerror = error => {
@@ -135,7 +138,7 @@ export function AddCandidateSheet({}: AddCandidateSheetProps) {
         description:
           error instanceof Error
             ? error.message
-            : 'There was a problem parsing the resume.',
+            : 'There was a problem reading the file.',
       });
     } finally {
       setIsProcessing(false);

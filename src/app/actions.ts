@@ -7,11 +7,11 @@ export async function parseResumeAction(input: ExtractResumeDataInput) {
   try {
     const extractedData = await extractResumeData(input);
     return { success: true, data: extractedData };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error parsing resume:', error);
     return {
       success: false,
-      error: 'Failed to parse resume. Please check the file and try again.',
+      error: error.message || 'An unknown error occurred while parsing the resume.',
     };
   }
 }
