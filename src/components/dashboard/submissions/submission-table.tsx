@@ -84,6 +84,7 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
 
         if (data.length === 0) {
             toast({ title: "No submissions to re-grade." });
+            setIsRegrading(false);
             return;
         }
 
@@ -157,5 +158,3 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
     </>
   );
 }
-
-    
