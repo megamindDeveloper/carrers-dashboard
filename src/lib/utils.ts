@@ -19,19 +19,28 @@ export const gradeSubmission = (
     questions: AssessmentQuestion[]
 ): { score: number; maxScore: number; gradedAnswers: any[] } => {
     let score = 0;
-    let maxScore = 0;
+    
+    // Correctly calculate maxScore by summing points from ALL questions that have points assigned.
+    const maxScore = questions.reduce((total, q) => total + (q.points || 0), 0);
 
     const gradedAnswers = answers.map(formAnswer => {
         const question = questions.find(q => q.id === formAnswer.questionId);
-        // Ensure question exists and has points assigned for it to be gradable.
-        // We check for correctAnswer as well, but points are the main trigger.
-        if (!question || (question.points ?? 0) === 0 || !question.correctAnswer) {
+
+        // If a question doesn't exist or has no points, it's not gradable.
+        if (!question || (question.points ?? 0) === 0) {
             return { ...formAnswer, isCorrect: null, points: 0 };
         }
+        
+        // This question is gradable, but is it auto-gradable?
+        const isAutoGradable = !!question.correctAnswer;
+        
+        if (!isAutoGradable) {
+            // For manually graded questions, return as-is for now. HR will fill in points later.
+            // isCorrect remains null until manually graded.
+            return { ...formAnswer, isCorrect: null, points: formAnswer.points || 0 };
+        }
 
-        const questionPoints = question.points || 0;
-        maxScore += questionPoints;
-
+        // --- Auto-Grading Logic ---
         let isCorrect = false;
         if (question.type === 'multiple-choice') {
             isCorrect = formAnswer.answer === question.correctAnswer;
@@ -41,18 +50,22 @@ export const gradeSubmission = (
             isCorrect = correctAnswers.length === studentAnswers.length && correctAnswers.every((ans, i) => ans === studentAnswers[i]);
         }
 
+        const pointsAwarded = isCorrect ? (question.points || 0) : 0;
         if (isCorrect) {
-            score += questionPoints;
+            score += pointsAwarded;
         }
 
         return {
             ...formAnswer,
             isCorrect,
-            points: isCorrect ? questionPoints : 0,
+            points: pointsAwarded,
         };
     });
+    
+    // For submissions that have already been manually graded, we need to ensure the total score is correct.
+    const finalScore = gradedAnswers.reduce((total, ans) => total + (ans.points || 0), 0);
 
-    return { score, maxScore, gradedAnswers };
+    return { score: finalScore, maxScore, gradedAnswers };
 };
 
     
