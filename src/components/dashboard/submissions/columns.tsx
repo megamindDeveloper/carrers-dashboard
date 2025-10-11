@@ -106,7 +106,7 @@ export const getColumns = (): ColumnDef<AssessmentSubmission>[] => {
     },
     {
     id: 'actions',
-    cell: ({ row }) => {
+    cell: ({ row, table }) => {
       const submission = row.original;
 
       return (
@@ -119,13 +119,14 @@ export const getColumns = (): ColumnDef<AssessmentSubmission>[] => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => {
-                const table = row.table;
-                const onRowClick = table.options.meta?.onRowClick;
-                 if (onRowClick) {
-                    (onRowClick as (row: any) => void)(row);
+            <DropdownMenuItem
+              onClick={() => {
+                const onRowClick = (table.options.meta as any)?.onRowClick;
+                if (onRowClick) {
+                  onRowClick(submission);
                 }
-            }}>
+              }}
+            >
                 View Submission
             </DropdownMenuItem>
           </DropdownMenuContent>
