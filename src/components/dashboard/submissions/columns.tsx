@@ -25,8 +25,9 @@ const formatTime = (seconds: number) => {
     return `${mins}m ${secs}s`;
 };
 
+type PositionMap = { [email: string]: string };
 
-export const getColumns = (colleges: College[] = []): ColumnDef<AssessmentSubmission>[] => {
+export const getColumns = (colleges: College[] = [], positionMap: PositionMap = {}): ColumnDef<AssessmentSubmission>[] => {
   const columns: ColumnDef<AssessmentSubmission>[] = [
     {
       accessorKey: 'candidateName',
@@ -62,20 +63,26 @@ export const getColumns = (colleges: College[] = []): ColumnDef<AssessmentSubmis
         },
         filterFn: (row, columnId, filterValue) => {
             if (!filterValue || filterValue.length === 0) return true;
-            return filterValue.includes(row.original.collegeId);
+             const collegeId = row.original.collegeId || 'Direct';
+            return (filterValue as string[]).includes(collegeId);
         },
     },
     {
         accessorKey: 'answers',
         header: 'Position Applied For',
         cell: ({ row }) => {
-            const positionAnswer = row.original.answers.find(a => a.questionText?.toLowerCase().includes('position applying for'));
-            return positionAnswer?.answer || 'N/A';
+            const submission = row.original;
+            const positionAnswer = submission.answers.find(a => a.questionText?.toLowerCase().includes('position applying for'));
+            const position = positionAnswer?.answer || positionMap[submission.candidateEmail.toLowerCase()] || 'N/A';
+            return position;
         },
         filterFn: (row, columnId, filterValue) => {
             if (!filterValue || filterValue.length === 0) return true;
-            const positionAnswer = row.original.answers.find(a => a.questionText?.toLowerCase().includes('position applying for'));
-            return filterValue.includes(positionAnswer?.answer);
+            const submission = row.original;
+            const positionAnswer = submission.answers.find(a => a.questionText?.toLowerCase().includes('position applying for'));
+            const position = positionAnswer?.answer || positionMap[submission.candidateEmail.toLowerCase()];
+
+            return position ? (filterValue as string[]).includes(position) : false;
         },
     },
     {

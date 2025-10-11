@@ -29,7 +29,6 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
   useEffect(() => {
     if (!assessmentId) return;
 
-    // Fetch all submissions to cross-reference for "Position Applying For"
     const allSubmissionsQuery = query(collection(db, 'assessmentSubmissions'));
 
     const unsubSubmissions = onSnapshot(
@@ -42,7 +41,6 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
 
         setAllSubmissions(allSubmissionsData);
 
-        // Filter for the current assessment's submissions
         const currentAssessmentSubmissions = allSubmissionsData
           .filter(sub => sub.assessmentId === assessmentId)
           .sort((a, b) => (b.submittedAt?.toDate() ?? 0) - (a.submittedAt?.toDate() ?? 0));
@@ -87,19 +85,34 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
     }, {} as Record<string, number>);
   }, [data]);
   
- const positionCounts = useMemo(() => {
-    // This should count positions from ALL submissions to be accurate in the filter dropdown
-    return allSubmissions.reduce((acc, sub) => {
+  const positionCounts = useMemo(() => {
+    return data.reduce((acc, sub) => {
       const positionAnswer = sub.answers.find(a => a.questionText?.toLowerCase().includes('position applying for'))?.answer;
       if (positionAnswer && typeof positionAnswer === 'string') {
         acc[positionAnswer] = (acc[positionAnswer] || 0) + 1;
       }
       return acc;
     }, {} as Record<string, number>);
+  }, [data]);
+  
+  const positionMap = useMemo(() => {
+    const map: { [email: string]: string } = {};
+    allSubmissions.forEach(sub => {
+      if (sub.candidateEmail) {
+        const email = sub.candidateEmail.toLowerCase();
+        if (!map[email]) { // Only take the first one we find
+          const positionAnswer = sub.answers.find(a => a.questionText?.toLowerCase().includes('position applying for'))?.answer;
+          if (positionAnswer && typeof positionAnswer === 'string') {
+            map[email] = positionAnswer;
+          }
+        }
+      }
+    });
+    return map;
   }, [allSubmissions]);
 
 
-  const columns = useMemo(() => getColumns(colleges), [colleges]);
+  const columns = useMemo(() => getColumns(colleges, positionMap), [colleges, positionMap]);
 
   if (loading) return <p className="p-4">Loading submissions...</p>;
 

@@ -113,9 +113,9 @@ export function DataTableToolbar<TData>({
         )}
          {isSubmissionTable && columnExists('answers') && positionOptions.length > 0 && (
             <Select
-                value={(table.getColumn('answers')?.getFilterValue() as string) ?? 'all'}
+                value={(table.getColumn('answers')?.getFilterValue() as string[])?.[0] ?? 'all'}
                 onValueChange={value =>
-                    table.getColumn('answers')?.setFilterValue(value === 'all' ? null : value)
+                    table.getColumn('answers')?.setFilterValue(value === 'all' ? null : [value])
                 }
             >
                 <SelectTrigger className="h-8 w-[200px]">
@@ -131,9 +131,9 @@ export function DataTableToolbar<TData>({
          )}
           {isSubmissionTable && columnExists('collegeId') && colleges && colleges.length > 0 && (
             <Select
-                value={(table.getColumn('collegeId')?.getFilterValue() as string) ?? 'all'}
+                value={(table.getColumn('collegeId')?.getFilterValue() as string[])?.[0] ?? 'all'}
                 onValueChange={value =>
-                    table.getColumn('collegeId')?.setFilterValue(value === 'all' ? null : value)
+                    table.getColumn('collegeId')?.setFilterValue(value === 'all' ? null : [value])
                 }
             >
                 <SelectTrigger className="h-8 w-[200px]">
