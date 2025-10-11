@@ -26,7 +26,7 @@ interface SubmissionDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   submission: AssessmentSubmission | null;
-  onUpdate: (updatedSubmission: AssessmentSubmission) => void;
+  onUpdate?: (updatedSubmission: AssessmentSubmission) => void;
 }
 
 const getFormattedDate = (date: any) => {
@@ -42,13 +42,14 @@ const getFormattedDate = (date: any) => {
 };
 
 const formatTime = (seconds: number) => {
+    if (isNaN(seconds) || seconds < 0) return '0m 0s';
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}m ${secs}s`;
 };
 
 const isUrl = (str: string) => {
-    if (!str) return false;
+    if (typeof str !== 'string') return false;
     try {
         new URL(str);
         return true;
@@ -90,13 +91,14 @@ export function SubmissionDetailsModal({ isOpen, onClose, submission, onUpdate }
             answers: answers,
             score: totalScore,
         });
-
-        // Notify parent component of the update
-        onUpdate({
-            ...submission,
-            answers,
-            score: totalScore,
-        });
+        
+        if (onUpdate) {
+            onUpdate({
+                ...submission,
+                answers,
+                score: totalScore,
+            });
+        }
 
         toast({
             title: "Grades Saved",
@@ -187,7 +189,7 @@ export function SubmissionDetailsModal({ isOpen, onClose, submission, onUpdate }
                                {item.isCorrect === false && <div className="flex items-center gap-1 text-red-600"><X className="h-4 w-4" /> Incorrect</div>}
                             </div>
                             {isUrl(item.answer) ? (
-                                <Button variant="outline" asChild>
+                                <Button variant="outline" asChild size="sm">
                                     <a href={item.answer} target="_blank" rel="noopener noreferrer">
                                         <FileText className="mr-2 h-4 w-4" /> View Uploaded File
                                     </a>
@@ -227,4 +229,3 @@ export function SubmissionDetailsModal({ isOpen, onClose, submission, onUpdate }
     </Dialog>
   );
 }
-
