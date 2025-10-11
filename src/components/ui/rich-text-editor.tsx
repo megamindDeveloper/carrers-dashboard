@@ -1,8 +1,9 @@
+
 "use client";
 
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import React from "react";
+import React, { useEffect } from "react";
 import MenuBar from "./rich-text-editor-menubar";
 import TextAlign from "@tiptap/extension-text-align";
 import Highlight from "@tiptap/extension-highlight";
@@ -265,6 +266,16 @@ export default function RichTextEditor({
       onChange(editor.getHTML());
     },
   });
+
+  useEffect(() => {
+    if (editor && !editor.isDestroyed) {
+      const isSame = editor.getHTML() === content;
+      if (!isSame) {
+        editor.commands.setContent(content, false);
+      }
+    }
+  }, [content, editor]);
+
 
   return (
     <div className="flex flex-col">
