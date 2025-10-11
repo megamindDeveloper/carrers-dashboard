@@ -4,7 +4,7 @@
 import { useMemo } from 'react';
 import type { Table } from '@tanstack/react-table';
 import { Input } from '@/components/ui/input';
-import { CANDIDATE_STATUSES, JOB_STATUSES, JOB_TYPES, CandidateType } from '@/lib/types';
+import { CANDIDATE_SOURCES, CANDIDATE_STATUSES, JOB_STATUSES, JOB_TYPES, CandidateType } from '@/lib/types';
 import {
   Select,
   SelectContent,
@@ -195,6 +195,26 @@ export function DataTableToolbar<TData>({
               {statusOptions.map(status => (
                 <SelectItem key={status} value={status}>
                   {status}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+         {isCandidateTable && columnExists('source') && (
+          <Select
+            value={(table.getColumn('source')?.getFilterValue() as string) ?? 'all'}
+            onValueChange={value =>
+              table.getColumn('source')?.setFilterValue(value === 'all' ? null : value)
+            }
+          >
+            <SelectTrigger className="h-8 w-[150px] lg:w-[180px]">
+              <SelectValue placeholder="Filter by source" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Sources</SelectItem>
+              {CANDIDATE_SOURCES.map(source => (
+                <SelectItem key={source} value={source}>
+                  {source}
                 </SelectItem>
               ))}
             </SelectContent>

@@ -15,9 +15,13 @@ export const CANDIDATE_STATUSES = [
 ] as const;
 
 export const CANDIDATE_TYPES = ['full-time', 'internship'] as const;
+export const CANDIDATE_SOURCES = ['Website', 'LinkedIn', 'Naukri', 'Indeed', 'Referral', 'Other'] as const;
+
 
 export type CandidateStatus = (typeof CANDIDATE_STATUSES)[number];
 export type CandidateType = (typeof CANDIDATE_TYPES)[number];
+export type CandidateSource = (typeof CANDIDATE_SOURCES)[number];
+
 
 export type Candidate = {
   id: string;
@@ -43,6 +47,7 @@ export type Candidate = {
   introductionVideoIntern?: string;
   comments?: string;
   submissions?: AssessmentSubmission[];
+  source?: CandidateSource;
 };
 
 export const CandidateUpdateSchema = z.object({
@@ -62,6 +67,7 @@ export const CandidateUpdateSchema = z.object({
   status: z.enum(CANDIDATE_STATUSES),
   type: z.enum(CANDIDATE_TYPES),
   comments: z.string().optional(),
+  source: z.enum(CANDIDATE_SOURCES).optional(),
 });
 
 

@@ -3,7 +3,7 @@
 'use client';
 
 import type { ColumnDef } from '@tanstack/react-table';
-import type { Candidate, CandidateStatus, CandidateType, AssessmentSubmission } from '@/lib/types';
+import type { Candidate, CandidateStatus, CandidateType, AssessmentSubmission, CandidateSource } from '@/lib/types';
 import { CANDIDATE_STATUSES } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
@@ -174,6 +174,14 @@ export const getColumns = ({
 
 
   const commonColumns: ColumnDef<Candidate>[] = [
+    {
+      accessorKey: 'source',
+      header: 'Source',
+      cell: ({ row }) => {
+        const source = row.original.source;
+        return <Badge variant="outline">{source || 'N/A'}</Badge>
+      }
+    },
     {
       accessorKey: 'submittedAt',
       header: ({ column }) => (

@@ -2,8 +2,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { AssessmentSubmission, Candidate, CandidateStatus, CandidateType } from '@/lib/types';
-import { CANDIDATE_STATUSES, CANDIDATE_TYPES, CandidateUpdateSchema } from '@/lib/types';
+import type { AssessmentSubmission, Candidate, CandidateStatus, CandidateType, CandidateSource } from '@/lib/types';
+import { CANDIDATE_STATUSES, CANDIDATE_TYPES, CANDIDATE_SOURCES, CandidateUpdateSchema } from '@/lib/types';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type * as z from 'zod';
@@ -80,6 +80,7 @@ export function CandidateDetailsModal({
         status: candidate.status ? toTitleCase(candidate.status as string) as CandidateStatus : 'Applied',
         type: candidate.type || 'full-time',
         comments: candidate.comments || '',
+        source: candidate.source || 'Website',
       });
     }
   }, [candidate, form]);
@@ -239,13 +240,41 @@ export function CandidateDetailsModal({
                 )} />
             </div>
 
-            <FormField control={form.control} name="portfolio" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Portfolio/Link</FormLabel>
-                  <FormControl><Input {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-            )} />
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <FormField control={form.control} name="portfolio" render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Portfolio/Link</FormLabel>
+                    <FormControl><Input {...field} /></FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )} />
+
+                <FormField
+                    control={form.control}
+                    name="source"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Source</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select the source" />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                {CANDIDATE_SOURCES.map(source => (
+                                    <SelectItem key={source} value={source}>
+                                    {source}
+                                    </SelectItem>
+                                ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            </div>
+
 
              {candidate.type === 'internship' && (
               <FormField control={form.control} name="introductionVideoIntern" render={({ field }) => (

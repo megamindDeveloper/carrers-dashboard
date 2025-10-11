@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -28,11 +29,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { parseResumeAction } from '@/app/actions';
-import type { Candidate, CandidateType } from '@/lib/types';
+import type { Candidate, CandidateType, CandidateSource } from '@/lib/types';
+import { CANDIDATE_SOURCES } from '@/lib/types';
 import { Loader2, PlusCircle } from 'lucide-react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db, storage } from '@/app/utils/firebase/firebaseConfig';
 import { ref, uploadString, getDownloadURL } from "firebase/storage";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface AddCandidateSheetProps {
 }
@@ -52,6 +55,7 @@ const candidateSchema = z.object({
   portfolio: z.string().url('Invalid URL').or(z.literal('')),
   resumeDataUri: z.string().min(1, 'Resume is required'),
   introductionVideoIntern: z.string().url('Invalid URL').or(z.literal('')),
+  source: z.enum(CANDIDATE_SOURCES).optional(),
 });
 
 export function AddCandidateSheet({}: AddCandidateSheetProps) {
@@ -76,6 +80,7 @@ export function AddCandidateSheet({}: AddCandidateSheetProps) {
       portfolio: '',
       resumeDataUri: '',
       introductionVideoIntern: '',
+      source: 'Website',
     },
   });
 
@@ -174,6 +179,7 @@ export function AddCandidateSheet({}: AddCandidateSheetProps) {
         portfolio: data.portfolio,
         resumeUrl: resumeUrl,
         type: candidateType,
+        source: data.source,
         introductionVideoIntern: data.introductionVideoIntern,
         submittedAt: serverTimestamp(),
       };
@@ -397,22 +403,49 @@ export function AddCandidateSheet({}: AddCandidateSheetProps) {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="position"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Position Applying For</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Social Media Manager"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <FormField
+                    control={form.control}
+                    name="position"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Position Applying For</FormLabel>
+                        <FormControl>
+                            <Input
+                            placeholder="Social Media Manager"
+                            {...field}
+                            />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={form.control}
+                    name="source"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Source</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select the source" />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                {CANDIDATE_SOURCES.map(source => (
+                                    <SelectItem key={source} value={source}>
+                                    {source}
+                                    </SelectItem>
+                                ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                </div>
+
                 <FormField
                   control={form.control}
                   name="portfolio"
