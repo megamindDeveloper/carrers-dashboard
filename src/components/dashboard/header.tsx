@@ -18,6 +18,7 @@ import {
   FileText,
   ClipboardList,
   Building2,
+  Mail,
 } from 'lucide-react';
 import mmLogo from '../../../.idx/mmLogo.png';
 import { usePathname } from 'next/navigation';
@@ -37,6 +38,7 @@ const navItems = [
   { href: '/dashboard', icon: LayoutGrid, label: 'Overview' },
   { href: '/dashboard/jobs', icon: FileText, label: 'Jobs' },
   { href: '/dashboard/assessments', icon: ClipboardList, label: 'Assessments' },
+  { href: '/dashboard/templates', icon: Mail, label: 'Templates' },
   { href: '/dashboard/colleges', icon: Building2, label: 'Colleges' },
   { href: '/dashboard/all', icon: Users, label: 'All Candidates' },
   { href: '/dashboard/full-time', icon: Briefcase, label: 'Full-time' },

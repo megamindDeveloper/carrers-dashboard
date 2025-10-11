@@ -120,7 +120,7 @@ export type AssessmentSection = {
 };
 
 export type Assessment = {
-  id: string;
+  id:string;
   title: string;
   passcode?: string;
   timeLimit?: number; // in minutes
@@ -188,3 +188,19 @@ export const CollegeSchema = z.object({
   contactPerson: z.string().min(1, "Contact person's name is required"),
   contactEmail: z.string().email("A valid email is required for the contact person"),
 });
+
+
+// Email Template Types
+export const TemplateSchema = z.object({
+  name: z.string().min(1, "Template name is required"),
+  subject: z.string().min(1, "Subject is required"),
+  body: z.string().min(1, "Email body cannot be empty"),
+});
+
+export type EmailTemplate = {
+    id: string;
+    name: string;
+    subject: string;
+    body: string;
+    createdAt: any;
+};

@@ -24,9 +24,13 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import RichTextEditor from '@/components/ui/rich-text-editor';
-import type { CollegeCandidate, AssessmentSubmission } from '@/lib/types';
+import type { CollegeCandidate, AssessmentSubmission, EmailTemplate } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '@/app/utils/firebase/firebaseConfig';
+
 
 interface ResetAssessmentDialogProps {
   isOpen: boolean;
@@ -45,6 +49,8 @@ const emailSchema = z.object({
 const defaultEmailBody = `<p>We've received your request to retake the assessment. Your previous submission has been cleared, and you can now access the assessment again.</p><p>Please use the link below to begin. We recommend using a stable internet connection to avoid any further issues.</p>`;
 
 export function ResetAssessmentDialog({ isOpen, onClose, onSend, isSending, candidate, submission }: ResetAssessmentDialogProps) {
+  const [templates, setTemplates] = useState<EmailTemplate[]>([]);
+
   const form = useForm<z.infer<typeof emailSchema>>({
     resolver: zodResolver(emailSchema),
     defaultValues: {
@@ -52,6 +58,14 @@ export function ResetAssessmentDialog({ isOpen, onClose, onSend, isSending, cand
         body: '',
     }
   });
+  
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'emailTemplates'), (snapshot) => {
+        const fetchedTemplates = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as EmailTemplate));
+        setTemplates(fetchedTemplates);
+    });
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     if (submission && isOpen) {
@@ -61,6 +75,17 @@ export function ResetAssessmentDialog({ isOpen, onClose, onSend, isSending, cand
       });
     }
   }, [submission, form, isOpen]);
+
+  const handleTemplateSelect = (templateId: string) => {
+      const template = templates.find(t => t.id === templateId);
+      if (template) {
+          form.reset({
+              ...form.getValues(),
+              subject: template.subject,
+              body: template.body,
+          });
+      }
+  };
 
   const onSubmit = (data: z.infer<typeof emailSchema>) => {
     onSend(data);
@@ -84,6 +109,24 @@ export function ResetAssessmentDialog({ isOpen, onClose, onSend, isSending, cand
             </DialogHeader>
             <ScrollArea className="max-h-[60vh] p-1 pr-4">
               <div className="space-y-4 py-4">
+                 <FormItem>
+                      <FormLabel>Load from Template (Optional)</FormLabel>
+                       <Select onValueChange={handleTemplateSelect}>
+                          <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a template to use" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                              {templates.map(template => (
+                                  <SelectItem key={template.id} value={template.id}>
+                                      {template.name}
+                                  </SelectItem>
+                              ))}
+                          </SelectContent>
+                      </Select>
+                  </FormItem>
+
                 <FormField control={form.control} name="subject" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Email Subject</FormLabel>
