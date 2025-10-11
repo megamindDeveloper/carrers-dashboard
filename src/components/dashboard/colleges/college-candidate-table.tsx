@@ -155,7 +155,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
     for (const key of keys) {
         const lowerKey = key.toLowerCase();
         for (const rowKey in row) {
-            if (rowKey.toLowerCase() === lowerKey) {
+            if (rowKey.toLowerCase().trim() === lowerKey) {
                 return row[rowKey];
             }
         }
@@ -655,9 +655,13 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
                             <CardDescription>Total counts for each status in this college drive.</CardDescription>
                         </CardHeader>
                         <CardContent className="flex flex-wrap gap-2">
+                            <Badge variant="secondary" className="text-base py-1 px-3">
+                                Total Candidates: <span className="font-bold ml-2">{data.length}</span>
+                            </Badge>
                            {CANDIDATE_STATUSES.map(status => {
                                 const count = statusCounts[status] || 0;
-                                if (count > 0) {
+                                // Exclude 'Applied' since it's now represented by Total Candidates
+                                if (count > 0 && status !== 'Applied') {
                                     return (
                                         <Badge key={status} variant="secondary" className="text-base py-1 px-3">
                                             {status}: <span className="font-bold ml-2">{count}</span>
