@@ -190,7 +190,6 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
                 
                 if (!data.shouldAutoGrade) {
                     delete newQ.correctAnswer;
-                    delete newQ.points;
                 }
                 
                 return newQ;
@@ -342,7 +341,7 @@ export function AddEditAssessmentSheet({ isOpen, onClose, assessment, onSave }: 
                         <div className="space-y-0.5">
                             <FormLabel className="text-blue-800">Enable Auto-Grading</FormLabel>
                             <FormDescription className="text-blue-700">
-                             Allows setting correct answers and points for automatic scoring.
+                             Allows setting correct answers for automatic scoring. Subjective questions can still be graded manually.
                             </FormDescription>
                         </div>
                         <FormControl>
@@ -491,7 +490,7 @@ function QuestionsField({ sectionIndex, control, form, shouldAutoGrade }: { sect
                             </FormItem>
                         )}
                     />
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-center">
                       <FormField
                           control={control}
                           name={`sections.${sectionIndex}.questions.${questionIndex}.type`}
@@ -513,6 +512,17 @@ function QuestionsField({ sectionIndex, control, form, shouldAutoGrade }: { sect
                                           <SelectItem value="url">URL</SelectItem>
                                       </SelectContent>
                                   </Select>
+                                  <FormMessage />
+                              </FormItem>
+                          )}
+                      />
+                       <FormField
+                          control={control}
+                          name={`sections.${sectionIndex}.questions.${questionIndex}.points`}
+                          render={({ field }) => (
+                              <FormItem>
+                                  <FormLabel>Points</FormLabel>
+                                  <FormControl><Input type="number" className="w-full" {...field} /></FormControl>
                                   <FormMessage />
                               </FormItem>
                           )}
@@ -541,17 +551,7 @@ function QuestionsField({ sectionIndex, control, form, shouldAutoGrade }: { sect
 
                     {shouldAutoGrade && (questionType === 'multiple-choice' || questionType === 'checkbox') && options?.length > 0 && (
                        <div className="p-3 border-l-4 border-blue-400 bg-blue-50 rounded-md space-y-4">
-                           <FormField
-                                control={control}
-                                name={`sections.${sectionIndex}.questions.${questionIndex}.points`}
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel className="text-blue-800">Points for this question</FormLabel>
-                                        <FormControl><Input type="number" className="w-24" {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                           <h4 className="text-sm font-medium text-blue-800">Auto-Grading</h4>
                            {questionType === 'multiple-choice' && (
                             <FormField
                                 control={control}
@@ -656,3 +656,5 @@ function OptionsField({ sectionIndex, questionIndex, control }: { sectionIndex: 
         </div>
     )
 }
+
+    
