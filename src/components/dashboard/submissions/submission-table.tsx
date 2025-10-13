@@ -33,7 +33,6 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
   useEffect(() => {
     if (!assessmentId) return;
 
-    // Fetch the current assessment to get its properties like shouldAutoGrade
     const assessmentRef = doc(db, 'assessments', assessmentId);
     const unsubAssessment = onSnapshot(assessmentRef, (doc) => {
         if (doc.exists()) {
@@ -71,37 +70,37 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
       }
     );
 
-    // Fetch all colleges to map IDs to names
     const unsubColleges = onSnapshot(collection(db, 'colleges'), (snapshot) => {
         setColleges(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as College)));
     });
 
-    // Fetch all general candidates
-    const unsubCandidates = onSnapshot(collection(db, 'applications'), (snapshot) => {
-        const appCandidates = snapshot.docs.map(d => ({ ...d.data(), id: d.id } as Candidate));
-        setCandidates(prev => [...prev.filter(c => 'importedAt' in c), ...appCandidates]);
-    });
+    const fetchAllCandidates = async () => {
+        const candidatePromises = [
+            getDocs(collection(db, 'applications')),
+            getDocs(collection(db, 'colleges')),
+        ];
+        const [appSnapshot, collegesSnapshot] = await Promise.all(candidatePromises);
 
-    // Fetch all college candidates
-    const fetchCollegeCandidates = async () => {
-        const collegesSnapshot = await getDocs(collection(db, 'colleges'));
-        const allCollegeCandidates: CollegeCandidate[] = [];
+        const appCandidates = appSnapshot.docs.map(d => ({ ...d.data(), id: d.id } as Candidate));
+        
+        const collegeCandidates: CollegeCandidate[] = [];
         for (const collegeDoc of collegesSnapshot.docs) {
             const candidatesSnapshot = await getDocs(collection(db, `colleges/${collegeDoc.id}/candidates`));
             candidatesSnapshot.forEach(candidateDoc => {
-                allCollegeCandidates.push({ id: candidateDoc.id, ...candidateDoc.data() } as CollegeCandidate);
+                collegeCandidates.push({ id: candidateDoc.id, ...candidateDoc.data() } as CollegeCandidate);
             });
         }
-        setCandidates(prev => [...prev.filter(c => !('importedAt' in c)), ...allCollegeCandidates]);
+        
+        setCandidates([...appCandidates, ...collegeCandidates]);
     };
-    fetchCollegeCandidates();
+    
+    fetchAllCandidates();
 
 
     return () => {
         unsubAssessment();
         unsubSubmissions();
         unsubColleges();
-        unsubCandidates();
     };
   }, [assessmentId, toast]);
 
@@ -118,19 +117,15 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
 
   const selectedCandidate = useMemo(() => {
     if (!selectedSubmission) return null;
-    
-    // For college candidates
-    if (selectedSubmission.collegeId && selectedSubmission.collegeCandidateId) {
-      return candidates.find(c => 'importedAt' in c && c.id === selectedSubmission.collegeCandidateId) || null;
-    }
-    
-    // For general candidates (check by ID first, then fallback to email)
-    if (selectedSubmission.candidateId) {
-       return candidates.find(c => !('importedAt' in c) && c.id === selectedSubmission.candidateId) || null;
-    }
-    
-    return candidates.find(c => c.email.toLowerCase() === selectedSubmission.candidateEmail.toLowerCase()) || null;
-
+    return candidates.find(c => {
+        if (selectedSubmission.candidateId && c.id === selectedSubmission.candidateId) {
+            return true;
+        }
+        if (selectedSubmission.collegeCandidateId && c.id === selectedSubmission.collegeCandidateId) {
+            return true;
+        }
+        return c.email.toLowerCase() === selectedSubmission.candidateEmail.toLowerCase();
+    }) || null;
   }, [selectedSubmission, candidates]);
   
   const collegeCounts = useMemo(() => {
@@ -173,21 +168,26 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
     
     const proceedWithUpdate = async () => {
         try {
-            const docRef = doc(db, isCollegeCandidate ? `colleges/${assessment?.id}/candidates` : 'applications', candidateId);
+            const collectionPath = isCollegeCandidate ? `colleges/${selectedSubmission?.collegeId}/candidates` : 'applications';
+            const docRef = doc(db, collectionPath, candidateId);
             await updateDoc(docRef, { status });
              toast({
                 title: 'Status Updated',
                 description: `Candidate status has been changed to ${status}.`,
             });
-             if (status === 'Shortlisted' || status === 'Rejected') {
+
+             const shouldSendEmail = !isCollegeCandidate && (status === 'Shortlisted' || status === 'Rejected');
+
+            if (shouldSendEmail) {
                 const apiEndpoint = status === 'Shortlisted' ? '/api/shortlisted' : '/api/rejected';
+                const candidate = candidateToUpdate as Candidate;
                 const response = await fetch(apiEndpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                    fullName: 'fullName' in candidateToUpdate ? candidateToUpdate.fullName : candidateToUpdate.name,
-                    email: candidateToUpdate.email,
-                    position: 'position' in candidateToUpdate ? candidateToUpdate.position : assessment?.title,
+                      fullName: candidate.fullName,
+                      email: candidate.email,
+                      position: candidate.position,
                     }),
                 });
                 const result = await response.json();
@@ -201,7 +201,7 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
             toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not update candidate status.' });
         }
     };
-      if (status && status !== candidateToUpdate.status && (status === 'Shortlisted' || status === 'Rejected')) {
+      if (!isCollegeCandidate && (status === 'Shortlisted' || status === 'Rejected')) {
       const action = status === 'Shortlisted' ? 'shortlist' : 'reject';
       const emailType = status === 'Shortlisted' ? 'a "shortlisted"' : 'a "rejection"';
       setConfirmation({
