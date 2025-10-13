@@ -506,7 +506,32 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
     }
 };
 
- const handleStatusChange = async (candidateId: string, status: CandidateStatus) => {
+ const handleStatusChange = async (candidateId: string, status: CandidateStatus, isCollegeCandidate: boolean = true) => {
+    if (!isCollegeCandidate) return;
+
+    const candidateToUpdate = data.find(c => c.id === candidateId);
+    if (!candidateToUpdate) return;
+    
+    if (status && status !== candidateToUpdate.status && (status === 'Shortlisted' || status === 'Rejected')) {
+      const action = status === 'Shortlisted' ? 'shortlist' : 'reject';
+      const emailType = status === 'Shortlisted' ? 'a "shortlisted"' : 'a "rejection"';
+      
+      setConfirmation({
+        isOpen: true,
+        title: `Are you sure you want to ${action} this candidate?`,
+        description: `This will send ${emailType} email to ${candidateToUpdate.name}. This functionality is for main applications. Do you want to proceed?`,
+        onConfirm: async () => {
+          await proceedWithStatusUpdate(candidateId, status);
+          setConfirmation({ ...confirmation, isOpen: false });
+        },
+      });
+      return;
+    }
+
+    await proceedWithStatusUpdate(candidateId, status);
+};
+
+const proceedWithStatusUpdate = async (candidateId: string, status: CandidateStatus) => {
     try {
       await updateDoc(doc(db, `colleges/${collegeId}/candidates`, candidateId), { status });
       toast({
@@ -520,7 +545,8 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
         description: 'Could not update candidate status.',
       });
     }
-  };
+}
+
 
   const statusCounts = useMemo(() => {
     return data.reduce((acc, candidate) => {
@@ -535,7 +561,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
     onViewSubmission: (sub) => setSelectedSubmission(sub),
     onDelete: handleDeleteCandidate,
     onResetSubmission: handleOpenResetDialog,
-    onStatusChange: handleStatusChange,
+    onStatusChange: (id, status) => handleStatusChange(id, status, true),
     selectedAssessmentId,
   }), [selectedAssessmentId]);
 
@@ -546,7 +572,6 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
 
     const allCandidateIdsWithInvitation = new Set<string>();
     data.forEach(c => {
-        // Assume an invite is sent if they have a submission or are pending
         allCandidateIdsWithInvitation.add(c.id);
     });
 
@@ -555,7 +580,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
     return {
         assessmentTitle: selectedAssessment.title,
         totalCandidates: data.length,
-        invitationsSent: data.length, // Simplified for now, can be enhanced with invitation tracking
+        invitationsSent: data.length,
         submissionsReceived: submittedCount,
     };
   }, [data, selectedAssessmentId, assessments]);
@@ -580,7 +605,6 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
         
         const requiredQuestions = selectedAssessment.sections?.flatMap(s => s.questions).filter(q => q.isRequired) || [];
         if (requiredQuestions.length === 0) {
-            // If no required questions, all submitted are considered complete
             return data.filter(c => c.submissions?.some(s => s.assessmentId === selectedAssessmentId));
         }
 
@@ -613,7 +637,7 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
         const submission = c.submissions?.find(s => s.assessmentId === selectedAssessmentId);
         if (!submission) return false;
         
-        if (requiredQuestions.length === 0) return true; // All submitted are complete if no required questions
+        if (requiredQuestions.length === 0) return true;
 
         return requiredQuestions.every(q => {
             const answer = submission.answers.find(a => a.questionId === q.id)?.answer;
@@ -621,6 +645,8 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
         });
     }).length;
   }, [data, selectedAssessmentId, assessments]);
+
+  const submissionCandidate = data.find(c => c.id === selectedSubmission?.collegeCandidateId);
 
   if (loading) return <p className="p-4">Loading candidates...</p>;
 
@@ -660,7 +686,6 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
                             </Badge>
                            {CANDIDATE_STATUSES.map(status => {
                                 const count = statusCounts[status] || 0;
-                                // Exclude 'Applied' since it's now represented by Total Candidates
                                 if (count > 0 && status !== 'Applied') {
                                     return (
                                         <Badge key={status} variant="secondary" className="text-base py-1 px-3">
@@ -803,6 +828,10 @@ export function CollegeCandidateTable({ collegeId }: CollegeCandidateTableProps)
         isOpen={!!selectedSubmission}
         onClose={() => setSelectedSubmission(null)}
         submission={selectedSubmission}
+        candidate={submissionCandidate || null}
+        onStatusChange={async (candidateId, status) => {
+            await handleStatusChange(candidateId, status, true);
+        }}
       />
       <SendAssessmentDialog
         isOpen={isSendAssessmentDialogOpen}

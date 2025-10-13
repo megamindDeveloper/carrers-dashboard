@@ -380,6 +380,8 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
     [handleStatusChangeFromDropdown, handleDeleteCandidate]
   );
 
+  const submissionCandidate = data.find(c => c.id === selectedSubmission?.candidateId);
+
   if (loading) return <p className="p-4">Loading candidates...</p>;
 
   return (
@@ -424,6 +426,10 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
         isOpen={!!selectedSubmission}
         onClose={() => setSelectedSubmission(null)}
         submission={selectedSubmission}
+        candidate={submissionCandidate || null}
+        onStatusChange={async (candidateId, status) => {
+           await handleSaveChanges(candidateId, { status });
+        }}
       />
     </>
   );

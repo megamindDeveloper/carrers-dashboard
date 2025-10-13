@@ -2,7 +2,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { AssessmentSubmission } from '@/lib/types';
+import type { AssessmentSubmission, Candidate, CandidateStatus, CollegeCandidate } from '@/lib/types';
+import { CANDIDATE_STATUSES } from '@/lib/types';
 import {
   Dialog,
   DialogContent,
@@ -11,7 +12,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { ExternalLink, FileText, Phone, Mail, Check, X, Loader2, Save } from 'lucide-react';
+import { ExternalLink, Mail, Loader2, Save } from 'lucide-react';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -21,13 +22,29 @@ import { Label } from '@/components/ui/label';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/app/utils/firebase/firebaseConfig';
 import { useToast } from '@/hooks/use-toast';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { useForm } from 'react-hook-form';
 
 interface SubmissionDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   submission: AssessmentSubmission | null;
   onUpdate?: (updatedSubmission: AssessmentSubmission) => void;
+  onStatusChange?: (candidateId: string, status: CandidateStatus, isCollegeCandidate: boolean) => Promise<void>;
+  candidate: Candidate | CollegeCandidate | null;
 }
+
+const toTitleCase = (str: string | undefined) => {
+    if (!str) return '';
+    return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
+};
 
 const getFormattedDate = (date: any) => {
     if (!date) return 'N/A';
@@ -48,21 +65,28 @@ const formatTime = (seconds: number) => {
     return `${mins}m ${secs}s`;
 };
 
-export function SubmissionDetailsModal({ isOpen, onClose, submission, onUpdate }: SubmissionDetailsModalProps) {
+export function SubmissionDetailsModal({ isOpen, onClose, submission, onUpdate, onStatusChange, candidate }: SubmissionDetailsModalProps) {
   const [answers, setAnswers] = useState(submission?.answers || []);
   const [totalScore, setTotalScore] = useState(submission?.score || 0);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
 
+   const form = useForm({
+    defaultValues: {
+      status: 'Applied' as CandidateStatus,
+    },
+  });
+
   useEffect(() => {
     if (submission) {
-      // Ensure answers is always an array
       const initialAnswers = Array.isArray(submission.answers) ? submission.answers : [];
       setAnswers(initialAnswers);
-      // Recalculate score from answers to be safe
       setTotalScore(initialAnswers.reduce((sum, ans) => sum + (ans.points || 0), 0));
     }
-  }, [submission]);
+    if (candidate) {
+      form.setValue('status', toTitleCase(candidate.status as string) as CandidateStatus || 'Applied');
+    }
+  }, [submission, candidate, form]);
 
   const handleScoreChange = (questionId: string, newPoints: number) => {
     const updatedAnswers = answers.map(ans => 
@@ -111,6 +135,12 @@ export function SubmissionDetailsModal({ isOpen, onClose, submission, onUpdate }
         setIsSaving(false);
     }
   };
+  
+  const handleStatusChange = async (newStatus: CandidateStatus) => {
+    if (!candidate || !onStatusChange) return;
+    const isCollegeCandidate = !!submission?.collegeId;
+    await onStatusChange(candidate.id, newStatus, isCollegeCandidate);
+  }
 
   if (!submission) return null;
 
@@ -143,11 +173,42 @@ export function SubmissionDetailsModal({ isOpen, onClose, submission, onUpdate }
 
         <div className="flex-1 overflow-y-auto pr-6 space-y-6 py-4">
             {showCandidateInfo && (
-              <div className="space-y-2 border-b pb-4">
+              <div className="space-y-4 border-b pb-4">
                   <h3 className="font-semibold">Candidate Information</h3>
-                  <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">{submission.candidateEmail}</span>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">{submission.candidateEmail}</span>
+                    </div>
+                     {candidate && onStatusChange && (
+                        <Form {...form}>
+                          <form className="flex items-center gap-2">
+                            <FormField
+                                control={form.control}
+                                name="status"
+                                render={({ field }) => (
+                                <FormItem className="flex items-center gap-2 space-y-0">
+                                    <FormLabel className="text-sm">Status:</FormLabel>
+                                    <Select onValueChange={(value) => handleStatusChange(value as CandidateStatus)} value={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger className="h-8 w-[180px]">
+                                        <SelectValue placeholder="Change status" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {CANDIDATE_STATUSES.map(status => (
+                                        <SelectItem key={status} value={status}>
+                                            {status}
+                                        </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                    </Select>
+                                </FormItem>
+                                )}
+                            />
+                          </form>
+                        </Form>
+                     )}
                   </div>
               </div>
             )}
@@ -155,7 +216,6 @@ export function SubmissionDetailsModal({ isOpen, onClose, submission, onUpdate }
             <div className="space-y-4">
                  <h3 className="font-semibold">Answers</h3>
                 {answers.map((item, index) => {
-                    // A question is manually gradable if the assessment supports grading, but the answer object's `isCorrect` is null.
                     const isManualGrade = submission.shouldAutoGrade && item.isCorrect === null;
                     const answerValue = Array.isArray(item.answer) ? item.answer.join(', ') : (item.answer || '');
                     
@@ -169,8 +229,6 @@ export function SubmissionDetailsModal({ isOpen, onClose, submission, onUpdate }
                         )}>
                             <div className="flex justify-between items-start">
                                <p className="font-medium flex-1">{index + 1}. {item.questionText}</p>
-                               {item.isCorrect === true && <div className="flex items-center gap-1 text-green-600"><Check className="h-4 w-4" /> Correct (+{item.points || 0})</div>}
-                               {item.isCorrect === false && <div className="flex items-center gap-1 text-red-600"><X className="h-4 w-4" /> Incorrect</div>}
                             </div>
                             <div className="text-sm text-muted-foreground p-3 bg-background/50 rounded-md whitespace-pre-wrap">
                                 {isLink ? (
