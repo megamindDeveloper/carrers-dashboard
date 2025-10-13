@@ -31,7 +31,7 @@ export const gradeSubmission = (
         }
         
         // A question is auto-gradable only if it has a defined correct answer.
-        const isAutoGradable = question.correctAnswer !== undefined && question.correctAnswer !== null && (Array.isArray(question.correctAnswer) ? question.correctAnswer.length > 0 : true);
+        const isAutoGradable = question.correctAnswer !== undefined && question.correctAnswer !== null && (Array.isArray(question.correctAnswer) ? question.correctAnswer.length > 0 : question.correctAnswer !== '');
         
         if (!isAutoGradable) {
             // This is a subjective, manually graded question.

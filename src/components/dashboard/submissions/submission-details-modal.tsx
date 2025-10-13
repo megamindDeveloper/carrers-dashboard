@@ -81,7 +81,8 @@ export function SubmissionDetailsModal({ isOpen, onClose, submission, onUpdate, 
     if (submission) {
       const initialAnswers = Array.isArray(submission.answers) ? submission.answers : [];
       setAnswers(initialAnswers);
-      setTotalScore(initialAnswers.reduce((sum, ans) => sum + (ans.points || 0), 0));
+      const initialScore = initialAnswers.reduce((sum, ans) => sum + (ans.points || 0), 0);
+      setTotalScore(initialScore);
     }
     if (candidate) {
       form.setValue('status', toTitleCase(candidate.status as string) as CandidateStatus || 'Applied');
