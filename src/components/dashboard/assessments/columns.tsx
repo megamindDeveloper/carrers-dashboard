@@ -78,6 +78,29 @@ export const getColumns = ({ onEdit, onDelete }: GetColumnsProps): ColumnDef<Ass
         },
     },
      {
+      accessorKey: 'totalPoints',
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Total Points
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => {
+        const totalPoints = row.original.sections?.reduce((total, section) => {
+            return total + (section.questions?.reduce((sectionTotal, q) => sectionTotal + (q.points || 0), 0) || 0);
+        }, 0) || 0;
+        return <div className="text-center font-semibold">{totalPoints}</div>;
+      },
+      sortingFn: (rowA, rowB, columnId) => {
+        const pointsA = rowA.original.sections?.reduce((total, section) => total + (section.questions?.reduce((sectionTotal, q) => sectionTotal + (q.points || 0), 0) || 0), 0) || 0;
+        const pointsB = rowB.original.sections?.reduce((total, section) => total + (section.questions?.reduce((sectionTotal, q) => sectionTotal + (q.points || 0), 0) || 0), 0) || 0;
+        return pointsA - pointsB;
+      }
+    },
+     {
       accessorKey: 'submissions',
       header: ({ column }) => (
         <Button
