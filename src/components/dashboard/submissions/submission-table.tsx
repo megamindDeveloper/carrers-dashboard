@@ -1,17 +1,18 @@
 
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
-import type { Assessment, AssessmentSubmission, College, Candidate, CollegeCandidate } from '@/lib/types';
+import type { Assessment, AssessmentSubmission, College, Candidate, CollegeCandidate, CandidateStatus } from '@/lib/types';
 import { DataTable } from '@/components/dashboard/data-table';
 import { getColumns } from './columns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { collection, onSnapshot, query, where, getDocs, doc } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, getDocs, doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { db } from '@/app/utils/firebase/firebaseConfig';
 import { useToast } from '@/hooks/use-toast';
 import { SubmissionDetailsModal } from './submission-details-modal';
 import { ExportSubmissionsDialog } from './export-submissions-dialog';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
+import { ConfirmationDialog } from '../confirmation-dialog';
 
 interface SubmissionTableProps {
   assessmentId: string;
@@ -27,6 +28,7 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
   const [selectedSubmission, setSelectedSubmission] = useState<AssessmentSubmission | null>(null);
   const [isExportDialogOpen, setExportDialogOpen] = useState(false);
   const { toast } = useToast();
+   const [confirmation, setConfirmation] = useState<{ isOpen: boolean; title: string; description: string; onConfirm: () => void; }>({ isOpen: false, title: '', description: '', onConfirm: () => {} });
   
   useEffect(() => {
     if (!assessmentId) return;
@@ -69,22 +71,31 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
       }
     );
 
-    const unsubColleges = onSnapshot(collection(db, 'colleges'), async snapshot => {
-        const collegeData = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as College));
-        setColleges(collegeData);
-        
-        // Fetch all candidates from all colleges
-        const collegeCandidatesPromises = collegeData.map(c => getDocs(query(collection(db, `colleges/${c.id}/candidates`))));
-        const collegeCandidatesSnapshots = await Promise.all(collegeCandidatesPromises);
-        const collegeCandidates = collegeCandidatesSnapshots.flatMap(snap => snap.docs.map(d => ({...d.data(), id: d.id} as CollegeCandidate)));
-
-        setCandidates(prev => [...prev.filter(c => !('importedAt' in c)), ...collegeCandidates]);
+    // Fetch all colleges to map IDs to names
+    const unsubColleges = onSnapshot(collection(db, 'colleges'), (snapshot) => {
+        setColleges(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as College)));
     });
 
-    const unsubCandidates = onSnapshot(collection(db, 'applications'), snapshot => {
-        const appCandidates = snapshot.docs.map(d => ({...d.data(), id: d.id} as Candidate));
+    // Fetch all general candidates
+    const unsubCandidates = onSnapshot(collection(db, 'applications'), (snapshot) => {
+        const appCandidates = snapshot.docs.map(d => ({ ...d.data(), id: d.id } as Candidate));
         setCandidates(prev => [...prev.filter(c => 'importedAt' in c), ...appCandidates]);
     });
+
+    // Fetch all college candidates
+    const fetchCollegeCandidates = async () => {
+        const collegesSnapshot = await getDocs(collection(db, 'colleges'));
+        const allCollegeCandidates: CollegeCandidate[] = [];
+        for (const collegeDoc of collegesSnapshot.docs) {
+            const candidatesSnapshot = await getDocs(collection(db, `colleges/${collegeDoc.id}/candidates`));
+            candidatesSnapshot.forEach(candidateDoc => {
+                allCollegeCandidates.push({ id: candidateDoc.id, ...candidateDoc.data() } as CollegeCandidate);
+            });
+        }
+        setCandidates(prev => [...prev.filter(c => !('importedAt' in c)), ...allCollegeCandidates]);
+    };
+    fetchCollegeCandidates();
+
 
     return () => {
         unsubAssessment();
@@ -156,6 +167,57 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
     }, {} as Record<string, number>);
   }, [allSubmissions, assessmentId, positionMap]);
 
+   const handleStatusChange = async (candidateId: string, status: CandidateStatus, isCollegeCandidate: boolean) => {
+    const candidateToUpdate = candidates.find(c => c.id === candidateId);
+    if (!candidateToUpdate) return;
+    
+    const proceedWithUpdate = async () => {
+        try {
+            const docRef = doc(db, isCollegeCandidate ? `colleges/${assessment?.id}/candidates` : 'applications', candidateId);
+            await updateDoc(docRef, { status });
+             toast({
+                title: 'Status Updated',
+                description: `Candidate status has been changed to ${status}.`,
+            });
+             if (status === 'Shortlisted' || status === 'Rejected') {
+                const apiEndpoint = status === 'Shortlisted' ? '/api/shortlisted' : '/api/rejected';
+                const response = await fetch(apiEndpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                    fullName: 'fullName' in candidateToUpdate ? candidateToUpdate.fullName : candidateToUpdate.name,
+                    email: candidateToUpdate.email,
+                    position: 'position' in candidateToUpdate ? candidateToUpdate.position : assessment?.title,
+                    }),
+                });
+                const result = await response.json();
+                if (response.ok && result.success) {
+                    toast({ title: "Email Sent", description: `An email has been sent to the candidate.` });
+                } else {
+                    toast({ variant: "destructive", title: "Email Failed", description: result.message });
+                }
+            }
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not update candidate status.' });
+        }
+    };
+      if (status && status !== candidateToUpdate.status && (status === 'Shortlisted' || status === 'Rejected')) {
+      const action = status === 'Shortlisted' ? 'shortlist' : 'reject';
+      const emailType = status === 'Shortlisted' ? 'a "shortlisted"' : 'a "rejection"';
+      setConfirmation({
+        isOpen: true,
+        title: `Are you sure you want to ${action} this candidate?`,
+        description: `This will send ${emailType} email to the candidate. Do you want to proceed?`,
+        onConfirm: async () => {
+          await proceedWithUpdate();
+          setConfirmation({ ...confirmation, isOpen: false });
+        },
+      });
+      return;
+    }
+
+    await proceedWithUpdate();
+  };
 
   const columns = useMemo(() => getColumns(colleges, positionMap), [colleges, positionMap]);
 
@@ -192,12 +254,21 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
         submission={selectedSubmission}
         candidate={selectedCandidate}
         onUpdate={(updated) => setData(prev => prev.map(s => s.id === updated.id ? updated : s))}
+        onStatusChange={handleStatusChange}
       />
       <ExportSubmissionsDialog
         isOpen={isExportDialogOpen}
         onClose={() => setExportDialogOpen(false)}
         submissions={data}
        />
+        <ConfirmationDialog
+            isOpen={confirmation.isOpen}
+            onOpenChange={(isOpen) => setConfirmation({ ...confirmation, isOpen })}
+            title={confirmation.title}
+            description={confirmation.description}
+            onConfirm={confirmation.onConfirm}
+            onCancel={() => setConfirmation({ ...confirmation, isOpen: false })}
+        />
     </>
   );
 }
