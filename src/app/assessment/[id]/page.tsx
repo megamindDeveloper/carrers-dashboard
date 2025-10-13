@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
@@ -236,6 +235,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     const timeTaken = startTimeRef.current ? Math.floor((Date.now() - startTimeRef.current) / 1000) : 0;
     const collegeId = searchParams.get('collegeId');
     const candidateIdParam = searchParams.get('candidateId'); // Can be college candidate or general candidate
+    const allQuestions = assessment.sections?.flatMap(s => s.questions) || [];
 
     let submissionData: any = {
         assessmentId: assessment.id,
@@ -244,18 +244,18 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
         submittedAt: serverTimestamp(),
         timeTaken,
         collegeId: collegeId || null,
+        maxScore: allQuestions.reduce((total, q) => total + (q.points || 0), 0),
     };
     
     if (assessment.shouldAutoGrade) {
-        const allQuestions = assessment.sections?.flatMap(s => s.questions) || [];
-        const { score, maxScore, gradedAnswers } = gradeSubmission(data.answers, allQuestions);
+        const { score, gradedAnswers } = gradeSubmission(data.answers, allQuestions);
         submissionData = {
             ...submissionData,
             score,
-            maxScore,
             answers: gradedAnswers,
         };
     } else {
+        submissionData.score = 0; // Default score for manually graded
         submissionData.answers = data.answers.map(({questionId, questionText, answer}) => ({questionId, questionText, answer}));
     }
 
@@ -987,5 +987,3 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
-
-    
