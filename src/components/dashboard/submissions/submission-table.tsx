@@ -5,7 +5,7 @@ import type { Assessment, AssessmentSubmission, College, Candidate, CollegeCandi
 import { DataTable } from '@/components/dashboard/data-table';
 import { getColumns } from './columns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { collection, onSnapshot, query, where, getDocs, doc, updateDoc, writeBatch } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, getDocs, doc, updateDoc, writeBatch, getDoc } from 'firebase/firestore';
 import { db } from '@/app/utils/firebase/firebaseConfig';
 import { useToast } from '@/hooks/use-toast';
 import { SubmissionDetailsModal } from './submission-details-modal';
@@ -132,7 +132,7 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
     setIsRecalculating(true);
     toast({
         title: "Recalculating Scores...",
-        description: `Updating scores and max scores for ${data.length} submissions. Please wait.`,
+        description: `Updating scores for ${data.length} submissions. Please wait.`,
     });
 
     try {
@@ -142,7 +142,7 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
         data.forEach(submission => {
             const { score, maxScore, gradedAnswers } = gradeSubmission(submission.answers, allQuestions);
             const submissionRef = doc(db, "assessmentSubmissions", submission.id);
-            batch.update(submissionRef, { 
+             batch.update(submissionRef, { 
                 maxScore: maxScore,
                 score: score,
                 answers: gradedAnswers,
@@ -234,16 +234,19 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
     }
     const isCollegeCandidate = !!submission.collegeId;
 
-    const candidateToUpdate = candidates.find(c => c.id === candidateId);
-    if (!candidateToUpdate) {
-       toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not find the full candidate record to update.' });
-       return;
+    const collectionPath = isCollegeCandidate ? `colleges/${submission.collegeId}/candidates` : 'applications';
+    const docRef = doc(db, collectionPath, candidateId);
+
+    const candidateSnap = await getDoc(docRef);
+
+    if (!candidateSnap.exists()) {
+        toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not find the full candidate record to update.' });
+        return;
     }
+    const candidateToUpdate = { id: candidateSnap.id, ...candidateSnap.data() } as Candidate | CollegeCandidate;
     
     const proceedWithUpdate = async () => {
         try {
-            const collectionPath = isCollegeCandidate ? `colleges/${submission.collegeId}/candidates` : 'applications';
-            const docRef = doc(db, collectionPath, candidateId);
             await updateDoc(docRef, { status: newStatus });
              toast({
                 title: 'Status Updated',
