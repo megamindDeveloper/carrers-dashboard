@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { SubmissionDetailsModal } from './submission-details-modal';
 import { ExportSubmissionsDialog } from './export-submissions-dialog';
 import { Button } from '@/components/ui/button';
-import { Download } from 'lucide-react';
+import { Download, RefreshCw, Loader2 } from 'lucide-react';
 import { ConfirmationDialog } from '../confirmation-dialog';
 
 interface SubmissionTableProps {
@@ -25,6 +25,7 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
   const [colleges, setColleges] = useState<College[]>([]);
   const [candidates, setCandidates] = useState<(Candidate | CollegeCandidate)[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isRecalculating, setIsRecalculating] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<AssessmentSubmission | null>(null);
   const [isExportDialogOpen, setExportDialogOpen] = useState(false);
   const { toast } = useToast();
@@ -36,7 +37,13 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
     const assessmentRef = doc(db, 'assessments', assessmentId);
     const unsubAssessment = onSnapshot(assessmentRef, (doc) => {
         if (doc.exists()) {
-            setAssessment({ id: doc.id, ...doc.data() } as Assessment);
+            const assessmentData = { id: doc.id, ...doc.data() } as Assessment;
+             if ((!assessmentData.sections || assessmentData.sections.length === 0) && (assessmentData as any).questions?.length > 0) {
+                assessmentData.sections = [{ id: 'default', title: 'General Questions', questions: (assessmentData as any).questions }];
+            } else if (!assessmentData.sections) {
+                assessmentData.sections = [];
+            }
+            setAssessment(assessmentData);
         }
     });
 
@@ -111,6 +118,52 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
         unsubColleges();
     };
   }, [assessmentId, toast]);
+
+  const handleRecalculateScores = async () => {
+    if (!assessment || data.length === 0) {
+        toast({
+            title: "Nothing to recalculate",
+            description: "There are no submissions for this assessment.",
+        });
+        return;
+    }
+
+    setIsRecalculating(true);
+    toast({
+        title: "Recalculating Scores...",
+        description: `Updating max scores for ${data.length} submissions. Please wait.`,
+    });
+
+    try {
+        const allQuestions = assessment.sections?.flatMap(s => s.questions) || [];
+        const correctMaxScore = allQuestions.reduce((total, q) => total + (q.points || 0), 0);
+
+        const batch = writeBatch(db);
+        data.forEach(submission => {
+            if (submission.maxScore !== correctMaxScore) {
+                const submissionRef = doc(db, "assessmentSubmissions", submission.id);
+                batch.update(submissionRef, { maxScore: correctMaxScore });
+            }
+        });
+
+        await batch.commit();
+
+        toast({
+            title: "Scores Recalculated!",
+            description: "All submissions have been updated with the correct total points.",
+        });
+
+    } catch (error) {
+        console.error("Error recalculating scores:", error);
+        toast({
+            variant: "destructive",
+            title: "Recalculation Failed",
+            description: "An error occurred while updating the scores.",
+        });
+    } finally {
+        setIsRecalculating(false);
+    }
+  };
 
   const handleRowClick = (submission: AssessmentSubmission) => {
     setSelectedSubmission({
@@ -246,10 +299,16 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
                 <CardTitle>Submissions</CardTitle>
                 <CardDescription>A list of all candidate submissions for this assessment.</CardDescription>
             </div>
-            <Button onClick={() => setExportDialogOpen(true)} variant="outline" disabled={data.length === 0}>
-                <Download className="mr-2 h-4 w-4" />
-                Export to CSV
-            </Button>
+            <div className="flex gap-2">
+                <Button onClick={handleRecalculateScores} variant="outline" disabled={isRecalculating || data.length === 0}>
+                    {isRecalculating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                    Recalculate Scores
+                </Button>
+                <Button onClick={() => setExportDialogOpen(true)} variant="outline" disabled={data.length === 0}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Export to CSV
+                </Button>
+            </div>
         </CardHeader>
         <CardContent>
           <DataTable
