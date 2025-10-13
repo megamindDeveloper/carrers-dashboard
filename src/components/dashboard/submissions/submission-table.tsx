@@ -107,16 +107,19 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
 
   const selectedCandidate = useMemo(() => {
     if (!selectedSubmission) return null;
-
+    
+    // For college candidates
     if (selectedSubmission.collegeId && selectedSubmission.collegeCandidateId) {
       return candidates.find(c => 'importedAt' in c && c.id === selectedSubmission.collegeCandidateId) || null;
     }
     
+    // For general candidates (check by ID first, then fallback to email)
     if (selectedSubmission.candidateId) {
-      return candidates.find(c => !('importedAt' in c) && c.id === selectedSubmission.candidateId) || null;
+       return candidates.find(c => !('importedAt' in c) && c.id === selectedSubmission.candidateId) || null;
     }
+    
+    return candidates.find(c => c.email.toLowerCase() === selectedSubmission.candidateEmail.toLowerCase()) || null;
 
-    return null;
   }, [selectedSubmission, candidates]);
   
   const collegeCounts = useMemo(() => {
@@ -198,5 +201,3 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
     </>
   );
 }
-
-    

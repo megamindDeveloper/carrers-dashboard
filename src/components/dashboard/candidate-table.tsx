@@ -435,5 +435,3 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
     </>
   );
 }
-
-    

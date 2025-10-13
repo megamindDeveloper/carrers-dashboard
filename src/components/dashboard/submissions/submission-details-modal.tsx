@@ -271,5 +271,3 @@ export function SubmissionDetailsModal({ isOpen, onClose, submission, onUpdate, 
     </Dialog>
   );
 }
-
-    
