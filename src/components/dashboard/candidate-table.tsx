@@ -1,5 +1,3 @@
-
-
 'use client';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Assessment, Candidate, CandidateStatus, CandidateType, AssessmentSubmission } from '@/lib/types';
@@ -39,11 +37,13 @@ const statusOrder = CANDIDATE_STATUSES.reduce((acc, status, index) => {
 
 const toTitleCase = (str: string) => {
   if (!str) return '';
-  return str.replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
+  return str.replace(/\\w\\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
 };
 
 export function CandidateTable({ title, description, filterType }: CandidateTableProps) {
   const [data, setData] = useState<Candidate[]>([]);
+  const [allCandidates, setAllCandidates] = useState<Candidate[]>([]);
+  const [allSubmissions, setAllSubmissions] = useState<AssessmentSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const { toast } = useToast();
@@ -57,73 +57,86 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
   const [selectedSubmission, setSelectedSubmission] = useState<AssessmentSubmission | null>(null);
 
   useEffect(() => {
-    // Fetch candidates in real-time
     const candidatesQuery = collection(db, 'applications');
-    const unsubCandidates = onSnapshot(candidatesQuery, (candidatesSnapshot) => {
-        let candidates = candidatesSnapshot.docs.map(d => ({
-            id: d.id,
-            ...(d.data() as Omit<Candidate, 'id'>),
-        }));
-
-        if (filterType) {
-            candidates = candidates.filter(c => c.type === filterType);
-        }
-
-        // Fetch all submissions in real-time to link them
-        const submissionsQuery = query(collection(db, 'assessmentSubmissions'));
-        const unsubSubmissions = onSnapshot(submissionsQuery, (submissionsSnapshot) => {
-            const submissionsData = submissionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AssessmentSubmission));
-            
-            const submissionsByEmail = submissionsData.reduce((acc, sub) => {
-                if (sub.candidateEmail) {
-                    const lowerEmail = sub.candidateEmail.toLowerCase();
-                    if (!acc[lowerEmail]) {
-                        acc[lowerEmail] = [];
-                    }
-                    acc[lowerEmail].push(sub);
-                }
-                return acc;
-            }, {} as Record<string, AssessmentSubmission[]>);
-
-            const candidatesWithSubmissions = candidates.map(candidate => ({
-                ...candidate,
-                submissions: submissionsByEmail[candidate.email.toLowerCase()] || [],
-            }));
-            
-            candidatesWithSubmissions.sort((a, b) => {
-              const statusA = toTitleCase(a.status as string) as CandidateStatus;
-              const statusB = toTitleCase(b.status as string) as CandidateStatus;
-              const orderA = statusOrder[statusA] ?? 99;
-              const orderB = statusOrder[statusB] ?? 99;
-              if (orderA !== orderB) return orderA - orderB;
-              const positionCompare = a.position.localeCompare(b.position);
-              if (positionCompare !== 0) return positionCompare;
-              const dateA = a.submittedAt?.toDate ? a.submittedAt.toDate() : new Date(0);
-              const dateB = b.submittedAt?.toDate ? b.submittedAt.toDate() : new Date(0);
-              return dateB.getTime() - dateA.getTime();
-            });
-
-            setData(candidatesWithSubmissions.map(c => ({
-              ...c,
-              type: c.type === 'intern' ? 'internship' : c.type === 'emp' ? 'full-time' : c.type,
-            })));
-            setLoading(false);
-        }, (error) => {
-            console.error('Submissions onSnapshot error:', error);
-            setLoading(false);
-        });
-
-        // Return the unsubscribe function for submissions
-        return () => unsubSubmissions();
-
+    const unsubCandidates = onSnapshot(candidatesQuery, (snapshot) => {
+      const candidatesData = snapshot.docs.map(d => ({
+        id: d.id,
+        ...(d.data() as Omit<Candidate, 'id'>),
+      }));
+      setAllCandidates(candidatesData);
     }, (error) => {
-        console.error('Candidates onSnapshot error:', error);
-        setLoading(false);
+      console.error('Candidates onSnapshot error:', error);
+      toast({ variant: 'destructive', title: 'Error Fetching Candidates', description: error.message });
+      setLoading(false);
     });
 
-    // Return the unsubscribe function for candidates
-    return () => unsubCandidates();
-}, [filterType]);
+    const submissionsQuery = query(collection(db, 'assessmentSubmissions'));
+    const unsubSubmissions = onSnapshot(submissionsQuery, (snapshot) => {
+      const submissionsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AssessmentSubmission));
+      setAllSubmissions(submissionsData);
+    }, (error) => {
+      console.error('Submissions onSnapshot error:', error);
+      toast({ variant: 'destructive', title: 'Error Fetching Submissions', description: error.message });
+      setLoading(false);
+    });
+
+    return () => {
+      unsubCandidates();
+      unsubSubmissions();
+    };
+  }, [toast]);
+  
+  useEffect(() => {
+    if (!loading && allCandidates.length === 0) {
+      // Data has been loaded and it's empty
+      setData([]);
+      return;
+    }
+
+    let processedCandidates = allCandidates;
+    
+    if (filterType) {
+        processedCandidates = processedCandidates.filter(c => c.type === filterType);
+    }
+    
+    const submissionsByEmail = allSubmissions.reduce((acc, sub) => {
+        if (sub.candidateEmail) {
+            const lowerEmail = sub.candidateEmail.toLowerCase();
+            if (!acc[lowerEmail]) {
+                acc[lowerEmail] = [];
+            }
+            acc[lowerEmail].push(sub);
+        }
+        return acc;
+    }, {} as Record<string, AssessmentSubmission[]>);
+
+    const candidatesWithSubmissions = processedCandidates.map(candidate => ({
+        ...candidate,
+        submissions: submissionsByEmail[candidate.email.toLowerCase()] || [],
+    }));
+    
+    candidatesWithSubmissions.sort((a, b) => {
+      const statusA = toTitleCase(a.status as string) as CandidateStatus;
+      const statusB = toTitleCase(b.status as string) as CandidateStatus;
+      const orderA = statusOrder[statusA] ?? 99;
+      const orderB = statusOrder[statusB] ?? 99;
+      if (orderA !== orderB) return orderA - orderB;
+      const positionCompare = a.position.localeCompare(b.position);
+      if (positionCompare !== 0) return positionCompare;
+      const dateA = a.submittedAt?.toDate ? a.submittedAt.toDate() : new Date(0);
+      const dateB = b.submittedAt?.toDate ? b.submittedAt.toDate() : new Date(0);
+      return dateB.getTime() - dateA.getTime();
+    });
+
+    setData(candidatesWithSubmissions.map(c => ({
+      ...c,
+      type: c.type === 'intern' ? 'internship' : c.type === 'emp' ? 'full-time' : c.type,
+    })));
+
+    setLoading(false);
+
+  }, [allCandidates, allSubmissions, filterType, loading]);
+
 
   
   const handleRowClick = (candidate: Candidate) => {
