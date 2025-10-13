@@ -30,14 +30,19 @@ export const gradeSubmission = (
             return { ...formAnswer, isCorrect: null, points: 0 };
         }
         
+        // If points are already defined for an answer (from manual grading), preserve them.
+        if (formAnswer.points !== undefined && formAnswer.points !== null) {
+            return { ...formAnswer, isCorrect: null }; // isCorrect is ambiguous for manual grades
+        }
+        
         // A question is auto-gradable only if it has a defined correct answer.
         const isAutoGradable = question.correctAnswer !== undefined && question.correctAnswer !== null && (Array.isArray(question.correctAnswer) ? question.correctAnswer.length > 0 : question.correctAnswer !== '');
         
         if (!isAutoGradable) {
-            // This is a subjective, manually graded question.
-            // Preserve any points already assigned, default to 0.
+            // This is a subjective question that has not been manually graded yet.
             // isCorrect is null because it's not auto-judged.
-            return { ...formAnswer, isCorrect: null, points: formAnswer.points || 0 };
+            // Points remain 0 until a grader enters them.
+            return { ...formAnswer, isCorrect: null, points: 0 };
         }
 
         // --- Auto-Grading Logic ---
