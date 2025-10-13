@@ -26,22 +26,13 @@ export const gradeSubmission = (
         const question = questions.find(q => q.id === formAnswer.questionId);
 
         if (!question) {
-            // Question not found in assessment, not gradable
             return { ...formAnswer, isCorrect: null, points: 0 };
         }
         
-        // If points are already defined for an answer (from manual grading), preserve them.
-        if (formAnswer.points !== undefined && formAnswer.points !== null) {
-            return { ...formAnswer, isCorrect: null }; // isCorrect is ambiguous for manual grades
-        }
-        
-        // A question is auto-gradable only if it has a defined correct answer.
         const isAutoGradable = question.correctAnswer !== undefined && question.correctAnswer !== null && (Array.isArray(question.correctAnswer) ? question.correctAnswer.length > 0 : question.correctAnswer !== '');
         
         if (!isAutoGradable) {
-            // This is a subjective question that has not been manually graded yet.
-            // isCorrect is null because it's not auto-judged.
-            // Points remain 0 until a grader enters them.
+            // This is a subjective question. Reset points to 0 for manual grading.
             return { ...formAnswer, isCorrect: null, points: 0 };
         }
 
@@ -64,7 +55,6 @@ export const gradeSubmission = (
         };
     });
     
-    // Final score is the sum of all points, both auto-graded and manually assigned.
     const finalScore = gradedAnswers.reduce((total, ans) => total + (ans.points || 0), 0);
 
     return { score: finalScore, maxScore, gradedAnswers };
