@@ -1,7 +1,7 @@
 
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
-import type { Assessment, AssessmentSubmission, College } from '@/lib/types';
+import type { Assessment, AssessmentSubmission, College, Candidate, CollegeCandidate } from '@/lib/types';
 import { DataTable } from '@/components/dashboard/data-table';
 import { getColumns } from './columns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -22,6 +22,7 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
   const [allSubmissions, setAllSubmissions] = useState<AssessmentSubmission[]>([]);
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [colleges, setColleges] = useState<College[]>([]);
+  const [candidates, setCandidates] = useState<(Candidate | CollegeCandidate)[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSubmission, setSelectedSubmission] = useState<AssessmentSubmission | null>(null);
   const [isExportDialogOpen, setExportDialogOpen] = useState(false);
@@ -68,14 +69,28 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
       }
     );
 
-    const unsubColleges = onSnapshot(collection(db, 'colleges'), snapshot => {
-        setColleges(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as College)));
+    const unsubColleges = onSnapshot(collection(db, 'colleges'), async snapshot => {
+        const collegeData = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as College));
+        setColleges(collegeData);
+        
+        // Fetch all candidates from all colleges
+        const collegeCandidatesPromises = collegeData.map(c => getDocs(query(collection(db, `colleges/${c.id}/candidates`))));
+        const collegeCandidatesSnapshots = await Promise.all(collegeCandidatesPromises);
+        const collegeCandidates = collegeCandidatesSnapshots.flatMap(snap => snap.docs.map(d => ({...d.data(), id: d.id} as CollegeCandidate)));
+
+        setCandidates(prev => [...prev.filter(c => !('importedAt' in c)), ...collegeCandidates]);
+    });
+
+    const unsubCandidates = onSnapshot(collection(db, 'applications'), snapshot => {
+        const appCandidates = snapshot.docs.map(d => ({...d.data(), id: d.id} as Candidate));
+        setCandidates(prev => [...prev.filter(c => 'importedAt' in c), ...appCandidates]);
     });
 
     return () => {
         unsubAssessment();
         unsubSubmissions();
         unsubColleges();
+        unsubCandidates();
     };
   }, [assessmentId, toast]);
 
@@ -89,6 +104,20 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
   const handleCloseModal = () => {
       setSelectedSubmission(null);
   }
+
+  const selectedCandidate = useMemo(() => {
+    if (!selectedSubmission) return null;
+
+    if (selectedSubmission.collegeId && selectedSubmission.collegeCandidateId) {
+      return candidates.find(c => 'importedAt' in c && c.id === selectedSubmission.collegeCandidateId) || null;
+    }
+    
+    if (selectedSubmission.candidateId) {
+      return candidates.find(c => !('importedAt' in c) && c.id === selectedSubmission.candidateId) || null;
+    }
+
+    return null;
+  }, [selectedSubmission, candidates]);
   
   const collegeCounts = useMemo(() => {
     return allSubmissions.filter(s => s.assessmentId === assessmentId).reduce((acc, sub) => {
@@ -158,6 +187,7 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
         isOpen={!!selectedSubmission}
         onClose={handleCloseModal}
         submission={selectedSubmission}
+        candidate={selectedCandidate}
         onUpdate={(updated) => setData(prev => prev.map(s => s.id === updated.id ? updated : s))}
       />
       <ExportSubmissionsDialog
@@ -168,3 +198,5 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
     </>
   );
 }
+
+    

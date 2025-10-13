@@ -242,9 +242,9 @@ export function SubmissionDetailsModal({ isOpen, onClose, submission, onUpdate, 
                                     <em>No answer provided.</em>
                                 )}
                             </div>
-                             {isManualGrade && (
+                             {submission.shouldAutoGrade && (
                                 <div className="pt-2">
-                                    <Label htmlFor={`score-${item.questionId}`} className="text-xs font-semibold">MANUAL SCORE</Label>
+                                    <Label htmlFor={`score-${item.questionId}`} className="text-xs font-semibold">Points</Label>
                                     <Input
                                         id={`score-${item.questionId}`}
                                         type="number"
@@ -271,3 +271,5 @@ export function SubmissionDetailsModal({ isOpen, onClose, submission, onUpdate, 
     </Dialog>
   );
 }
+
+    

@@ -380,7 +380,8 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
     [handleStatusChangeFromDropdown, handleDeleteCandidate]
   );
 
-  const submissionCandidate = data.find(c => c.id === selectedSubmission?.candidateId);
+  const submissionCandidate = data.find(c => c.id === selectedSubmission?.candidateId || c.email.toLowerCase() === selectedSubmission?.candidateEmail.toLowerCase());
+
 
   if (loading) return <p className="p-4">Loading candidates...</p>;
 
@@ -434,3 +435,5 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
     </>
   );
 }
+
+    
