@@ -13,6 +13,7 @@ import { ExportSubmissionsDialog } from './export-submissions-dialog';
 import { Button } from '@/components/ui/button';
 import { Download, RefreshCw, Loader2 } from 'lucide-react';
 import { ConfirmationDialog } from '../confirmation-dialog';
+import { gradeSubmission } from '@/lib/utils';
 
 interface SubmissionTableProps {
   assessmentId: string;
@@ -131,26 +132,28 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
     setIsRecalculating(true);
     toast({
         title: "Recalculating Scores...",
-        description: `Updating max scores for ${data.length} submissions. Please wait.`,
+        description: `Updating scores and max scores for ${data.length} submissions. Please wait.`,
     });
 
     try {
         const allQuestions = assessment.sections?.flatMap(s => s.questions) || [];
-        const correctMaxScore = allQuestions.reduce((total, q) => total + (q.points || 0), 0);
-
+        
         const batch = writeBatch(db);
         data.forEach(submission => {
-            if (submission.maxScore !== correctMaxScore) {
-                const submissionRef = doc(db, "assessmentSubmissions", submission.id);
-                batch.update(submissionRef, { maxScore: correctMaxScore });
-            }
+            const { score, maxScore, gradedAnswers } = gradeSubmission(submission.answers, allQuestions);
+            const submissionRef = doc(db, "assessmentSubmissions", submission.id);
+            batch.update(submissionRef, { 
+                maxScore: maxScore,
+                score: score,
+                answers: gradedAnswers,
+            });
         });
 
         await batch.commit();
 
         toast({
             title: "Scores Recalculated!",
-            description: "All submissions have been updated with the correct total points.",
+            description: "All submissions have been updated with the correct scores and total points.",
         });
 
     } catch (error) {
@@ -232,7 +235,10 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
     const isCollegeCandidate = !!submission.collegeId;
 
     const candidateToUpdate = candidates.find(c => c.id === candidateId);
-    if (!candidateToUpdate) return;
+    if (!candidateToUpdate) {
+       toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not find the full candidate record to update.' });
+       return;
+    }
     
     const proceedWithUpdate = async () => {
         try {
@@ -248,7 +254,7 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
 
             if (shouldSendEmail) {
                 const apiEndpoint = newStatus === 'Shortlisted' ? '/api/shortlisted' : '/api/rejected';
-                const candidate = candidateToUpdate as Candidate;
+                const candidate = candidateToUpdate as Candidate; // We know it's a main candidate here
                 const response = await fetch(apiEndpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
