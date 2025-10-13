@@ -81,7 +81,7 @@ export function SubmissionDetailsModal({ isOpen, onClose, submission, onUpdate, 
     if (submission) {
       const initialAnswers = Array.isArray(submission.answers) ? submission.answers : [];
       setAnswers(initialAnswers);
-      const initialScore = initialAnswers.reduce((sum, ans) => sum + (ans.points || 0), 0);
+      const initialScore = submission.score ?? initialAnswers.reduce((sum, ans) => sum + (ans.points || 0), 0);
       setTotalScore(initialScore);
     }
     if (candidate) {
@@ -243,7 +243,7 @@ export function SubmissionDetailsModal({ isOpen, onClose, submission, onUpdate, 
                                     <em>No answer provided.</em>
                                 )}
                             </div>
-                             {submission.shouldAutoGrade && (
+                             {(submission.shouldAutoGrade || item.points !== undefined) && (
                                 <div className="pt-2">
                                     <Label htmlFor={`score-${item.questionId}`} className="text-xs font-semibold">Points</Label>
                                     <Input
@@ -263,10 +263,12 @@ export function SubmissionDetailsModal({ isOpen, onClose, submission, onUpdate, 
         </div>
          <DialogFooter>
              <Button type="button" variant="outline" onClick={onClose}>Close</Button>
-             {submission.shouldAutoGrade && <Button onClick={handleSaveChanges} disabled={isSaving}>
-                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                Save Grades
-             </Button>}
+             {(submission.shouldAutoGrade || answers.some(a => a.points !== undefined)) && (
+                <Button onClick={handleSaveChanges} disabled={isSaving}>
+                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                    Save Grades
+                </Button>
+             )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

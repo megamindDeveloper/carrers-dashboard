@@ -225,58 +225,60 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
 
   const onSubmit = useCallback(async (data: AnswersFormValues) => {
     if (!assessment || isSubmitting || alreadySubmitted) return;
-
+  
     if (!validateRequiredAnswers(data)) {
         setIsSubmitting(false);
         return;
     }
-
+  
     setIsSubmitting(true);
     const timeTaken = startTimeRef.current ? Math.floor((Date.now() - startTimeRef.current) / 1000) : 0;
     const collegeId = searchParams.get('collegeId');
-    const candidateIdParam = searchParams.get('candidateId'); // Can be college candidate or general candidate
+    const candidateIdParam = searchParams.get('candidateId');
     const allQuestions = assessment.sections?.flatMap(s => s.questions) || [];
-
+  
+    const maxScore = allQuestions.reduce((total, q) => total + (q.points || 0), 0);
+  
     let submissionData: any = {
-        assessmentId: assessment.id,
-        assessmentTitle: assessment.title,
-        answers: data.answers.map(({questionId, questionText, answer}) => ({questionId, questionText, answer})),
-        submittedAt: serverTimestamp(),
-        timeTaken,
-        collegeId: collegeId || null,
-        maxScore: allQuestions.reduce((total, q) => total + (q.points || 0), 0),
+      assessmentId: assessment.id,
+      assessmentTitle: assessment.title,
+      answers: data.answers.map(({ questionId, questionText, answer }) => ({ questionId, questionText, answer })),
+      submittedAt: serverTimestamp(),
+      timeTaken,
+      collegeId: collegeId || null,
+      maxScore, // Use the correctly calculated maxScore
     };
-    
+  
     if (assessment.shouldAutoGrade) {
-        const { score, gradedAnswers } = gradeSubmission(data.answers, allQuestions);
-        submissionData = {
-            ...submissionData,
-            score,
-            answers: gradedAnswers,
-        };
+      const { score, gradedAnswers } = gradeSubmission(data.answers, allQuestions);
+      submissionData = {
+        ...submissionData,
+        score,
+        answers: gradedAnswers,
+      };
     } else {
-        submissionData.score = 0; // Default score for manually graded
-        submissionData.answers = data.answers.map(({questionId, questionText, answer}) => ({questionId, questionText, answer}));
+      submissionData.score = 0;
+      submissionData.answers = data.answers.map(({ questionId, questionText, answer }) => ({ questionId, questionText, answer, points: 0, isCorrect: null }));
     }
-
+  
     if (candidate) {
-        submissionData = {
-            ...submissionData,
-            candidateId: (candidate as Candidate).type ? candidate.id : null, // General candidate ID
-            collegeCandidateId: collegeId ? candidateIdParam : null, // College candidate ID
-            candidateName: 'fullName' in candidate ? (candidate as Candidate).fullName : candidate.name,
-            candidateEmail: candidate.email,
-        };
+      submissionData = {
+        ...submissionData,
+        candidateId: (candidate as Candidate).type ? candidate.id : null,
+        collegeCandidateId: collegeId ? candidateIdParam : null,
+        candidateName: 'fullName' in candidate ? (candidate as Candidate).fullName : candidate.name,
+        candidateEmail: candidate.email,
+      };
     } else {
-        submissionData = {
-            ...submissionData,
-            candidateId: null,
-            collegeCandidateId: null,
-            candidateName: 'N/A',
-            candidateEmail: 'N/A',
-        }
+      submissionData = {
+        ...submissionData,
+        candidateId: null,
+        collegeCandidateId: null,
+        candidateName: 'N/A',
+        candidateEmail: 'N/A',
+      };
     }
-
+  
     try {
       await addDoc(collection(db, 'assessmentSubmissions'), submissionData);
       
@@ -285,7 +287,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
         description: 'Your answers have been recorded.',
       });
       setIsFinished(true);
-
+  
     } catch (e: any) {
       console.error("Submission error:", e);
       toast({
@@ -294,7 +296,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
         description: e.message || 'An unexpected error occurred.',
       });
     } finally {
-        setIsSubmitting(false);
+      setIsSubmitting(false);
     }
   }, [assessment, candidate, isSubmitting, searchParams, toast, alreadySubmitted]);
 
@@ -987,3 +989,5 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
+
+    
