@@ -246,7 +246,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
       submittedAt: serverTimestamp(),
       timeTaken,
       collegeId: collegeId || null,
-      maxScore, // Use the correctly calculated maxScore
+      maxScore,
     };
   
     if (assessment.shouldAutoGrade) {
@@ -989,5 +989,3 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     </div>
   );
 }
-
-    
