@@ -237,7 +237,7 @@ export default function AssessmentPage({ params }: { params: { id: string } }) {
     const candidateIdParam = searchParams.get('candidateId');
     const allQuestions = assessment.sections?.flatMap(s => s.questions) || [];
   
-    const maxScore = allQuestions.reduce((total, q) => total + (q.points || 0), 0);
+    const maxScore = allQuestions.length;
   
     let submissionData: any = {
       assessmentId: assessment.id,
