@@ -74,24 +74,14 @@ export function JobTable() {
     try {
       if (selectedJob) {
         // Update existing job
-        const response = await fetch('/api/jobs', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: selectedJob.id, ...jobData }),
-        });
-        if (!response.ok) throw new Error('Failed to update job');
+        await updateDoc(doc(db, 'jobs', selectedJob.id), jobData);
         toast({
           title: 'Job Updated',
           description: `The job "${jobData.position}" has been updated successfully.`,
         });
       } else {
         // Add new job
-        const response = await fetch('/api/jobs', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(jobData),
-        });
-        if (!response.ok) throw new Error('Failed to create job');
+        await addDoc(collection(db, 'jobs'), { ...jobData, createdAt: serverTimestamp() });
         toast({
           title: 'Job Added',
           description: `The job "${jobData.position}" has been created.`,
@@ -142,5 +132,3 @@ export function JobTable() {
     </>
   );
 }
-
-    
