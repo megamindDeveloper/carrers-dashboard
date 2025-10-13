@@ -40,8 +40,28 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
         }
     });
 
-    const allSubmissionsQuery = query(collection(db, 'assessmentSubmissions'));
+    const fetchAllCandidates = async () => {
+        const candidatePromises = [
+            getDocs(collection(db, 'applications')),
+            getDocs(collection(db, 'colleges')),
+        ];
+        const [appSnapshot, collegesSnapshot] = await Promise.all(candidatePromises);
 
+        const appCandidates = appSnapshot.docs.map(d => ({ ...d.data(), id: d.id } as Candidate));
+        
+        let collegeCandidates: CollegeCandidate[] = [];
+        for (const collegeDoc of collegesSnapshot.docs) {
+            const candidatesSnapshot = await getDocs(collection(db, `colleges/${collegeDoc.id}/candidates`));
+            const cands = candidatesSnapshot.docs.map(candidateDoc => ({ id: candidateDoc.id, ...candidateDoc.data() } as CollegeCandidate));
+            collegeCandidates = [...collegeCandidates, ...cands];
+        }
+        
+        setCandidates([...appCandidates, ...collegeCandidates]);
+    };
+    
+    fetchAllCandidates();
+
+    const allSubmissionsQuery = query(collection(db, 'assessmentSubmissions'));
     const unsubSubmissions = onSnapshot(
       allSubmissionsQuery,
       async (allSubmissionsSnapshot) => {
@@ -49,11 +69,22 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
           id: d.id,
           ...(d.data() as Omit<AssessmentSubmission, 'id'>),
         }));
-
         setAllSubmissions(allSubmissionsData);
+
+        const fetchedCandidates = await getDocs(query(collection(db, 'applications'))).then(snap => snap.docs.map(d => ({id: d.id, ...d.data()} as Candidate)));
+        const collegesSnapshot = await getDocs(query(collection(db, 'colleges')));
+        let fetchedCollegeCandidates: CollegeCandidate[] = [];
+        for (const collegeDoc of collegesSnapshot.docs) {
+            const candsSnap = await getDocs(query(collection(db, `colleges/${collegeDoc.id}/candidates`)));
+            fetchedCollegeCandidates = [...fetchedCollegeCandidates, ...candsSnap.docs.map(d => ({id: d.id, ...d.data()} as CollegeCandidate))];
+        }
 
         const currentAssessmentSubmissions = allSubmissionsData
           .filter(sub => sub.assessmentId === assessmentId)
+          .map(sub => {
+              const candidate = fetchedCandidates.find(c => c.id === sub.candidateId) || fetchedCollegeCandidates.find(c => c.id === sub.collegeCandidateId);
+              return { ...sub, candidateStatus: candidate?.status };
+          })
           .sort((a, b) => (b.submittedAt?.toDate() ?? 0) - (a.submittedAt?.toDate() ?? 0));
         
         setData(currentAssessmentSubmissions);
@@ -73,29 +104,6 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
     const unsubColleges = onSnapshot(collection(db, 'colleges'), (snapshot) => {
         setColleges(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as College)));
     });
-
-    const fetchAllCandidates = async () => {
-        const candidatePromises = [
-            getDocs(collection(db, 'applications')),
-            getDocs(collection(db, 'colleges')),
-        ];
-        const [appSnapshot, collegesSnapshot] = await Promise.all(candidatePromises);
-
-        const appCandidates = appSnapshot.docs.map(d => ({ ...d.data(), id: d.id } as Candidate));
-        
-        const collegeCandidates: CollegeCandidate[] = [];
-        for (const collegeDoc of collegesSnapshot.docs) {
-            const candidatesSnapshot = await getDocs(collection(db, `colleges/${collegeDoc.id}/candidates`));
-            candidatesSnapshot.forEach(candidateDoc => {
-                collegeCandidates.push({ id: candidateDoc.id, ...candidateDoc.data() } as CollegeCandidate);
-            });
-        }
-        
-        setCandidates([...appCandidates, ...collegeCandidates]);
-    };
-    
-    fetchAllCandidates();
-
 
     return () => {
         unsubAssessment();
@@ -162,24 +170,31 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
     }, {} as Record<string, number>);
   }, [allSubmissions, assessmentId, positionMap]);
 
-   const handleStatusChange = async (candidateId: string, status: CandidateStatus, isCollegeCandidate: boolean) => {
+   const handleStatusChange = async (submission: AssessmentSubmission, newStatus: CandidateStatus) => {
+    const candidateId = submission.candidateId || submission.collegeCandidateId;
+    if (!candidateId) {
+        toast({ variant: 'destructive', title: 'Update Failed', description: 'Candidate ID not found for this submission.' });
+        return;
+    }
+    const isCollegeCandidate = !!submission.collegeId;
+
     const candidateToUpdate = candidates.find(c => c.id === candidateId);
     if (!candidateToUpdate) return;
     
     const proceedWithUpdate = async () => {
         try {
-            const collectionPath = isCollegeCandidate ? `colleges/${selectedSubmission?.collegeId}/candidates` : 'applications';
+            const collectionPath = isCollegeCandidate ? `colleges/${submission.collegeId}/candidates` : 'applications';
             const docRef = doc(db, collectionPath, candidateId);
-            await updateDoc(docRef, { status });
+            await updateDoc(docRef, { status: newStatus });
              toast({
                 title: 'Status Updated',
-                description: `Candidate status has been changed to ${status}.`,
+                description: `Candidate status has been changed to ${newStatus}.`,
             });
 
-             const shouldSendEmail = !isCollegeCandidate && (status === 'Shortlisted' || status === 'Rejected');
+             const shouldSendEmail = !isCollegeCandidate && (newStatus === 'Shortlisted' || newStatus === 'Rejected');
 
             if (shouldSendEmail) {
-                const apiEndpoint = status === 'Shortlisted' ? '/api/shortlisted' : '/api/rejected';
+                const apiEndpoint = newStatus === 'Shortlisted' ? '/api/shortlisted' : '/api/rejected';
                 const candidate = candidateToUpdate as Candidate;
                 const response = await fetch(apiEndpoint, {
                     method: 'POST',
@@ -201,9 +216,9 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
             toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not update candidate status.' });
         }
     };
-      if (!isCollegeCandidate && (status === 'Shortlisted' || status === 'Rejected')) {
-      const action = status === 'Shortlisted' ? 'shortlist' : 'reject';
-      const emailType = status === 'Shortlisted' ? 'a "shortlisted"' : 'a "rejection"';
+      if (!isCollegeCandidate && (newStatus === 'Shortlisted' || newStatus === 'Rejected')) {
+      const action = newStatus === 'Shortlisted' ? 'shortlist' : 'reject';
+      const emailType = newStatus === 'Shortlisted' ? 'a "shortlisted"' : 'a "rejection"';
       setConfirmation({
         isOpen: true,
         title: `Are you sure you want to ${action} this candidate?`,
@@ -219,7 +234,7 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
     await proceedWithUpdate();
   };
 
-  const columns = useMemo(() => getColumns(colleges, positionMap), [colleges, positionMap]);
+  const columns = useMemo(() => getColumns({ onStatusChange: handleStatusChange, colleges, positionMap }), [colleges, positionMap]);
 
   if (loading) return <p className="p-4">Loading submissions...</p>;
 
@@ -254,7 +269,7 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
         submission={selectedSubmission}
         candidate={selectedCandidate}
         onUpdate={(updated) => setData(prev => prev.map(s => s.id === updated.id ? updated : s))}
-        onStatusChange={handleStatusChange}
+        onStatusChange={(candidateId, status, isCollege) => handleStatusChange({ ...selectedSubmission, candidateId: isCollege ? null : candidateId, collegeCandidateId: isCollege ? candidateId : null } as AssessmentSubmission, status)}
       />
       <ExportSubmissionsDialog
         isOpen={isExportDialogOpen}

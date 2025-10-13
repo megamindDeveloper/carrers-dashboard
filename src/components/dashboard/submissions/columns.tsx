@@ -2,7 +2,8 @@
 'use client';
 
 import type { ColumnDef } from '@tanstack/react-table';
-import type { AssessmentSubmission, College } from '@/lib/types';
+import type { AssessmentSubmission, CandidateStatus, College } from '@/lib/types';
+import { CANDIDATE_STATUSES } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -10,10 +11,16 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from '@/components/ui/dropdown-menu';
 import {
   ArrowUpDown,
   MoreHorizontal,
+  Trash2,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
@@ -27,7 +34,19 @@ const formatTime = (seconds: number) => {
 
 type PositionMap = { [email: string]: string };
 
-export const getColumns = (colleges: College[] = [], positionMap: PositionMap = {}): ColumnDef<AssessmentSubmission>[] => {
+type GetColumnsProps = {
+    onStatusChange: (submission: AssessmentSubmission, newStatus: CandidateStatus) => void;
+    colleges?: College[];
+    positionMap?: PositionMap;
+};
+
+
+const toTitleCase = (str: string | undefined): string => {
+    if (!str) return '';
+    return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
+};
+
+export const getColumns = ({ onStatusChange, colleges = [], positionMap = {} }: GetColumnsProps): ColumnDef<AssessmentSubmission>[] => {
   const columns: ColumnDef<AssessmentSubmission>[] = [
     {
       accessorKey: 'candidateName',
@@ -140,6 +159,7 @@ export const getColumns = (colleges: College[] = [], positionMap: PositionMap = 
     id: 'actions',
     cell: ({ row, table }) => {
       const submission = row.original;
+      const candidateStatus = (row.original as any).candidateStatus as CandidateStatus | undefined;
 
       return (
         <DropdownMenu>
@@ -161,6 +181,23 @@ export const getColumns = (colleges: College[] = [], positionMap: PositionMap = 
             >
                 View Submission
             </DropdownMenuItem>
+             <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                    <span>Change Status</span>
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                    <DropdownMenuRadioGroup
+                    value={candidateStatus ? toTitleCase(candidateStatus) : undefined}
+                    onValueChange={(value) => onStatusChange(submission, value as CandidateStatus)}
+                    >
+                    {CANDIDATE_STATUSES.map((status) => (
+                        <DropdownMenuRadioItem key={status} value={status} disabled={!candidateStatus}>
+                        {status}
+                        </DropdownMenuRadioItem>
+                    ))}
+                    </DropdownMenuRadioGroup>
+                </DropdownMenuSubContent>
+            </DropdownMenuSub>
           </DropdownMenuContent>
         </DropdownMenu>
       );
