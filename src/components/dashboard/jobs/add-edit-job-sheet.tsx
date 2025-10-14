@@ -25,9 +25,8 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import type { Job, JobStatus, JobType } from '@/lib/types';
+import type { Job } from '@/lib/types';
 import { JOB_STATUSES, JOB_TYPES } from '@/lib/types';
 import { Loader2, PlusCircle, Trash2, X } from 'lucide-react';
 import {
@@ -37,6 +36,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import RichTextEditor from '@/components/ui/rich-text-editor';
 
 interface AddEditJobSheetProps {
   isOpen: boolean;
@@ -51,9 +52,10 @@ const jobSchema = z.object({
   openings: z.coerce.number().min(1, 'At least one opening is required'),
   experience: z.string().min(1, 'Experience is required'),
   location: z.string().min(1, 'Location is required'),
-  highlightPoints: z.array(z.object({ value: z.string().min(1, "Highlight point cannot be empty") })).min(1, "At least one highlight point is required"),
-  responsibilities: z.array(z.object({ value: z.string().min(1, "Responsibility cannot be empty") })).min(1, "At least one responsibility is required"),
-  skills: z.array(z.object({ value: z.string().min(1, "Skill cannot be empty") })).min(1, "At least one skill is required"),
+  sections: z.array(z.object({
+    title: z.string().min(1, "Section title cannot be empty"),
+    points: z.array(z.object({ value: z.string().min(1, "Point cannot be empty") }))
+  })).min(1, "At least one section is required"),
   status: z.enum(JOB_STATUSES),
   type: z.enum(JOB_TYPES),
   duration: z.string().optional(),
@@ -66,48 +68,58 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
 
   const form = useForm<z.infer<typeof jobSchema>>({
     resolver: zodResolver(jobSchema),
-    defaultValues: {
-      position: '',
-      icon: 'Briefcase',
-      openings: 1,
-      experience: '',
-      location: '',
-      highlightPoints: [{ value: '' }],
-      responsibilities: [{ value: '' }],
-      skills: [{ value: '' }],
-      status: 'Open',
-      type: 'full-time',
-      duration: '',
-    },
   });
 
-  const { fields: highlightPointsFields, append: appendHighlightPoint, remove: removeHighlightPoint } = useFieldArray({ control: form.control, name: "highlightPoints" });
-  const { fields: respFields, append: appendResp, remove: removeResp } = useFieldArray({ control: form.control, name: "responsibilities" });
-  const { fields: skillsFields, append: appendSkill, remove: removeSkill } = useFieldArray({ control: form.control, name: "skills" });
-
+  const { fields: sectionsFields, append: appendSection, remove: removeSection } = useFieldArray({ control: form.control, name: "sections" });
 
   useEffect(() => {
     if (isOpen) {
       if (job) {
+        // This is an existing job, potentially in the old format.
+        let sections = [];
+        if (job.sections && Array.isArray(job.sections)) {
+            // New format already exists
+            sections = job.sections.map(sec => ({
+                title: sec.title,
+                points: sec.points.map(p => ({ value: p }))
+            }));
+        } else {
+            // Old format, perform migration
+            if (job.highlightPoints && job.highlightPoints.length > 0) {
+                sections.push({ title: 'Highlights', points: job.highlightPoints.map(p => ({ value: p })) });
+            }
+            if (job.responsibilities && job.responsibilities.length > 0) {
+                sections.push({ title: 'Responsibilities', points: job.responsibilities.map(p => ({ value: p })) });
+            }
+            if (job.skills && job.skills.length > 0) {
+                sections.push({ title: 'Skills', points: job.skills.map(p => ({ value: p })) });
+            }
+        }
+
         form.reset({
-          ...job,
+          position: job.position || '',
+          icon: job.icon || 'Briefcase',
           openings: job.openings || 1,
-          highlightPoints: (job.highlightPoints || []).map(s => ({ value: s })),
-          responsibilities: (job.responsibilities || []).map(r => ({ value: r })),
-          skills: (job.skills || []).map(s => ({ value: s })),
+          experience: job.experience || '',
+          location: job.location || '',
+          status: job.status || 'Open',
           type: job.type || 'full-time',
           duration: job.duration || '',
+          sections: sections,
         });
       } else {
+        // This is a new job
         form.reset({
           position: '',
           icon: 'Briefcase',
           openings: 1,
           experience: '',
           location: '',
-          highlightPoints: [{ value: '' }],
-          responsibilities: [{ value: '' }],
-          skills: [{ value: '' }],
+          sections: [
+            { title: 'Highlights', points: [{value: ''}] },
+            { title: 'Responsibilities', points: [{value: ''}] },
+            { title: 'Skills', points: [{value: ''}] }
+          ],
           status: 'Open',
           type: 'full-time',
           duration: '',
@@ -121,11 +133,16 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
     try {
       const jobData = {
           ...data,
-          highlightPoints: data.highlightPoints.map(s => s.value),
-          responsibilities: data.responsibilities.map(r => r.value),
-          skills: data.skills.map(s => s.value),
+          sections: data.sections.map(sec => ({
+            ...sec,
+            points: sec.points.map(p => p.value)
+          })),
+          // Ensure old fields are removed on save
+          highlightPoints: undefined,
+          responsibilities: undefined,
+          skills: undefined,
       };
-      await onSave(jobData);
+      await onSave(jobData as any);
     } catch (error) {
        console.error("Error saving job:", error);
        toast({
@@ -138,58 +155,22 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
     }
   };
 
-  const BulletPointInput = ({ fields, append, remove, label, placeholder, name }: any) => (
-    <div className="space-y-2">
-      <FormLabel>{label}</FormLabel>
-      {fields.map((field: any, index: number) => (
-        <FormField
-          key={field.id}
-          control={form.control}
-          name={`${name}.${index}.value` as any}
-          render={({ field }) => (
-            <FormItem className="flex items-center gap-2">
-              <FormControl>
-                <Input {...field} placeholder={placeholder} />
-              </FormControl>
-              <Button
-                type="button"
-                variant="destructive"
-                size="icon"
-                onClick={() => remove(index)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </FormItem>
-          )}
-        />
-      ))}
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={() => append({ value: '' })}
-      >
-        <PlusCircle className="mr-2 h-4 w-4" />
-        Add {label.slice(0, -1)}
-      </Button>
-    </div>
-  );
-
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-2xl">
+      <SheetContent className="w-full sm:max-w-3xl flex flex-col">
+        <SheetHeader>
+          <SheetTitle>{job ? 'Edit Job' : 'Add New Job'}</SheetTitle>
+          <SheetDescription>
+            Fill in the details for the job posting. Click save when you're done.
+          </SheetDescription>
+        </SheetHeader>
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
-            className="flex h-full flex-col"
+            className="flex-1 flex flex-col overflow-hidden"
           >
-            <SheetHeader>
-              <SheetTitle>{job ? 'Edit Job' : 'Add New Job'}</SheetTitle>
-              <SheetDescription>
-                Fill in the details for the job posting. Click save when you're done.
-              </SheetDescription>
-            </SheetHeader>
-            <div className="flex-1 overflow-y-auto p-1 pr-6 space-y-4 py-4">
+           <ScrollArea className="flex-1 pr-6">
+            <div className="space-y-4 py-4">
                <FormField control={form.control} name="position" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Job Position</FormLabel>
@@ -269,33 +250,33 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
                     <FormMessage />
                   </FormItem>
                 )} />
-
-              <div className="space-y-2">
-                <FormLabel>Highlight Points</FormLabel>
-                 {highlightPointsFields.map((field, index) => (
-                    <FormField
-                      key={field.id}
-                      control={form.control}
-                      name={`highlightPoints.${index}.value`}
-                      render={({ field }) => (
-                        <FormItem className="flex items-center gap-2">
-                          <FormControl>
-                            <Input {...field} placeholder="e.g., Competitive salary" />
-                          </FormControl>
-                          <Button type="button" variant="ghost" size="icon" onClick={() => removeHighlightPoint(index)}>
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </FormItem>
-                      )}
-                    />
+              
+                <div className="space-y-4 border-t pt-4">
+                  {sectionsFields.map((sectionField, sectionIndex) => (
+                    <div key={sectionField.id} className="space-y-4 rounded-lg border p-4">
+                       <div className="flex items-end justify-between">
+                         <FormField
+                          control={form.control}
+                          name={`sections.${sectionIndex}.title`}
+                          render={({ field }) => (
+                            <FormItem className="flex-grow">
+                              <FormLabel>Section Title</FormLabel>
+                              <FormControl><Input placeholder="e.g., Responsibilities" {...field} /></FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <Button type="button" variant="destructive" size="sm" onClick={() => removeSection(sectionIndex)} className="ml-4">
+                            <Trash2 className="mr-2 h-4 w-4" /> Delete Section
+                        </Button>
+                       </div>
+                       <PointsArrayField sectionIndex={sectionIndex} form={form} />
+                    </div>
                   ))}
-                  <Button type="button" variant="outline" size="sm" onClick={() => appendHighlightPoint({ value: '' })}>
-                    <PlusCircle className="mr-2 h-4 w-4" />Add Highlight Point
+                  <Button type="button" variant="outline" onClick={() => appendSection({ title: '', points: [{ value: '' }]})}>
+                      <PlusCircle className="mr-2 h-4 w-4" /> Add Section
                   </Button>
-              </div>
-
-              <BulletPointInput fields={respFields} append={appendResp} remove={removeResp} label="Responsibilities" placeholder="e.g., Develop new features" name="responsibilities" />
-              <BulletPointInput fields={skillsFields} append={appendSkill} remove={removeSkill} label="Skills" placeholder="e.g., Proficient in TypeScript" name="skills" />
+                </div>
 
 
                <FormField control={form.control} name="status" render={({ field }) => (
@@ -319,7 +300,8 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
                 />
 
             </div>
-            <SheetFooter className="pt-4">
+           </ScrollArea>
+            <SheetFooter className="pt-4 border-t">
               <SheetClose asChild>
                 <Button type="button" variant="outline">
                   Cancel
@@ -335,4 +317,50 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
       </SheetContent>
     </Sheet>
   );
+}
+
+function PointsArrayField({ sectionIndex, form }: { sectionIndex: number, form: any }) {
+    const { fields, append, remove } = useFieldArray({
+        control: form.control,
+        name: `sections.${sectionIndex}.points`
+    });
+
+    return (
+      <div className="space-y-2 pl-2 border-l-2">
+        <FormLabel>Points</FormLabel>
+        {fields.map((field, pointIndex) => (
+          <div key={field.id} className="flex items-start gap-2">
+             <FormField
+                control={form.control}
+                name={`sections.${sectionIndex}.points.${pointIndex}.value`}
+                render={({ field }) => (
+                    <FormItem className="flex-grow">
+                    <FormControl>
+                        <RichTextEditor content={field.value} onChange={field.onChange} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => remove(pointIndex)}
+              className="mt-1"
+            >
+              <X className="h-4 w-4 text-muted-foreground" />
+            </Button>
+          </div>
+        ))}
+        <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => append({ value: "" })}
+        >
+            <PlusCircle className="mr-2 h-4 w-4" /> Add Point
+        </Button>
+      </div>
+    )
 }
