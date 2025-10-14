@@ -12,7 +12,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-export const JobDescriptionParserInputSchema = z.object({
+const JobDescriptionParserInputSchema = z.object({
   jobDescription: z
     .string()
     .describe('The full raw text of the job description to be parsed.'),
@@ -24,7 +24,7 @@ const JobSectionSchema = z.object({
     points: z.array(z.string()).describe("An array of bullet points or individual paragraphs under that section heading.")
 });
 
-export const JobDescriptionParserOutputSchema = z.object({
+const JobDescriptionParserOutputSchema = z.object({
     sections: z.array(JobSectionSchema)
 });
 export type JobDescriptionParserOutput = z.infer<typeof JobDescriptionParserOutputSchema>;
