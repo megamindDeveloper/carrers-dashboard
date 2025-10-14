@@ -48,8 +48,7 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
         }
     });
 
-    // Real-time listener for all submissions
-    const submissionsQuery = query(collection(db, 'assessmentSubmissions'));
+    const submissionsQuery = query(collection(db, 'assessmentSubmissions'), where('assessmentId', '==', assessmentId));
     const unsubSubmissions = onSnapshot(submissionsQuery, (snapshot) => {
         const subs = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as AssessmentSubmission));
         setAllSubmissions(subs);
@@ -57,31 +56,33 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
         console.error("Error fetching submissions:", error);
         toast({ variant: 'destructive', title: 'Error fetching submissions', description: error.message });
     });
-
-    // Real-time listener for all candidates (general + college)
-    const unsubCandidates = onSnapshot(collection(db, 'applications'), (appSnapshot) => {
-        const appCandidates = appSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as Candidate));
-
-        onSnapshot(collection(db, 'colleges'), async (collegesSnapshot) => {
-            let collegeCandidates: CollegeCandidate[] = [];
-            for (const collegeDoc of collegesSnapshot.docs) {
-                const candidatesSnapshot = await getDocs(collection(db, `colleges/${collegeDoc.id}/candidates`));
-                const cands = candidatesSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as CollegeCandidate));
-                collegeCandidates = [...collegeCandidates, ...cands];
-            }
-            setCandidates([...appCandidates, ...collegeCandidates]);
-        });
-    });
     
     const unsubColleges = onSnapshot(collection(db, 'colleges'), (snapshot) => {
         setColleges(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as College)));
     });
+    
+    // Fetch all candidates from all sources for status mapping
+    const appSub = onSnapshot(collection(db, 'applications'), (snapshot) => {
+      const appCands = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Candidate));
+      setCandidates(c => [...appCands, ...c.filter(cand => !appCands.find(ac => ac.id === cand.id))]);
+    });
+
+    const collegeSub = onSnapshot(collection(db, 'colleges'), (snapshot) => {
+      snapshot.docs.forEach(collegeDoc => {
+        onSnapshot(collection(db, `colleges/${collegeDoc.id}/candidates`), (candSnapshot) => {
+          const collegeCands = candSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as CollegeCandidate));
+           setCandidates(c => [...collegeCands, ...c.filter(cand => !collegeCands.find(cc => cc.id === cand.id))]);
+        });
+      });
+    });
+
 
     return () => {
         unsubAssessment();
         unsubSubmissions();
-        unsubCandidates();
         unsubColleges();
+        appSub();
+        collegeSub();
     };
   }, [assessmentId, toast]);
 
@@ -89,22 +90,23 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
     // This effect runs whenever submissions or candidates change, ensuring the table is always up-to-date.
     if (allSubmissions.length > 0 && candidates.length > 0) {
         const currentAssessmentSubmissions = allSubmissions
-            .filter(sub => sub.assessmentId === assessmentId)
             .map(sub => {
-                const candidate = candidates.find(c => c.id === (sub.candidateId || sub.collegeCandidateId));
+                const candidate = candidates.find(c => {
+                  if(sub.candidateId) return c.id === sub.candidateId;
+                  if(sub.collegeCandidateId) return c.id === sub.collegeCandidateId;
+                  return false;
+                });
                 return { ...sub, candidateStatus: candidate?.status };
             })
             .sort((a, b) => (b.submittedAt?.toDate() ?? 0) - (a.submittedAt?.toDate() ?? 0));
         
         setData(currentAssessmentSubmissions);
         setLoading(false);
-    } else if (allSubmissions.length >= 0 && candidates.length >= 0) {
-        // Handle case where there might be submissions but no candidates loaded yet, or vice-versa
-        // Or when there are simply no submissions for this assessment
-        setData(allSubmissions.filter(sub => sub.assessmentId === assessmentId));
+    } else if (allSubmissions.length === 0) {
+        setData([]);
         setLoading(false);
     }
-  }, [allSubmissions, candidates, assessmentId]);
+  }, [allSubmissions, candidates]);
 
   const handleRecalculateScores = async () => {
     if (!assessment || data.length === 0) {

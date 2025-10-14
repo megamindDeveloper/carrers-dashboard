@@ -104,6 +104,36 @@ export const getColumns = ({ onStatusChange, colleges = [], positionMap = {} }: 
             return position ? (filterValue as string[]).includes(position) : false;
         },
     },
+     {
+      id: 'candidateStatus',
+      accessorKey: 'candidateStatus',
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Status
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => {
+        const status = (row.original as any).candidateStatus;
+        if (!status) return <Badge variant="outline">Unknown</Badge>;
+
+        const safeStatus = toTitleCase(status) ?? 'Unknown';
+        
+        let variant: 'default' | 'secondary' | 'destructive' | 'outline' = 'secondary';
+
+        switch (safeStatus) {
+            case 'Applied': variant = 'secondary'; break;
+            case 'Shortlisted': variant = 'default'; break;
+            case 'Rejected': variant = 'destructive'; break;
+            default: variant = 'outline'; break;
+        }
+
+        return <Badge variant={variant}>{safeStatus}</Badge>;
+      },
+    },
     {
         accessorKey: 'score',
         header: ({ column }) => (
