@@ -12,12 +12,12 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
-export const IconSuggesterInputSchema = z.object({
+const IconSuggesterInputSchema = z.object({
   jobTitle: z.string().describe('The job title to find an icon for.'),
 });
 export type IconSuggesterInput = z.infer<typeof IconSuggesterInputSchema>;
 
-export const IconSuggesterOutputSchema = z.object({
+const IconSuggesterOutputSchema = z.object({
   iconName: z.string().describe('The suggested Lucide icon name in camelCase (e.g., "Briefcase", "Code", "PenTool").'),
 });
 export type IconSuggesterOutput = z.infer<typeof IconSuggesterOutputSchema>;
