@@ -46,7 +46,7 @@ Analyze the following job description text and structure it.
 
 IMPORTANT RULES:
 1.  If you find a section titled "Highlights" or similar, extract its bullet points into the 'highlightPoints' array.
-2.  For all other sections that describe the job itself (like "Responsibilities", "Required Skills", "Qualifications", "Requirements", "What You'll Do"), parse them into the 'sections' array. Each item in 'sections' must have a 'title' and an array of 'points'.
+2.  For all other sections that describe the role itself (like "Responsibilities", "Required Skills", "Qualifications", "Requirements", "What You'll Do"), parse them into the 'sections' array. Each item in 'sections' must have a 'title' and an array of 'points'.
 3.  EXCLUDE any general company information, "About Us" sections, "Why Work Here" sections, or any other content that doesn't describe the role's duties or qualifications.
 
 Job Description Text:
@@ -63,7 +63,7 @@ const parseJobDescriptionFlow = ai.defineFlow(
     outputSchema: JobDescriptionParserOutputSchema,
   },
   async input => {
-    const {output} = await parseJobDescriptionAction(input);
+    const {output} = await jobDescriptionParserPrompt(input);
     if (!output) {
       throw new Error('AI response was empty.');
     }

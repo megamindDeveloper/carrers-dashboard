@@ -164,7 +164,10 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
         if (result.data.highlightPoints && result.data.highlightPoints.length > 0) {
             const formattedHighlights = result.data.highlightPoints.map(point => ({ value: point }));
             replaceHighlights(formattedHighlights);
+        } else {
+            replaceHighlights([]); // Clear highlights if none are found
         }
+
         if (result.data.sections && result.data.sections.length > 0) {
             const formattedSections = result.data.sections.map(section => ({
               title: section.title,
@@ -229,10 +232,10 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
     try {
       const jobData = {
           ...data,
-          highlightPoints: (data.highlightPoints || []).map(p => p.value),
+          highlightPoints: (data.highlightPoints || []).map(p => p.value).filter(Boolean),
           sections: data.sections.map(section => ({
               ...section,
-              points: section.points.map(p => p.value)
+              points: section.points.map(p => p.value).filter(Boolean)
           })),
       };
       await onSave(jobData, job?.id);
