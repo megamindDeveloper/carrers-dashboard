@@ -92,9 +92,9 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
         form.reset({
           ...job,
           openings: job.openings || 1,
-          highlightPoints: job.highlightPoints.map(s => ({ value: s })),
-          responsibilities: job.responsibilities.map(r => ({ value: r })),
-          skills: job.skills.map(s => ({ value: s })),
+          highlightPoints: (job.highlightPoints || []).map(s => ({ value: s })),
+          responsibilities: (job.responsibilities || []).map(r => ({ value: r })),
+          skills: (job.skills || []).map(s => ({ value: s })),
           type: job.type || 'full-time',
           duration: job.duration || '',
         });
