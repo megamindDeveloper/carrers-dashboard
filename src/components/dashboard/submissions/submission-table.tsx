@@ -61,26 +61,34 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
         setColleges(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as College)));
     });
 
+    // Listener for main applications
     const unsubCandidates = onSnapshot(collection(db, 'applications'), (snapshot) => {
-      const appCands = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Candidate));
-      setCandidates(prev => {
-        const existingIds = new Set(prev.map(p => p.id));
-        const newCands = appCands.filter(ac => !existingIds.has(ac.id));
-        return [...prev, ...newCands];
-      });
+        const appCands = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Candidate));
+        setCandidates(prevCands => {
+            const newCandsMap = new Map(prevCands.map(c => [c.id, c]));
+            appCands.forEach(c => newCandsMap.set(c.id, c));
+            return Array.from(newCandsMap.values());
+        });
     });
 
-    const unsubCollegeCandidates = onSnapshot(collection(db, 'colleges'), (snapshot) => {
-      snapshot.docs.forEach(collegeDoc => {
-        onSnapshot(collection(db, `colleges/${collegeDoc.id}/candidates`), (candSnapshot) => {
-          const collegeCands = candSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CollegeCandidate));
-          setCandidates(prev => {
-            const existingIds = new Set(prev.map(p => p.id));
-            const newCands = collegeCands.filter(cc => !existingIds.has(cc.id));
-            return [...prev, ...newCands];
-          });
+    // Listeners for all college candidates
+    const collegeListeners: (() => void)[] = [];
+    const unsubAllCollegesForCands = onSnapshot(collection(db, 'colleges'), (snapshot) => {
+        // Unsubscribe from old college candidate listeners
+        collegeListeners.forEach(unsub => unsub());
+        collegeListeners.length = 0;
+
+        snapshot.docs.forEach(collegeDoc => {
+            const unsub = onSnapshot(collection(db, `colleges/${collegeDoc.id}/candidates`), (candSnapshot) => {
+                const collegeCands = candSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CollegeCandidate));
+                setCandidates(prevCands => {
+                    const newCandsMap = new Map(prevCands.map(c => [c.id, c]));
+                    collegeCands.forEach(c => newCandsMap.set(c.id, c));
+                    return Array.from(newCandsMap.values());
+                });
+            });
+            collegeListeners.push(unsub);
         });
-      });
     });
 
     return () => {
@@ -88,20 +96,22 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
         unsubSubmissions();
         unsubColleges();
         unsubCandidates();
-        unsubCollegeCandidates();
+        unsubAllCollegesForCands();
+        collegeListeners.forEach(unsub => unsub());
     };
   }, [assessmentId, toast]);
 
   useEffect(() => {
     // This effect runs whenever submissions or candidates change, ensuring the table is always up-to-date.
-    if (allSubmissions.length > 0) {
+    if (allSubmissions.length > 0 && candidates.length > 0) {
         const currentAssessmentSubmissions = allSubmissions
             .map(sub => {
                 const candidate = candidates.find(c => {
-                  if(sub.candidateId) return c.id === sub.candidateId;
-                  if(sub.collegeCandidateId) return c.id === sub.collegeCandidateId;
-                  // Fallback for older submissions that might only have email
-                  return c.email.toLowerCase() === sub.candidateEmail.toLowerCase();
+                    // Prioritize specific ID links first
+                    if (sub.candidateId && c.id === sub.candidateId) return true;
+                    if (sub.collegeCandidateId && c.id === sub.collegeCandidateId) return true;
+                    // Fallback to email for older data structures
+                    return c.email.toLowerCase() === sub.candidateEmail.toLowerCase();
                 });
                 return { ...sub, candidateStatus: candidate?.status, candidate: candidate || null };
             })
@@ -217,24 +227,15 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
 
 
    const handleStatusChange = async (submission: AssessmentSubmission, newStatus: CandidateStatus) => {
-    const candidateId = submission.candidateId || submission.collegeCandidateId;
-    if (!candidateId) {
+    const candidate = submission.candidate as Candidate | CollegeCandidate | null;
+    if (!candidate?.id) {
         toast({ variant: 'destructive', title: 'Update Failed', description: 'Candidate ID not found for this submission.' });
         return;
     }
+
     const isCollegeCandidate = !!submission.collegeId;
-
     const collectionPath = isCollegeCandidate ? `colleges/${submission.collegeId}/candidates` : 'applications';
-    
-    // Perform a direct lookup to ensure we have the correct document path
-    const docRef = doc(db, collectionPath, candidateId);
-
-    const candidateSnap = await getDoc(docRef);
-    if (!candidateSnap.exists()) {
-        toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not find the full candidate record to update.' });
-        return;
-    }
-    const candidateToUpdate = { id: candidateSnap.id, ...candidateSnap.data() } as Candidate | CollegeCandidate;
+    const docRef = doc(db, collectionPath, candidate.id);
     
     const proceedWithUpdate = async () => {
         try {
@@ -248,14 +249,14 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
 
             if (shouldSendEmail) {
                 const apiEndpoint = newStatus === 'Shortlisted' ? '/api/shortlisted' : '/api/rejected';
-                const candidate = candidateToUpdate as Candidate; // We know it's a main candidate here
+                const mainCandidate = candidate as Candidate;
                 const response = await fetch(apiEndpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                      fullName: candidate.fullName,
-                      email: candidate.email,
-                      position: candidate.position,
+                      fullName: mainCandidate.fullName,
+                      email: mainCandidate.email,
+                      position: mainCandidate.position,
                     }),
                 });
                 const result = await response.json();
@@ -269,7 +270,8 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
             toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not update candidate status.' });
         }
     };
-      if (!isCollegeCandidate && (newStatus === 'Shortlisted' || newStatus === 'Rejected')) {
+
+    if (!isCollegeCandidate && (newStatus === 'Shortlisted' || newStatus === 'Rejected')) {
       const action = newStatus === 'Shortlisted' ? 'shortlist' : 'reject';
       const emailType = newStatus === 'Shortlisted' ? 'a "shortlisted"' : 'a "rejection"';
       setConfirmation({

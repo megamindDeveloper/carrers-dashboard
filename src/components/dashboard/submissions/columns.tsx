@@ -84,25 +84,29 @@ export const getColumns = ({ onStatusChange, colleges = [] }: GetColumnsProps): 
         },
     },
     {
-        accessorKey: 'position',
+        id: 'position',
         header: 'Position Applied For',
         cell: ({ row }) => {
             const submission = row.original as any;
-            // First, try to get position from the linked candidate data.
-            if (submission.candidate?.position) {
-              return submission.candidate.position;
+            const candidate = submission.candidate as Candidate | CollegeCandidate | null;
+            
+            // Priority 1: Get position from the linked candidate record.
+            if (candidate && 'position' in candidate && candidate.position) {
+              return candidate.position;
             }
-            // Fallback to checking the assessment answers.
+
+            // Priority 2: Fallback to checking the assessment answers.
             const positionAnswer = submission.answers.find((a: any) => a.questionText?.toLowerCase().includes('position applying for'));
             return positionAnswer?.answer || 'N/A';
         },
         filterFn: (row, columnId, filterValue) => {
             if (!filterValue || filterValue.length === 0) return true;
             const submission = row.original as any;
+            const candidate = submission.candidate as Candidate | CollegeCandidate | null;
 
             let position = 'N/A';
-            if (submission.candidate?.position) {
-              position = submission.candidate.position;
+            if (candidate && 'position' in candidate && candidate.position) {
+              position = candidate.position;
             } else {
               const positionAnswer = submission.answers.find((a: any) => a.questionText?.toLowerCase().includes('position applying for'));
               if (positionAnswer?.answer) {
@@ -221,7 +225,7 @@ export const getColumns = ({ onStatusChange, colleges = [] }: GetColumnsProps): 
                 View Submission
             </DropdownMenuItem>
              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
+                <DropdownMenuSubTrigger disabled={!candidateStatus}>
                     <span>Change Status</span>
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent>
