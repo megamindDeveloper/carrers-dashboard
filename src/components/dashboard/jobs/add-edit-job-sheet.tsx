@@ -45,7 +45,7 @@ interface AddEditJobSheetProps {
   isOpen: boolean;
   onClose: () => void;
   job: Job | null;
-  onSave: (jobData: Omit<Job, 'id' | 'createdAt'>) => Promise<void>;
+  onSave: (jobData: Omit<Job, 'id' | 'createdAt'>, existingId?: string) => Promise<void>;
 }
 
 const sectionSchema = z.object({
@@ -91,16 +91,6 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
                 ...sec,
                 points: Array.isArray(sec.points) ? sec.points.map(p => ({ value: p })) : []
             }));
-        } else { // Handle backward compatibility for old structure
-            if (job.highlightPoints && job.highlightPoints.length > 0) {
-                initialSections.push({ title: 'Highlights', points: job.highlightPoints.map(p => ({ value: p })) });
-            }
-            if (job.responsibilities && job.responsibilities.length > 0) {
-                initialSections.push({ title: 'Responsibilities', points: job.responsibilities.map(p => ({ value: p })) });
-            }
-            if (job.skills && job.skills.length > 0) {
-                initialSections.push({ title: 'Skills', points: job.skills.map(p => ({ value: p })) });
-            }
         }
         
         // If still no sections, add a default one for editing
@@ -151,6 +141,7 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
       return;
     }
     setIsParsing(true);
+    console.log("Sending to AI for parsing:", rawDescription);
     try {
       const result = await parseJobDescriptionAction({ jobDescription: rawDescription });
       if (result.success && result.data?.sections) {
@@ -166,11 +157,11 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
       } else {
         throw new Error(result.error || 'Failed to parse the description.');
       }
-    } catch (error) {
+    } catch (error: any) {
        toast({
          variant: "destructive",
          title: "Parsing Failed",
-         description: "Could not automatically parse the job description. Please fill it out manually.",
+         description: error.message || "Could not automatically parse the job description. Please fill it out manually.",
        });
     } finally {
       setIsParsing(false);
@@ -187,7 +178,7 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
               points: section.points.map(p => p.value)
           })),
       };
-      await onSave(jobData);
+      await onSave(jobData, job?.id);
     } catch (error) {
        console.error("Error saving job:", error);
        toast({

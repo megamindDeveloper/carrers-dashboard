@@ -1,3 +1,4 @@
+
 'use server';
 
 import { extractResumeData } from '@/ai/flows/resume-data-extraction';
@@ -22,12 +23,15 @@ export async function parseResumeAction(input: ExtractResumeDataInput) {
 export async function parseJobDescriptionAction(input: JobDescriptionParserInput) {
   try {
     const sections = await parseJobDescription(input);
+    if (!sections || !sections.sections) {
+        throw new Error('AI response was empty or in an unexpected format.');
+    }
     return { success: true, data: sections };
   } catch (error: any) {
     console.error('Error parsing job description:', error);
     return {
       success: false,
-      error: error.message || 'An unknown error occurred while parsing the job description.',
+      error: `AI parsing failed: ${error.message}` || 'An unknown error occurred while parsing the job description.',
     };
   }
 }
