@@ -40,13 +40,18 @@ const jobDescriptionParserPrompt = ai.definePrompt({
   name: 'jobDescriptionParserPrompt',
   input: {schema: JobDescriptionParserInputSchema},
   output: {schema: JobDescriptionParserOutputSchema},
-  prompt: `You are an expert at parsing job descriptions. Analyze the following job description text and structure it into sections. Each section should have a title (the heading) and an array of points (the bullet points or paragraphs under that heading).
+  prompt: `You are an expert at parsing job descriptions into structured JSON.
+Analyze the following job description text and structure it into sections. Each section must have a title (the heading) and an array of points (the bullet points or paragraphs under that heading).
 
-  Job Description Text:
-  '''
-  {{{jobDescription}}}
-  '''
-  `,
+IMPORTANT RULES:
+1.  ONLY include sections that describe the job itself, such as "Responsibilities", "Required Skills", "Qualifications", "Requirements", or "What You'll Do".
+2.  EXCLUDE any general company information, "About Us" sections, "Why Work Here" sections, or any other content that doesn't describe the role's duties or qualifications.
+
+Job Description Text:
+'''
+{{{jobDescription}}}
+'''
+`,
 });
 
 const parseJobDescriptionFlow = ai.defineFlow(
