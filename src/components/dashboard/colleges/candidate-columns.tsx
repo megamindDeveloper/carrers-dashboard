@@ -92,6 +92,29 @@ export const getCandidateColumns = ({ onViewSubmission, onDelete, onResetSubmiss
         );
       },
     },
+    {
+        id: 'assessmentStatus',
+        header: 'Assessment Status',
+        cell: ({ row }) => {
+            const { submissions } = row.original;
+            if (!selectedAssessmentId) {
+                return <span className="text-xs text-muted-foreground">Select an assessment</span>;
+            }
+
+            const submission = submissions?.find(s => s.assessmentId === selectedAssessmentId);
+
+            if (submission) {
+                return (
+                    <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); onViewSubmission(submission); }}>
+                        <ClipboardList className="mr-2 h-4 w-4 text-green-600" />
+                        Submitted
+                    </Button>
+                )
+            }
+            
+            return <Badge variant="outline">Pending</Badge>;
+        }
+    },
      {
       accessorKey: 'status',
       header: ({ column }) => (
@@ -118,29 +141,6 @@ export const getCandidateColumns = ({ onViewSubmission, onDelete, onResetSubmiss
 
         return <Badge variant={variant}>{safeStatus}</Badge>;
       },
-    },
-    {
-        id: 'assessmentStatus',
-        header: 'Assessment Status',
-        cell: ({ row }) => {
-            const { submissions } = row.original;
-            if (!selectedAssessmentId) {
-                return <span className="text-xs text-muted-foreground">Select an assessment</span>;
-            }
-
-            const submission = submissions?.find(s => s.assessmentId === selectedAssessmentId);
-
-            if (submission) {
-                return (
-                    <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); onViewSubmission(submission); }}>
-                        <ClipboardList className="mr-2 h-4 w-4 text-green-600" />
-                        Submitted
-                    </Button>
-                )
-            }
-            
-            return <Badge variant="outline">Pending</Badge>;
-        }
     },
     {
       accessorKey: 'importedAt',

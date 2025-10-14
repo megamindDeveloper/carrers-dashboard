@@ -354,17 +354,17 @@ export const getColumns = ({
     },
   };
 
-  let columns: ColumnDef<Candidate>[] = [...baseColumns, assessmentStatusColumn];
+  const statusColumn = commonColumns.find(c => c.accessorKey === 'status')!;
+  const otherCommonColumns = commonColumns.filter(c => c.accessorKey !== 'status');
+
+  let columns: ColumnDef<Candidate>[] = [...baseColumns, statusColumn, assessmentStatusColumn];
 
   if (filterType === 'internship') {
-    // For interns, add intro video and remove experience
-    columns = [...columns, ...commonColumns, introVideoColumn, actionColumn];
+    columns = [...columns, ...otherCommonColumns, introVideoColumn, actionColumn];
   } else if (filterType === 'full-time') {
-    // For full-time, add experience
-    columns = [...columns, experienceColumn, ...commonColumns, actionColumn];
+    columns = [...columns, experienceColumn, ...otherCommonColumns, actionColumn];
   } else {
-    // For 'all' or undefined, include both
-    columns = [...columns, experienceColumn, ...commonColumns, introVideoColumn, actionColumn];
+    columns = [...columns, experienceColumn, ...otherCommonColumns, introVideoColumn, actionColumn];
   }
 
   return columns;
