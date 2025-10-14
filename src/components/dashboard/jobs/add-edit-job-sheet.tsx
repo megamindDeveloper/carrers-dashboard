@@ -29,7 +29,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import type { Job } from '@/lib/types';
 import { JOB_STATUSES, JOB_TYPES } from '@/lib/types';
-import { Loader2, PlusCircle, Trash2, X } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, X, Wand2 as MagicWand } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -38,6 +38,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { parseJobDescriptionAction } from '@/app/actions';
 
 interface AddEditJobSheetProps {
   isOpen: boolean;
@@ -66,13 +67,15 @@ const jobSchema = z.object({
 
 export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobSheetProps) {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isParsing, setIsParsing] = useState(false);
+  const [rawDescription, setRawDescription] = useState('');
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof jobSchema>>({
     resolver: zodResolver(jobSchema),
   });
 
-  const { fields: sections, append, remove } = useFieldArray({
+  const { fields: sections, append, remove, replace } = useFieldArray({
     control: form.control,
     name: "sections",
   });
@@ -80,10 +83,14 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
   useEffect(() => {
     if (isOpen) {
       if (job) {
-        // Backward compatibility: Convert old structure to new 'sections' structure
-        let initialSections = job.sections?.map(sec => ({ ...sec, points: sec.points.map(p => ({ value: p })) })) || [];
-
-        if (initialSections.length === 0) { // This means it's likely an old job
+        let initialSections = [];
+        // Check if the job has the new `sections` field
+        if (job.sections && Array.isArray(job.sections)) {
+            initialSections = job.sections.map(sec => ({
+                ...sec,
+                points: Array.isArray(sec.points) ? sec.points.map(p => ({ value: p })) : []
+            }));
+        } else { // Handle backward compatibility for old structure
             if (job.highlightPoints && job.highlightPoints.length > 0) {
                 initialSections.push({ title: 'Highlights', points: job.highlightPoints.map(p => ({ value: p })) });
             }
@@ -129,8 +136,45 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
           ]
         });
       }
+      setRawDescription('');
     }
   }, [job, isOpen, form]);
+
+  const handleParseDescription = async () => {
+    if (!rawDescription) {
+      toast({
+        variant: 'destructive',
+        title: 'No description provided',
+        description: 'Please paste the job description text into the box.',
+      });
+      return;
+    }
+    setIsParsing(true);
+    try {
+      const result = await parseJobDescriptionAction({ jobDescription: rawDescription });
+      if (result.success && result.data?.sections) {
+        const formattedSections = result.data.sections.map(section => ({
+          title: section.title,
+          points: section.points.map(point => ({ value: point }))
+        }));
+        replace(formattedSections); // Replace the entire sections array
+        toast({
+          title: 'Job Description Parsed!',
+          description: 'The sections below have been automatically populated.',
+        });
+      } else {
+        throw new Error(result.error || 'Failed to parse the description.');
+      }
+    } catch (error) {
+       toast({
+         variant: "destructive",
+         title: "Parsing Failed",
+         description: "Could not automatically parse the job description. Please fill it out manually.",
+       });
+    } finally {
+      setIsParsing(false);
+    }
+  };
 
   const onSubmit = async (data: z.infer<typeof jobSchema>) => {
     setIsProcessing(true);
@@ -173,6 +217,23 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
           >
            <ScrollArea className="flex-1 pr-6">
             <div className="space-y-4 py-4">
+              {/* AI Parser */}
+              <div className="space-y-2 rounded-lg border bg-muted/50 p-4">
+                  <Label htmlFor="raw-description">Paste Job Description to Auto-Fill</Label>
+                  <Textarea 
+                    id="raw-description"
+                    placeholder="Paste the full job description here and click 'Parse'..."
+                    value={rawDescription}
+                    onChange={(e) => setRawDescription(e.target.value)}
+                    className="min-h-[120px]"
+                    disabled={isParsing}
+                  />
+                  <Button type="button" onClick={handleParseDescription} disabled={isParsing || !rawDescription}>
+                    {isParsing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MagicWand className="mr-2 h-4 w-4" />}
+                    {isParsing ? 'Parsing...' : 'Parse Description'}
+                  </Button>
+              </div>
+
                <FormField control={form.control} name="position" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Job Position</FormLabel>
