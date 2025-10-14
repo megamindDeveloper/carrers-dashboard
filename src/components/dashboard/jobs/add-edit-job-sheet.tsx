@@ -38,7 +38,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { parseJobDescriptionAction } from '@/app/actions';
+import { parseJobDescriptionAction, suggestIconAction } from '@/app/actions';
 import { Label } from '@/components/ui/label';
 
 interface AddEditJobSheetProps {
@@ -69,6 +69,7 @@ const jobSchema = z.object({
 export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobSheetProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
+  const [isSuggestingIcon, setIsSuggestingIcon] = useState(false);
   const [rawDescription, setRawDescription] = useState('');
   const { toast } = useToast();
 
@@ -85,15 +86,25 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
     if (isOpen) {
       if (job) {
         let initialSections = [];
-        // Check if the job has the new `sections` field
-        if (job.sections && Array.isArray(job.sections)) {
+        // Handle backward compatibility for old data structure
+        if (job.sections && Array.isArray(job.sections) && job.sections.every(s => typeof s === 'object' && 'title' in s)) {
             initialSections = job.sections.map(sec => ({
                 ...sec,
                 points: Array.isArray(sec.points) ? sec.points.map(p => ({ value: p })) : []
             }));
+        } else {
+            // Convert old structure to new structure
+            if ((job as any).highlightPoints) {
+                initialSections.push({ title: 'Highlights', points: (job as any).highlightPoints.map((p: string) => ({ value: p })) });
+            }
+            if ((job as any).responsibilities) {
+                initialSections.push({ title: 'Responsibilities', points: (job as any).responsibilities.map((p: string) => ({ value: p })) });
+            }
+            if ((job as any).skills) {
+                initialSections.push({ title: 'Skills', points: (job as any).skills.map((p: string) => ({ value: p })) });
+            }
         }
         
-        // If still no sections, add a default one for editing
         if (initialSections.length === 0) {
              initialSections.push({ title: 'Responsibilities', points: [{ value: '' }] });
         }
@@ -141,7 +152,6 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
       return;
     }
     setIsParsing(true);
-    console.log("Sending to AI for parsing:", rawDescription);
     try {
       const result = await parseJobDescriptionAction({ jobDescription: rawDescription });
       if (result.success && result.data?.sections) {
@@ -149,7 +159,7 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
           title: section.title,
           points: section.points.map(point => ({ value: point }))
         }));
-        replace(formattedSections); // Replace the entire sections array
+        replace(formattedSections);
         toast({
           title: 'Job Description Parsed!',
           description: 'The sections below have been automatically populated.',
@@ -167,6 +177,40 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
       setIsParsing(false);
     }
   };
+
+  const handleSuggestIcon = async () => {
+    const jobTitle = form.getValues('position');
+    if (!jobTitle) {
+      toast({
+        variant: 'destructive',
+        title: 'No Position Name',
+        description: 'Please enter a position name first to suggest an icon.',
+      });
+      return;
+    }
+    setIsSuggestingIcon(true);
+    try {
+      const result = await suggestIconAction({ jobTitle });
+      if (result.success && result.data) {
+        form.setValue('icon', result.data);
+        toast({
+          title: 'Icon Suggested!',
+          description: `Set icon to "${result.data}". You can change it if you'd like.`,
+        });
+      } else {
+        throw new Error(result.error || 'Failed to suggest an icon.');
+      }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Suggestion Failed",
+        description: error.message,
+      });
+    } finally {
+      setIsSuggestingIcon(false);
+    }
+  };
+
 
   const onSubmit = async (data: z.infer<typeof jobSchema>) => {
     setIsProcessing(true);
@@ -261,12 +305,24 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
                     </FormItem>
                   )} />
                 </div>
-               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                 <FormField control={form.control} name="icon" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Lucide Icon Name</FormLabel>
-                      <FormControl><Input placeholder="e.g., Briefcase" {...field} /></FormControl>
-                      <FormDescription>
+                <FormItem>
+                    <FormLabel>Lucide Icon Name</FormLabel>
+                    <div className="flex items-center gap-2">
+                        <FormField
+                            control={form.control}
+                            name="icon"
+                            render={({ field }) => (
+                                <FormControl>
+                                    <Input placeholder="e.g., Briefcase" {...field} className="flex-grow"/>
+                                </FormControl>
+                            )}
+                        />
+                        <Button type="button" variant="outline" onClick={handleSuggestIcon} disabled={isSuggestingIcon}>
+                            {isSuggestingIcon ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MagicWand className="mr-2 h-4 w-4" />}
+                            Suggest
+                        </Button>
+                    </div>
+                     <FormDescription>
                         Visit{' '}
                         <a
                           href="https://lucide.dev/icons/"
@@ -278,9 +334,9 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
                         </a>{' '}
                         and pick an icon name.
                       </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
+                    <FormMessage />
+                </FormItem>
+               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                  <FormField control={form.control} name="location" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Location</FormLabel>
@@ -288,15 +344,14 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
                       <FormMessage />
                     </FormItem>
                   )} />
+                 <FormField control={form.control} name="experience" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Experience</FormLabel>
+                      <FormControl><Input placeholder="e.g., 2-4 years" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
                </div>
-
-                <FormField control={form.control} name="experience" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Experience</FormLabel>
-                    <FormControl><Input placeholder="e.g., 2-4 years" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
                 
                 <FormField control={form.control} name="duration" render={({ field }) => (
                   <FormItem>
