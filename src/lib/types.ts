@@ -77,6 +77,11 @@ export type JobStatus = (typeof JOB_STATUSES)[number];
 export const JOB_TYPES = ['full-time', 'internship'] as const;
 export type JobType = (typeof JOB_TYPES)[number];
 
+export type JobSection = {
+  title: string;
+  points: string[];
+};
+
 export type Job = {
   id: string;
   position: string;
@@ -88,6 +93,8 @@ export type Job = {
   createdAt: any;
   type: JobType;
   duration?: string;
+  sections?: JobSection[];
+  // Deprecated fields for backward compatibility
   highlightPoints?: string[];
   responsibilities?: string[];
   skills?: string[];

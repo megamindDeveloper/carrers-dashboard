@@ -46,18 +46,21 @@ interface AddEditJobSheetProps {
   onSave: (jobData: Omit<Job, 'id' | 'createdAt'>) => Promise<void>;
 }
 
+const sectionSchema = z.object({
+  title: z.string().min(1, "Section title cannot be empty"),
+  points: z.array(z.object({ value: z.string().min(1, "Point cannot be empty") })),
+});
+
 const jobSchema = z.object({
   position: z.string().min(1, 'Position is required'),
   icon: z.string().min(1, 'Icon name is required'),
   openings: z.coerce.number().min(1, 'At least one opening is required'),
   experience: z.string().min(1, 'Experience is required'),
   location: z.string().min(1, 'Location is required'),
-  highlightPoints: z.array(z.object({ value: z.string().min(1, "Highlight point cannot be empty") })),
-  responsibilities: z.array(z.object({ value: z.string().min(1, "Responsibility cannot be empty") })),
-  skills: z.array(z.object({ value: z.string().min(1, "Skill cannot be empty") })),
   status: z.enum(JOB_STATUSES),
   type: z.enum(JOB_TYPES),
   duration: z.string().optional(),
+  sections: z.array(sectionSchema).min(1, 'At least one section is required'),
 });
 
 
@@ -69,9 +72,35 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
     resolver: zodResolver(jobSchema),
   });
 
+  const { fields: sections, append, remove } = useFieldArray({
+    control: form.control,
+    name: "sections",
+  });
+
   useEffect(() => {
     if (isOpen) {
       if (job) {
+        // Backward compatibility: Convert old structure to new 'sections' structure
+        let initialSections = job.sections?.map(sec => ({ ...sec, points: sec.points.map(p => ({ value: p })) })) || [];
+
+        if (initialSections.length === 0) { // This means it's likely an old job
+            if (job.highlightPoints && job.highlightPoints.length > 0) {
+                initialSections.push({ title: 'Highlights', points: job.highlightPoints.map(p => ({ value: p })) });
+            }
+            if (job.responsibilities && job.responsibilities.length > 0) {
+                initialSections.push({ title: 'Responsibilities', points: job.responsibilities.map(p => ({ value: p })) });
+            }
+            if (job.skills && job.skills.length > 0) {
+                initialSections.push({ title: 'Skills', points: job.skills.map(p => ({ value: p })) });
+            }
+        }
+        
+        // If still no sections, add a default one for editing
+        if (initialSections.length === 0) {
+             initialSections.push({ title: 'Responsibilities', points: [{ value: '' }] });
+        }
+
+
         form.reset({
           position: job.position || '',
           icon: job.icon || 'Briefcase',
@@ -79,11 +108,9 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
           experience: job.experience || '',
           location: job.location || '',
           status: job.status || 'Open',
-          highlightPoints: (job.highlightPoints || []).map(s => ({ value: s })),
-          responsibilities: (job.responsibilities || []).map(r => ({ value: r })),
-          skills: (job.skills || []).map(s => ({ value: s })),
           type: job.type || 'full-time',
           duration: job.duration || '',
+          sections: initialSections,
         });
       } else {
         form.reset({
@@ -92,12 +119,14 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
           openings: 1,
           experience: '',
           location: '',
-          highlightPoints: [{ value: '' }],
-          responsibilities: [{ value: '' }],
-          skills: [{ value: '' }],
           status: 'Open',
           type: 'full-time',
           duration: '',
+          sections: [
+            { title: 'Highlights', points: [{ value: '' }] },
+            { title: 'Responsibilities', points: [{ value: '' }] },
+            { title: 'Skills', points: [{ value: '' }] },
+          ]
         });
       }
     }
@@ -108,9 +137,10 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
     try {
       const jobData = {
           ...data,
-          highlightPoints: data.highlightPoints.map(p => p.value),
-          responsibilities: data.responsibilities.map(p => p.value),
-          skills: data.skills.map(p => p.value),
+          sections: data.sections.map(section => ({
+              ...section,
+              points: section.points.map(p => p.value)
+          })),
       };
       await onSave(jobData);
     } catch (error) {
@@ -124,6 +154,8 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
       setIsProcessing(false);
     }
   };
+  
+  const addSection = () => append({ title: '', points: [{ value: '' }] });
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -220,10 +252,36 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
                     <FormMessage />
                   </FormItem>
                 )} />
+
+                <div className="space-y-4">
+                  {sections.map((section, index) => (
+                    <div key={section.id} className="space-y-2 rounded-lg border p-4 relative">
+                        <div className="flex items-center justify-between">
+                            <FormField
+                                control={form.control}
+                                name={`sections.${index}.title`}
+                                render={({ field }) => (
+                                    <FormItem className="flex-grow">
+                                    <FormLabel>Section Title</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="e.g., Responsibilities" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="absolute top-2 right-2">
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
+                        </div>
+                       <PointsArrayField sectionIndex={index} control={form.control} />
+                    </div>
+                  ))}
+                   <Button type="button" variant="outline" onClick={addSection}>
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Section
+                  </Button>
+                </div>
               
-                <PointsArrayField control={form.control} name="highlightPoints" label="Highlight Points" />
-                <PointsArrayField control={form.control} name="responsibilities" label="Responsibilities" />
-                <PointsArrayField control={form.control} name="skills" label="Skills" />
 
                <FormField control={form.control} name="status" render={({ field }) => (
                   <FormItem>
@@ -266,28 +324,28 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
 }
 
 
-function PointsArrayField({ control, name, label }: { control: any; name: 'highlightPoints' | 'responsibilities' | 'skills'; label: string }) {
-  const { fields, append, remove } = useFieldArray({ control, name });
+function PointsArrayField({ sectionIndex, control }: { sectionIndex: number; control: any }) {
+  const { fields, append, remove } = useFieldArray({ control, name: `sections.${sectionIndex}.points` });
 
   return (
-    <div className="space-y-2 rounded-lg border p-4">
-      <FormLabel>{label}</FormLabel>
-      {fields.map((item, index) => (
+    <div className="space-y-2 pl-2 border-l-2">
+      <FormLabel>Points</FormLabel>
+      {fields.map((item, pointIndex) => (
         <div key={item.id} className="flex items-center gap-2">
           <FormField
             control={control}
-            name={`${name}.${index}.value`}
+            name={`sections.${sectionIndex}.points.${pointIndex}.value`}
             render={({ field }) => (
               <FormItem className="flex-grow">
                 <FormControl>
-                  <Textarea placeholder={`${label.slice(0, -1)} #${index + 1}`} {...field} />
+                  <Textarea placeholder={`Point #${pointIndex + 1}`} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-          <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
-            <Trash2 className="h-4 w-4 text-muted-foreground" />
+          <Button type="button" variant="ghost" size="icon" onClick={() => remove(pointIndex)}>
+            <X className="h-4 w-4 text-muted-foreground" />
           </Button>
         </div>
       ))}
