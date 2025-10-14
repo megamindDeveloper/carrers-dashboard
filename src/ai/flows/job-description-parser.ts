@@ -25,6 +25,7 @@ const JobSectionSchema = z.object({
 });
 
 const JobDescriptionParserOutputSchema = z.object({
+    highlightPoints: z.array(z.string()).optional().describe("An array of bullet points from a 'Highlights' section."),
     sections: z.array(JobSectionSchema)
 });
 export type JobDescriptionParserOutput = z.infer<typeof JobDescriptionParserOutputSchema>;
@@ -41,11 +42,12 @@ const jobDescriptionParserPrompt = ai.definePrompt({
   input: {schema: JobDescriptionParserInputSchema},
   output: {schema: JobDescriptionParserOutputSchema},
   prompt: `You are an expert at parsing job descriptions into structured JSON.
-Analyze the following job description text and structure it into sections. Each section must have a title (the heading) and an array of points (the bullet points or paragraphs under that heading).
+Analyze the following job description text and structure it.
 
 IMPORTANT RULES:
-1.  ONLY include sections that describe the job itself, such as "Responsibilities", "Required Skills", "Qualifications", "Requirements", or "What You'll Do".
-2.  EXCLUDE any general company information, "About Us" sections, "Why Work Here" sections, or any other content that doesn't describe the role's duties or qualifications.
+1.  If you find a section titled "Highlights" or similar, extract its bullet points into the 'highlightPoints' array.
+2.  For all other sections that describe the job itself (like "Responsibilities", "Required Skills", "Qualifications", "Requirements", "What You'll Do"), parse them into the 'sections' array. Each item in 'sections' must have a 'title' and an array of 'points'.
+3.  EXCLUDE any general company information, "About Us" sections, "Why Work Here" sections, or any other content that doesn't describe the role's duties or qualifications.
 
 Job Description Text:
 '''
@@ -61,7 +63,10 @@ const parseJobDescriptionFlow = ai.defineFlow(
     outputSchema: JobDescriptionParserOutputSchema,
   },
   async input => {
-    const {output} = await jobDescriptionParserPrompt(input);
-    return output!;
+    const {output} = await parseJobDescriptionAction(input);
+    if (!output) {
+      throw new Error('AI response was empty.');
+    }
+    return output;
   }
 );

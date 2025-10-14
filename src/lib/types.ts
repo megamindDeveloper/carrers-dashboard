@@ -94,8 +94,8 @@ export type Job = {
   type: JobType;
   duration?: string;
   sections?: JobSection[];
-  // Deprecated fields for backward compatibility
   highlightPoints?: string[];
+  // Deprecated fields for backward compatibility
   responsibilities?: string[];
   skills?: string[];
 };

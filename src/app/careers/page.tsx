@@ -112,7 +112,7 @@ export default function CareersPage() {
                   {selectedPosition.position}
                 </DialogTitle>
                 <div className="flex flex-wrap gap-3 mb-6">
-                    {selectedPosition.sections?.find(sec => sec.title.toLowerCase() === 'highlights')?.points.map((point, index) => (
+                    {selectedPosition.highlightPoints?.map((point, index) => (
                          <span
                             key={index}
                             className="bg-red-500 text-white text-xs px-3 py-1 rounded-2xl"

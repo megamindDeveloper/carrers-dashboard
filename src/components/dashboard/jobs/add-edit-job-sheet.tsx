@@ -48,9 +48,11 @@ interface AddEditJobSheetProps {
   onSave: (jobData: Omit<Job, 'id' | 'createdAt'>, existingId?: string) => Promise<void>;
 }
 
+const pointSchema = z.object({ value: z.string().min(1, "Point cannot be empty") });
+
 const sectionSchema = z.object({
   title: z.string().min(1, "Section title cannot be empty"),
-  points: z.array(z.object({ value: z.string().min(1, "Point cannot be empty") })),
+  points: z.array(pointSchema),
 });
 
 const jobSchema = z.object({
@@ -62,7 +64,8 @@ const jobSchema = z.object({
   status: z.enum(JOB_STATUSES),
   type: z.enum(JOB_TYPES),
   duration: z.string().optional(),
-  sections: z.array(sectionSchema).min(1, 'At least one section is required'),
+  highlightPoints: z.array(pointSchema).optional(),
+  sections: z.array(sectionSchema).min(1, 'At least one other section is required'),
 });
 
 
@@ -81,22 +84,24 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
     control: form.control,
     name: "sections",
   });
+  
+  const { fields: highlightPoints, append: appendHighlight, remove: removeHighlight, replace: replaceHighlights } = useFieldArray({
+    control: form.control,
+    name: "highlightPoints",
+  });
 
   useEffect(() => {
     if (isOpen) {
       if (job) {
-        let initialSections = [];
-        // Handle backward compatibility for old data structure
-        if (job.sections && Array.isArray(job.sections) && job.sections.every(s => typeof s === 'object' && 'title' in s)) {
-            initialSections = job.sections.map(sec => ({
-                ...sec,
-                points: Array.isArray(sec.points) ? sec.points.map(p => ({ value: p })) : []
-            }));
-        } else {
-            // Convert old structure to new structure
-            if ((job as any).highlightPoints) {
-                initialSections.push({ title: 'Highlights', points: (job as any).highlightPoints.map((p: string) => ({ value: p })) });
-            }
+        const initialSections = (job.sections || []).map(sec => ({
+            ...sec,
+            points: Array.isArray(sec.points) ? sec.points.map(p => ({ value: p })) : []
+        }));
+        
+        const initialHighlights = (job.highlightPoints || []).map(p => ({ value: p }));
+
+        // Handle backward compatibility
+        if (initialSections.length === 0) {
             if ((job as any).responsibilities) {
                 initialSections.push({ title: 'Responsibilities', points: (job as any).responsibilities.map((p: string) => ({ value: p })) });
             }
@@ -119,6 +124,7 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
           status: job.status || 'Open',
           type: job.type || 'full-time',
           duration: job.duration || '',
+          highlightPoints: initialHighlights,
           sections: initialSections,
         });
       } else {
@@ -131,8 +137,8 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
           status: 'Open',
           type: 'full-time',
           duration: '',
+          highlightPoints: [{ value: '' }],
           sections: [
-            { title: 'Highlights', points: [{ value: '' }] },
             { title: 'Responsibilities', points: [{ value: '' }] },
             { title: 'Skills', points: [{ value: '' }] },
           ]
@@ -140,7 +146,7 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
       }
       setRawDescription('');
     }
-  }, [job, isOpen, form, replace]);
+  }, [job, isOpen, form]);
 
   const handleParseDescription = async () => {
     if (!rawDescription) {
@@ -154,12 +160,18 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
     setIsParsing(true);
     try {
       const result = await parseJobDescriptionAction({ jobDescription: rawDescription });
-      if (result.success && result.data?.sections) {
-        const formattedSections = result.data.sections.map(section => ({
-          title: section.title,
-          points: section.points.map(point => ({ value: point }))
-        }));
-        replace(formattedSections);
+      if (result.success && result.data) {
+        if (result.data.highlightPoints && result.data.highlightPoints.length > 0) {
+            const formattedHighlights = result.data.highlightPoints.map(point => ({ value: point }));
+            replaceHighlights(formattedHighlights);
+        }
+        if (result.data.sections && result.data.sections.length > 0) {
+            const formattedSections = result.data.sections.map(section => ({
+              title: section.title,
+              points: section.points.map(point => ({ value: point }))
+            }));
+            replace(formattedSections);
+        }
         toast({
           title: 'Job Description Parsed!',
           description: 'The sections below have been automatically populated.',
@@ -171,7 +183,7 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
        toast({
          variant: "destructive",
          title: "Parsing Failed",
-         description: error.message || "Could not automatically parse the job description. Please fill it out manually.",
+         description: `AI could not parse the job description. Please fill it out manually. Error: ${error.message}`,
        });
     } finally {
       setIsParsing(false);
@@ -217,6 +229,7 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
     try {
       const jobData = {
           ...data,
+          highlightPoints: (data.highlightPoints || []).map(p => p.value),
           sections: data.sections.map(section => ({
               ...section,
               points: section.points.map(p => p.value)
@@ -361,7 +374,15 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
                   </FormItem>
                 )} />
 
+                {/* Highlight Points */}
+                <div className="space-y-2 rounded-lg border bg-blue-50 border-blue-200 p-4">
+                    <PointsArrayField sectionTitle="Highlight Points" fieldName="highlightPoints" control={form.control} />
+                </div>
+
+
+                {/* Dynamic Sections */}
                 <div className="space-y-4">
+                  <h3 className="font-medium text-lg pt-4 border-t">Job Details Sections</h3>
                   {sections.map((section, index) => (
                     <div key={section.id} className="space-y-2 rounded-lg border p-4 relative">
                         <div className="flex items-center justify-between">
@@ -382,7 +403,7 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
                                 <Trash2 className="h-4 w-4 text-red-500" />
                             </Button>
                         </div>
-                       <PointsArrayField sectionIndex={index} control={form.control} />
+                       <PointsArrayField sectionTitle="Points" fieldName={`sections.${index}.points`} control={form.control} />
                     </div>
                   ))}
                    <Button type="button" variant="outline" onClick={addSection}>
@@ -432,17 +453,17 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
 }
 
 
-function PointsArrayField({ sectionIndex, control }: { sectionIndex: number; control: any }) {
-  const { fields, append, remove } = useFieldArray({ control, name: `sections.${sectionIndex}.points` });
+function PointsArrayField({ sectionTitle, fieldName, control }: { sectionTitle: string; fieldName: string, control: any }) {
+  const { fields, append, remove } = useFieldArray({ control, name: fieldName });
 
   return (
     <div className="space-y-2 pl-2 border-l-2">
-      <FormLabel>Points</FormLabel>
+      <FormLabel>{sectionTitle}</FormLabel>
       {fields.map((item, pointIndex) => (
         <div key={item.id} className="flex items-center gap-2">
           <FormField
             control={control}
-            name={`sections.${sectionIndex}.points.${pointIndex}.value`}
+            name={`${fieldName}.${pointIndex}.value`}
             render={({ field }) => (
               <FormItem className="flex-grow">
                 <FormControl>
