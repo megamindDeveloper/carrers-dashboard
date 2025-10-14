@@ -39,6 +39,7 @@ import {
 } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { parseJobDescriptionAction } from '@/app/actions';
+import { Label } from '@/components/ui/label';
 
 interface AddEditJobSheetProps {
   isOpen: boolean;
@@ -138,7 +139,7 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
       }
       setRawDescription('');
     }
-  }, [job, isOpen, form]);
+  }, [job, isOpen, form, replace]);
 
   const handleParseDescription = async () => {
     if (!rawDescription) {
