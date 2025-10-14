@@ -23,6 +23,7 @@ interface DataTableToolbarProps<TData> {
   collegeCounts?: Record<string, number>;
   positionCounts?: Record<string, number>;
   allSubmissionsForFiltering?: AssessmentSubmission[];
+  positionOptions?: string[];
 }
 
 export function DataTableToolbar<TData>({
@@ -32,6 +33,7 @@ export function DataTableToolbar<TData>({
   collegeCounts,
   positionCounts,
   allSubmissionsForFiltering,
+  positionOptions = [],
 }: DataTableToolbarProps<TData>) {
   const isFiltered =
     table.getState().columnFilters.length > 0;
@@ -44,21 +46,6 @@ export function DataTableToolbar<TData>({
   const isSubmissionTable = table.options.data.length > 0 && 'assessmentId' in table.options.data[0] && 'timeTaken' in table.options.data[0];
   const isCollegeCandidateTable = table.options.data.length > 0 && 'importedAt' in table.options.data[0];
   const isCandidateTable = !isJobTable && !isSubmissionTable && !isCollegeCandidateTable;
-
-  const positionOptions = useMemo(() => {
-    if (!isSubmissionTable || !allSubmissionsForFiltering) return [];
-    const positions = new Set<string>();
-    
-    // Use the comprehensive list of all submissions for the filter
-    allSubmissionsForFiltering.forEach(submission => {
-      const positionAnswer = submission.answers.find(a => a.questionText?.toLowerCase().includes('position applying for'));
-      if (positionAnswer?.answer && typeof positionAnswer.answer === 'string') {
-        positions.add(positionAnswer.answer);
-      }
-    });
-    return Array.from(positions);
-  }, [isSubmissionTable, allSubmissionsForFiltering]);
-
 
   const statusOptions = isJobTable ? JOB_STATUSES : CANDIDATE_STATUSES;
 
@@ -111,11 +98,11 @@ export function DataTableToolbar<TData>({
             className="h-8 w-[150px] lg:w-[250px]"
           />
         )}
-         {isSubmissionTable && columnExists('answers') && positionOptions.length > 0 && (
+         {isSubmissionTable && columnExists('position') && positionOptions.length > 0 && (
             <Select
-                value={(table.getColumn('answers')?.getFilterValue() as string[])?.[0] ?? 'all'}
+                value={(table.getColumn('position')?.getFilterValue() as string[])?.[0] ?? 'all'}
                 onValueChange={value =>
-                    table.getColumn('answers')?.setFilterValue(value === 'all' ? null : [value])
+                    table.getColumn('position')?.setFilterValue(value === 'all' ? null : [value])
                 }
             >
                 <SelectTrigger className="h-8 w-[200px]">

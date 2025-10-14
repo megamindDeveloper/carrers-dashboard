@@ -60,43 +60,50 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
     const unsubColleges = onSnapshot(collection(db, 'colleges'), (snapshot) => {
         setColleges(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as College)));
     });
-    
-    // Fetch all candidates from all sources for status mapping
-    const appSub = onSnapshot(collection(db, 'applications'), (snapshot) => {
-      const appCands = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Candidate));
-      setCandidates(c => [...appCands, ...c.filter(cand => !appCands.find(ac => ac.id === cand.id))]);
-    });
 
-    const collegeSub = onSnapshot(collection(db, 'colleges'), (snapshot) => {
-      snapshot.docs.forEach(collegeDoc => {
-        onSnapshot(collection(db, `colleges/${collegeDoc.id}/candidates`), (candSnapshot) => {
-          const collegeCands = candSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as CollegeCandidate));
-           setCandidates(c => [...collegeCands, ...c.filter(cand => !collegeCands.find(cc => cc.id === cand.id))]);
-        });
+    const unsubCandidates = onSnapshot(collection(db, 'applications'), (snapshot) => {
+      const appCands = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Candidate));
+      setCandidates(prev => {
+        const existingIds = new Set(prev.map(p => p.id));
+        const newCands = appCands.filter(ac => !existingIds.has(ac.id));
+        return [...prev, ...newCands];
       });
     });
 
+    const unsubCollegeCandidates = onSnapshot(collection(db, 'colleges'), (snapshot) => {
+      snapshot.docs.forEach(collegeDoc => {
+        onSnapshot(collection(db, `colleges/${collegeDoc.id}/candidates`), (candSnapshot) => {
+          const collegeCands = candSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CollegeCandidate));
+          setCandidates(prev => {
+            const existingIds = new Set(prev.map(p => p.id));
+            const newCands = collegeCands.filter(cc => !existingIds.has(cc.id));
+            return [...prev, ...newCands];
+          });
+        });
+      });
+    });
 
     return () => {
         unsubAssessment();
         unsubSubmissions();
         unsubColleges();
-        appSub();
-        collegeSub();
+        unsubCandidates();
+        unsubCollegeCandidates();
     };
   }, [assessmentId, toast]);
 
   useEffect(() => {
     // This effect runs whenever submissions or candidates change, ensuring the table is always up-to-date.
-    if (allSubmissions.length > 0 && candidates.length > 0) {
+    if (allSubmissions.length > 0) {
         const currentAssessmentSubmissions = allSubmissions
             .map(sub => {
                 const candidate = candidates.find(c => {
                   if(sub.candidateId) return c.id === sub.candidateId;
                   if(sub.collegeCandidateId) return c.id === sub.collegeCandidateId;
-                  return false;
+                  // Fallback for older submissions that might only have email
+                  return c.email.toLowerCase() === sub.candidateEmail.toLowerCase();
                 });
-                return { ...sub, candidateStatus: candidate?.status };
+                return { ...sub, candidateStatus: candidate?.status, candidate: candidate || null };
             })
             .sort((a, b) => (b.submittedAt?.toDate() ?? 0) - (a.submittedAt?.toDate() ?? 0));
         
@@ -188,31 +195,26 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
     }, {} as Record<string, number>);
   }, [allSubmissions, assessmentId]);
 
-  const positionMap = useMemo(() => {
-    const map: { [email: string]: string } = {};
-    allSubmissions.forEach(sub => {
-      if (sub.candidateEmail) {
-        const email = sub.candidateEmail.toLowerCase();
-        if (!map[email]) {
-          const positionAnswer = sub.answers.find(a => a.questionText?.toLowerCase().includes('position applying for'))?.answer;
-          if (positionAnswer && typeof positionAnswer === 'string') {
-            map[email] = positionAnswer;
-          }
-        }
-      }
-    });
-    return map;
-  }, [allSubmissions]);
-  
   const positionCounts = useMemo(() => {
-    return allSubmissions.filter(s => s.assessmentId === assessmentId).reduce((acc, sub) => {
-      const position = positionMap[sub.candidateEmail.toLowerCase()];
+    return data.reduce((acc, sub: any) => {
+      const position = sub.candidate?.position;
       if (position) {
         acc[position] = (acc[position] || 0) + 1;
       }
       return acc;
     }, {} as Record<string, number>);
-  }, [allSubmissions, assessmentId, positionMap]);
+  }, [data]);
+  
+  const positionOptions = useMemo(() => {
+    const positions = new Set<string>();
+    data.forEach((sub: any) => {
+      if (sub.candidate?.position) {
+        positions.add(sub.candidate.position);
+      }
+    });
+    return Array.from(positions);
+  }, [data]);
+
 
    const handleStatusChange = async (submission: AssessmentSubmission, newStatus: CandidateStatus) => {
     const candidateId = submission.candidateId || submission.collegeCandidateId;
@@ -223,10 +225,11 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
     const isCollegeCandidate = !!submission.collegeId;
 
     const collectionPath = isCollegeCandidate ? `colleges/${submission.collegeId}/candidates` : 'applications';
+    
+    // Perform a direct lookup to ensure we have the correct document path
     const docRef = doc(db, collectionPath, candidateId);
 
     const candidateSnap = await getDoc(docRef);
-
     if (!candidateSnap.exists()) {
         toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not find the full candidate record to update.' });
         return;
@@ -284,7 +287,7 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
     await proceedWithUpdate();
   };
 
-  const columns = useMemo(() => getColumns({ onStatusChange: handleStatusChange, colleges, positionMap }), [colleges, positionMap, handleStatusChange]);
+  const columns = useMemo(() => getColumns({ onStatusChange: handleStatusChange, colleges }), [colleges, handleStatusChange]);
 
   if (loading) return <p className="p-4">Loading submissions...</p>;
 

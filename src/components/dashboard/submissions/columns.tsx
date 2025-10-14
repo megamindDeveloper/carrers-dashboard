@@ -2,7 +2,7 @@
 'use client';
 
 import type { ColumnDef } from '@tanstack/react-table';
-import type { AssessmentSubmission, CandidateStatus, College } from '@/lib/types';
+import type { AssessmentSubmission, CandidateStatus, College, Candidate, CollegeCandidate } from '@/lib/types';
 import { CANDIDATE_STATUSES } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,12 +32,9 @@ const formatTime = (seconds: number) => {
     return `${mins}m ${secs}s`;
 };
 
-type PositionMap = { [email: string]: string };
-
 type GetColumnsProps = {
     onStatusChange: (submission: AssessmentSubmission, newStatus: CandidateStatus) => void;
     colleges?: College[];
-    positionMap?: PositionMap;
 };
 
 
@@ -46,7 +43,7 @@ const toTitleCase = (str: string | undefined): string => {
     return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
 };
 
-export const getColumns = ({ onStatusChange, colleges = [], positionMap = {} }: GetColumnsProps): ColumnDef<AssessmentSubmission>[] => {
+export const getColumns = ({ onStatusChange, colleges = [] }: GetColumnsProps): ColumnDef<AssessmentSubmission>[] => {
   const columns: ColumnDef<AssessmentSubmission>[] = [
     {
       accessorKey: 'candidateName',
@@ -87,21 +84,33 @@ export const getColumns = ({ onStatusChange, colleges = [], positionMap = {} }: 
         },
     },
     {
-        accessorKey: 'answers',
+        accessorKey: 'position',
         header: 'Position Applied For',
         cell: ({ row }) => {
-            const submission = row.original;
-            const positionAnswer = submission.answers.find(a => a.questionText?.toLowerCase().includes('position applying for'));
-            const position = positionAnswer?.answer || positionMap[submission.candidateEmail.toLowerCase()] || 'N/A';
-            return position;
+            const submission = row.original as any;
+            // First, try to get position from the linked candidate data.
+            if (submission.candidate?.position) {
+              return submission.candidate.position;
+            }
+            // Fallback to checking the assessment answers.
+            const positionAnswer = submission.answers.find((a: any) => a.questionText?.toLowerCase().includes('position applying for'));
+            return positionAnswer?.answer || 'N/A';
         },
         filterFn: (row, columnId, filterValue) => {
             if (!filterValue || filterValue.length === 0) return true;
-            const submission = row.original;
-            const positionAnswer = submission.answers.find(a => a.questionText?.toLowerCase().includes('position applying for'));
-            const position = positionAnswer?.answer || positionMap[submission.candidateEmail.toLowerCase()];
+            const submission = row.original as any;
 
-            return position ? (filterValue as string[]).includes(position) : false;
+            let position = 'N/A';
+            if (submission.candidate?.position) {
+              position = submission.candidate.position;
+            } else {
+              const positionAnswer = submission.answers.find((a: any) => a.questionText?.toLowerCase().includes('position applying for'));
+              if (positionAnswer?.answer) {
+                position = positionAnswer.answer;
+              }
+            }
+            
+            return (filterValue as string[]).includes(position);
         },
     },
      {

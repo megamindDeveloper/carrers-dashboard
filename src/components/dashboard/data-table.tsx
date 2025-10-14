@@ -46,6 +46,7 @@ interface DataTableProps<TData, TValue> {
   collegeCounts?: Record<string, number>;
   positionCounts?: Record<string, number>;
   allSubmissionsForFiltering?: AssessmentSubmission[];
+  positionOptions?: string[];
 }
 
 const toTitleCase = (str: string) => {
@@ -65,6 +66,7 @@ export function DataTable<TData extends {id: string}, TValue>({
   collegeCounts,
   positionCounts,
   allSubmissionsForFiltering,
+  positionOptions,
 }: DataTableProps<TData, TValue>) {
 
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -115,6 +117,7 @@ export function DataTable<TData extends {id: string}, TValue>({
         collegeCounts={collegeCounts} 
         positionCounts={positionCounts} 
         allSubmissionsForFiltering={allSubmissionsForFiltering}
+        positionOptions={positionOptions}
         />
       <div className="rounded-md border">
         <Table>
