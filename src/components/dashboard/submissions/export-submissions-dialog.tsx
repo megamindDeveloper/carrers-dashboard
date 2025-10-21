@@ -25,6 +25,7 @@ interface ExportSubmissionsDialogProps {
   isOpen: boolean;
   onClose: () => void;
   submissions: AssessmentSubmission[];
+  positionMap: Record<string, string>;
 }
 
 type HeaderKey = keyof AssessmentSubmission | `answer_${string}` | 'collegeName' | 'positionAppliedFor';
@@ -40,7 +41,7 @@ const BASE_HEADERS: { key: HeaderKey; label: string }[] = [
     { key: 'timeTaken', label: 'Time Taken (seconds)' },
 ];
 
-export function ExportSubmissionsDialog({ isOpen, onClose, submissions }: ExportSubmissionsDialogProps) {
+export function ExportSubmissionsDialog({ isOpen, onClose, submissions, positionMap }: ExportSubmissionsDialogProps) {
   const [selectedHeaders, setSelectedHeaders] = useState<HeaderKey[]>([]);
   const [colleges, setColleges] = useState<College[]>([]);
   const { toast } = useToast();
@@ -100,8 +101,8 @@ export function ExportSubmissionsDialog({ isOpen, onClose, submissions }: Export
             if (key === 'collegeName') {
                 row[headerInfo.label] = sub.collegeId ? (collegesMap.get(sub.collegeId) || 'Unknown College') : 'Direct';
             } else if (key === 'positionAppliedFor') {
-                const positionAnswer = sub.answers.find(a => a.questionText?.toLowerCase().includes('position applying for'))?.answer;
-                row[headerInfo.label] = positionAnswer || 'N/A';
+                const position = positionMap[sub.candidateEmail.toLowerCase()] || 'N/A';
+                row[headerInfo.label] = position;
             }
             else if (key.startsWith('answer_')) {
                 const qId = key.replace('answer_', '');

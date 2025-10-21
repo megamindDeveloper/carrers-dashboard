@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
 import type { Assessment, AssessmentSubmission, College, Candidate, CollegeCandidate, CandidateStatus } from "@/lib/types";
@@ -438,7 +439,7 @@ const filteredData = selectedPosition
           )
         }
       />
-      <ExportSubmissionsDialog isOpen={isExportDialogOpen} onClose={() => setExportDialogOpen(false)} submissions={data} />
+      <ExportSubmissionsDialog isOpen={isExportDialogOpen} onClose={() => setExportDialogOpen(false)} submissions={data} positionMap={positionMap} />
       <ConfirmationDialog
         isOpen={confirmation.isOpen}
         onOpenChange={(isOpen) => setConfirmation({ ...confirmation, isOpen })}
