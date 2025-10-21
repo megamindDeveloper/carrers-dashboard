@@ -27,12 +27,13 @@ interface ExportSubmissionsDialogProps {
   submissions: AssessmentSubmission[];
 }
 
-type HeaderKey = keyof AssessmentSubmission | `answer_${string}` | 'collegeName';
+type HeaderKey = keyof AssessmentSubmission | `answer_${string}` | 'collegeName' | 'positionAppliedFor';
 
 const BASE_HEADERS: { key: HeaderKey; label: string }[] = [
     { key: 'candidateName', label: 'Candidate Name' },
     { key: 'candidateEmail', label: 'Candidate Email' },
     { key: 'collegeName', label: 'College' },
+    { key: 'positionAppliedFor', label: 'Position Applied For'},
     { key: 'score', label: 'Score' },
     { key: 'maxScore', label: 'Max Score' },
     { key: 'submittedAt', label: 'Submitted At' },
@@ -57,7 +58,7 @@ export function ExportSubmissionsDialog({ isOpen, onClose, submissions }: Export
     const questionHeaders = new Map<string, string>();
     submissions.forEach(sub => {
       sub.answers.forEach(ans => {
-        if (!questionHeaders.has(ans.questionId)) {
+        if (!questionHeaders.has(ans.questionId) && !ans.questionText?.toLowerCase().includes('position applying for')) {
           questionHeaders.set(ans.questionId, ans.questionText);
         }
       });
@@ -98,7 +99,11 @@ export function ExportSubmissionsDialog({ isOpen, onClose, submissions }: Export
 
             if (key === 'collegeName') {
                 row[headerInfo.label] = sub.collegeId ? (collegesMap.get(sub.collegeId) || 'Unknown College') : 'Direct';
-            } else if (key.startsWith('answer_')) {
+            } else if (key === 'positionAppliedFor') {
+                const positionAnswer = sub.answers.find(a => a.questionText?.toLowerCase().includes('position applying for'))?.answer;
+                row[headerInfo.label] = positionAnswer || 'N/A';
+            }
+            else if (key.startsWith('answer_')) {
                 const qId = key.replace('answer_', '');
                 const answerObj = sub.answers.find(a => a.questionId === qId);
                 const answer = answerObj?.answer;
