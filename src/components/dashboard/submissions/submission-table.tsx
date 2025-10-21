@@ -38,6 +38,32 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
     onConfirm: () => {},
   });
 
+  const [positionMap, setPositionMap] = useState<Record<string, string>>({}); // For the position lookup
+  useEffect(() => {
+    const buildPositionMap = async () => {
+      // 1. Fetch ALL submissions, but only once with getDocs()
+      const allSubmissionsQuery = query(collection(db, "assessmentSubmissions"));
+      const querySnapshot = await getDocs(allSubmissionsQuery);
+      const allSubs = querySnapshot.docs.map(doc => doc.data() as AssessmentSubmission);
+
+      // 2. Build the map from this one-time data fetch
+      const map: { [email: string]: string } = {};
+      allSubs.forEach((sub) => {
+        if (sub.candidateEmail) {
+          const email = sub.candidateEmail.toLowerCase();
+          if (!map[email]) {
+            const positionAnswer = sub.answers.find((a) => a.questionText?.toLowerCase().includes("position applying for"))?.answer;
+            if (positionAnswer && typeof positionAnswer === "string") {
+              map[email] = positionAnswer;
+            }
+          }
+        }
+      });
+      setPositionMap(map);
+    };
+
+    buildPositionMap();
+  }, []); // Empty dependency array means this runs only ONCE
   useEffect(() => {
     if (!assessmentId) return;
 
@@ -54,7 +80,10 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
       }
     });
 
-    const submissionsQuery = query(collection(db, "assessmentSubmissions"));
+    const submissionsQuery = query(
+      collection(db, "assessmentSubmissions"),
+      where("assessmentId", "==", assessmentId) // The crucial filter
+    );
     const unsubSubmissions = onSnapshot(
       submissionsQuery,
       (snapshot) => {
@@ -300,22 +329,22 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
 
     await proceedWithUpdate();
   };
-  const positionMap = useMemo(() => {
-    const map: { [email: string]: string } = {};
-    allSubmissions.forEach((sub) => {
-      if (sub.candidateEmail) {
-        const email = sub.candidateEmail.toLowerCase();
-        if (!map[email]) {
-          console.log("sub", sub);
-          const positionAnswer = sub.answers.find((a) => a.questionText?.toLowerCase().includes("position applying for"))?.answer;
-          if (positionAnswer && typeof positionAnswer === "string") {
-            map[email] = positionAnswer;
-          }
-        }
-      }
-    });
-    return map;
-  }, [allSubmissions]);
+  // const positionMap = useMemo(() => {
+  //   const map: { [email: string]: string } = {};
+  //   allSubmissions.forEach((sub) => {
+  //     if (sub.candidateEmail) {
+  //       const email = sub.candidateEmail.toLowerCase();
+  //       if (!map[email]) {
+  //         console.log("sub", sub);
+  //         const positionAnswer = sub.answers.find((a) => a.questionText?.toLowerCase().includes("position applying for"))?.answer;
+  //         if (positionAnswer && typeof positionAnswer === "string") {
+  //           map[email] = positionAnswer;
+  //         }
+  //       }
+  //     }
+  //   });
+  //   return map;
+  // }, [allSubmissions]);
 
   const positionCounts = useMemo(() => {
     return allSubmissions
