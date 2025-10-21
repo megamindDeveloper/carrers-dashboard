@@ -32,10 +32,7 @@ const formatTime = (seconds: number) => {
     return `${mins}m ${secs}s`;
 };
 
-type GetColumnsProps = {
-    onStatusChange: (submission: AssessmentSubmission, newStatus: CandidateStatus) => void;
-    colleges?: College[];
-};
+
 
 
 const toTitleCase = (str: string | undefined): string => {
@@ -43,7 +40,15 @@ const toTitleCase = (str: string | undefined): string => {
     return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
 };
 
-export const getColumns = ({ onStatusChange, colleges = [] }: GetColumnsProps): ColumnDef<AssessmentSubmission>[] => {
+type PositionMap = { [email: string]: string };
+type GetColumnsArgs = {
+  onStatusChange: (submission: AssessmentSubmission, newStatus: CandidateStatus) => void;
+  colleges?: College[];
+  positionMap?: PositionMap;
+};
+
+export const getColumns = ({ onStatusChange, colleges = [], positionMap = {} }: GetColumnsArgs): ColumnDef<AssessmentSubmission>[] => {
+
   const columns: ColumnDef<AssessmentSubmission>[] = [
     {
       accessorKey: 'candidateName',
@@ -68,53 +73,37 @@ export const getColumns = ({ onStatusChange, colleges = [] }: GetColumnsProps): 
         );
       },
     },
-    {
-        accessorKey: 'collegeId',
-        header: 'College',
-        cell: ({ row }) => {
-            const collegeId = row.original.collegeId;
-            if (!collegeId) return 'Direct';
-            const college = colleges.find(c => c.id === collegeId);
-            return college ? <Badge variant="secondary">{college.name}</Badge> : 'Unknown College';
-        },
-        filterFn: (row, columnId, filterValue) => {
-            if (!filterValue || filterValue.length === 0) return true;
-             const collegeId = row.original.collegeId || 'Direct';
-            return (filterValue as string[]).includes(collegeId);
-        },
-    },
-    {
-        id: 'position',
+    // {
+    //     accessorKey: 'collegeId',
+    //     header: 'College',
+    //     cell: ({ row }) => {
+    //         const collegeId = row.original.collegeId;
+    //         if (!collegeId) return 'Direct';
+    //         const college = colleges.find(c => c.id === collegeId);
+    //         return college ? <Badge variant="secondary">{college.name}</Badge> : 'Unknown College';
+    //     },
+    //     filterFn: (row, columnId, filterValue) => {
+    //         if (!filterValue || filterValue.length === 0) return true;
+    //          const collegeId = row.original.collegeId || 'Direct';
+    //         return (filterValue as string[]).includes(collegeId);
+    //     },
+    // },
+   {
+        accessorKey: 'answers',
         header: 'Position Applied For',
         cell: ({ row }) => {
-            const submission = row.original as any;
-            const candidate = submission.candidate as Candidate | CollegeCandidate | null;
-            
-            // Priority 1: Get position from the linked candidate record.
-            if (candidate && 'position' in candidate && candidate.position) {
-              return candidate.position;
-            }
-
-            // Priority 2: Fallback to checking the assessment answers.
-            const positionAnswer = submission.answers.find((a: any) => a.questionText?.toLowerCase().includes('position applying for'));
-            return positionAnswer?.answer || 'N/A';
+            const submission = row.original;
+            const positionAnswer = submission.answers.find(a => a.questionText?.toLowerCase().includes('position applying for'));
+            const position = positionAnswer?.answer || positionMap[submission.candidateEmail.toLowerCase()] || 'N/A';
+            return position;
         },
         filterFn: (row, columnId, filterValue) => {
             if (!filterValue || filterValue.length === 0) return true;
-            const submission = row.original as any;
-            const candidate = submission.candidate as Candidate | CollegeCandidate | null;
+            const submission = row.original;
+            const positionAnswer = submission.answers.find(a => a.questionText?.toLowerCase().includes('position applying for'));
+            const position = positionAnswer?.answer || positionMap[submission.candidateEmail.toLowerCase()];
 
-            let position = 'N/A';
-            if (candidate && 'position' in candidate && candidate.position) {
-              position = candidate.position;
-            } else {
-              const positionAnswer = submission.answers.find((a: any) => a.questionText?.toLowerCase().includes('position applying for'));
-              if (positionAnswer?.answer) {
-                position = positionAnswer.answer;
-              }
-            }
-            
-            return (filterValue as string[]).includes(position);
+            return position ? (filterValue as string[]).includes(position) : false;
         },
     },
      {
@@ -166,31 +155,7 @@ export const getColumns = ({ onStatusChange, colleges = [] }: GetColumnsProps): 
             return `${score}/${maxScore}`;
         },
     },
-    {
-      accessorKey: 'submittedAt',
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        >
-          Submitted At
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      ),
-      cell: ({ row }) => {
-        const { submittedAt } = row.original;
-        if (!submittedAt) return 'N/A';
-        try {
-          const date = submittedAt.toDate ? submittedAt.toDate() : new Date(submittedAt);
-          if (isNaN(date.getTime())) {
-            return 'Invalid Date';
-          }
-          return format(date, 'MMM d, yyyy, h:mm a');
-        } catch (e) {
-          return 'Invalid Date';
-        }
-      },
-    },
+    
     {
         accessorKey: 'timeTaken',
         header: 'Time Taken',
