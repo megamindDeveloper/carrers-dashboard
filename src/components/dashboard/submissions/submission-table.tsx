@@ -42,12 +42,10 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
   const [positionMap, setPositionMap] = useState<Record<string, string>>({}); // For the position lookup
   useEffect(() => {
     const buildPositionMap = async () => {
-      // 1. Fetch ALL submissions, but only once with getDocs()
       const allSubmissionsQuery = query(collection(db, "assessmentSubmissions"));
       const querySnapshot = await getDocs(allSubmissionsQuery);
       const allSubs = querySnapshot.docs.map(doc => doc.data() as AssessmentSubmission);
 
-      // 2. Build the map from this one-time data fetch
       const map: { [email: string]: string } = {};
       allSubs.forEach((sub) => {
         if (sub.candidateEmail) {
@@ -64,7 +62,7 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
     };
 
     buildPositionMap();
-  }, []); // Empty dependency array means this runs only ONCE
+  }, []);
   useEffect(() => {
     if (!assessmentId) return;
 
@@ -83,7 +81,7 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
 
     const submissionsQuery = query(
       collection(db, "assessmentSubmissions"),
-      where("assessmentId", "==", assessmentId) // The crucial filter
+      where("assessmentId", "==", assessmentId)
     );
     const unsubSubmissions = onSnapshot(
       submissionsQuery,
@@ -101,7 +99,6 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
       setColleges(snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as College)));
     });
 
-    // Listener for main applications
     const unsubCandidates = onSnapshot(collection(db, "applications"), (snapshot) => {
       const appCands = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Candidate));
       setCandidates((prevCands) => {
@@ -111,10 +108,8 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
       });
     });
 
-    // Listeners for all college candidates
     const collegeListeners: (() => void)[] = [];
     const unsubAllCollegesForCands = onSnapshot(collection(db, "colleges"), (snapshot) => {
-      // Unsubscribe from old college candidate listeners
       collegeListeners.forEach((unsub) => unsub());
       collegeListeners.length = 0;
 
@@ -142,15 +137,12 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
   }, [assessmentId, toast]);
 
   useEffect(() => {
-    // This effect runs whenever submissions or candidates change, ensuring the table is always up-to-date.
     if (allSubmissions.length > 0 && candidates.length > 0) {
       const currentAssessmentSubmissions = allSubmissions
         .map((sub) => {
           const candidate = candidates.find((c) => {
-            // Prioritize specific ID links first
             if (sub.candidateId && c.id === sub.candidateId) return true;
             if (sub.collegeCandidateId && c.id === sub.collegeCandidateId) return true;
-            // Fallback to email for older data structures
             return c.email.toLowerCase() === sub.candidateEmail.toLowerCase();
           });
           return { ...sub, candidateStatus: candidate?.status, candidate: candidate || null };
@@ -248,25 +240,21 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
       }, {} as Record<string, number>);
   }, [allSubmissions, assessmentId]);
 
-  // const positionCounts = useMemo(() => {
-  //   return data.reduce((acc, sub: any) => {
-  //     const position = sub.candidate?.position;
-  //     if (position) {
-  //       acc[position] = (acc[position] || 0) + 1;
-  //     }
-  //     return acc;
-  //   }, {} as Record<string, number>);
-  // }, [data]);
+  const positionCounts = useMemo(() => {
+    return allSubmissions
+      .filter((s) => s.assessmentId === assessmentId)
+      .reduce((acc, sub) => {
+        const position = positionMap[sub.candidateEmail.toLowerCase()];
+        if (position) {
+          acc[position] = (acc[position] || 0) + 1;
+        }
+        return acc;
+      }, {} as Record<string, number>);
+  }, [allSubmissions, assessmentId, positionMap]);
 
   const positionOptions = useMemo(() => {
-    const positions = new Set<string>();
-    data.forEach((sub: any) => {
-      if (sub.candidate?.position) {
-        positions.add(sub.candidate.position);
-      }
-    });
-    return Array.from(positions);
-  }, [data]);
+    return Object.keys(positionCounts);
+  }, [positionCounts]);
 
   const handleStatusChange = async (submission: AssessmentSubmission, newStatus: CandidateStatus) => {
     const candidate = submission.candidate as Candidate | CollegeCandidate | null;
@@ -330,34 +318,6 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
 
     await proceedWithUpdate();
   };
-  // const positionMap = useMemo(() => {
-  //   const map: { [email: string]: string } = {};
-  //   allSubmissions.forEach((sub) => {
-  //     if (sub.candidateEmail) {
-  //       const email = sub.candidateEmail.toLowerCase();
-  //       if (!map[email]) {
-  //         console.log("sub", sub);
-  //         const positionAnswer = sub.answers.find((a) => a.questionText?.toLowerCase().includes("position applying for"))?.answer;
-  //         if (positionAnswer && typeof positionAnswer === "string") {
-  //           map[email] = positionAnswer;
-  //         }
-  //       }
-  //     }
-  //   });
-  //   return map;
-  // }, [allSubmissions]);
-
-  const positionCounts = useMemo(() => {
-    return allSubmissions
-      .filter((s) => s.assessmentId === assessmentId)
-      .reduce((acc, sub) => {
-        const position = positionMap[sub.candidateEmail.toLowerCase()];
-        if (position) {
-          acc[position] = (acc[position] || 0) + 1;
-        }
-        return acc;
-      }, {} as Record<string, number>);
-  }, [allSubmissions, assessmentId, positionMap]);
 
   const columns = useMemo(
     () =>
@@ -368,12 +328,7 @@ export function SubmissionTable({ assessmentId }: SubmissionTableProps) {
       }),
     [colleges, positionMap]
   );
-  const [selectedPosition, setSelectedPosition] = useState<string | null>(null);
-// Corrected filtering logic
-const filteredData = selectedPosition
-    ? data.filter((sub) => positionMap[sub.candidateEmail.toLowerCase()] === selectedPosition)
-    : data;
-
+  
   if (loading) return <p className="p-4">Loading submissions...</p>;
 
   return (
@@ -384,25 +339,11 @@ const filteredData = selectedPosition
             <CardTitle>Submissions</CardTitle>
             <CardDescription>A list of all candidate submissions for this assessment.</CardDescription>
           </div>
-
-          <div className="flex items-center gap-3">
-            {/* 🔽 New Position Filter */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline">{selectedPosition ? `Position: ${selectedPosition}` : "Filter by Position"}</Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {Object.keys(positionCounts).map((pos) => (
-                  <DropdownMenuItem key={pos} onClick={() => setSelectedPosition(pos)}>
-                    {pos} ({positionCounts[pos]})
-                  </DropdownMenuItem>
-                ))}
-                <DropdownMenuItem className="text-muted-foreground" onClick={() => setSelectedPosition(null)}>
-                  Clear Filter
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
+          <div className="flex items-center gap-2">
+            <Button onClick={handleRecalculateScores} variant="outline" disabled={isRecalculating || data.length === 0}>
+                {isRecalculating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                Recalculate All Scores
+            </Button>
             <Button onClick={() => setExportDialogOpen(true)} variant="outline" disabled={data.length === 0}>
               <Download className="mr-2 h-4 w-4" />
               Export to CSV
@@ -412,12 +353,13 @@ const filteredData = selectedPosition
 
         <CardContent>
           <DataTable
-            data={filteredData}
+            data={data}
             columns={columns}
             onRowClick={handleRowClick}
             colleges={colleges}
             collegeCounts={collegeCounts}
             positionCounts={positionCounts}
+            positionOptions={positionOptions}
             allSubmissionsForFiltering={allSubmissions}
           />
         </CardContent>

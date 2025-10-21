@@ -73,35 +73,33 @@ export const getColumns = ({ onStatusChange, colleges = [], positionMap = {} }: 
         );
       },
     },
-    // {
-    //     accessorKey: 'collegeId',
-    //     header: 'College',
-    //     cell: ({ row }) => {
-    //         const collegeId = row.original.collegeId;
-    //         if (!collegeId) return 'Direct';
-    //         const college = colleges.find(c => c.id === collegeId);
-    //         return college ? <Badge variant="secondary">{college.name}</Badge> : 'Unknown College';
-    //     },
-    //     filterFn: (row, columnId, filterValue) => {
-    //         if (!filterValue || filterValue.length === 0) return true;
-    //          const collegeId = row.original.collegeId || 'Direct';
-    //         return (filterValue as string[]).includes(collegeId);
-    //     },
-    // },
+    {
+        accessorKey: 'collegeId',
+        header: 'College',
+        cell: ({ row }) => {
+            const collegeId = row.original.collegeId;
+            if (!collegeId) return 'Direct';
+            const college = colleges.find(c => c.id === collegeId);
+            return college ? <Badge variant="secondary">{college.name}</Badge> : 'Unknown College';
+        },
+        filterFn: (row, columnId, filterValue) => {
+            if (!filterValue || filterValue.length === 0) return true;
+             const collegeId = row.original.collegeId || 'Direct';
+            return (filterValue as string[]).includes(collegeId);
+        },
+    },
    {
-        accessorKey: 'answers',
+        id: 'positionAppliedFor',
         header: 'Position Applied For',
         cell: ({ row }) => {
             const submission = row.original;
-            const positionAnswer = submission.answers.find(a => a.questionText?.toLowerCase().includes('position applying for'));
-            const position = positionAnswer?.answer || positionMap[submission.candidateEmail.toLowerCase()] || 'N/A';
+            const position = positionMap[submission.candidateEmail.toLowerCase()] || 'N/A';
             return position;
         },
         filterFn: (row, columnId, filterValue) => {
             if (!filterValue || filterValue.length === 0) return true;
             const submission = row.original;
-            const positionAnswer = submission.answers.find(a => a.questionText?.toLowerCase().includes('position applying for'));
-            const position = positionAnswer?.answer || positionMap[submission.candidateEmail.toLowerCase()];
+            const position = positionMap[submission.candidateEmail.toLowerCase()];
 
             return position ? (filterValue as string[]).includes(position) : false;
         },

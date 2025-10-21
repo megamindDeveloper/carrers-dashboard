@@ -98,11 +98,11 @@ export function DataTableToolbar<TData>({
             className="h-8 w-[150px] lg:w-[250px]"
           />
         )}
-         {isSubmissionTable && columnExists('position') && positionOptions.length > 0 && (
+         {isSubmissionTable && columnExists('positionAppliedFor') && positionOptions.length > 0 && (
             <Select
-                value={(table.getColumn('position')?.getFilterValue() as string[])?.[0] ?? 'all'}
+                value={(table.getColumn('positionAppliedFor')?.getFilterValue() as string[])?.[0] ?? 'all'}
                 onValueChange={value =>
-                    table.getColumn('position')?.setFilterValue(value === 'all' ? null : [value])
+                    table.getColumn('positionAppliedFor')?.setFilterValue(value === 'all' ? null : [value])
                 }
             >
                 <SelectTrigger className="h-8 w-[200px]">
