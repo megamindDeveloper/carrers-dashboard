@@ -38,6 +38,7 @@ import { ref, uploadString, getDownloadURL } from "firebase/storage";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface AddCandidateSheetProps {
+    prefilledType?: CandidateType;
 }
 
 const candidateSchema = z.object({
@@ -58,7 +59,7 @@ const candidateSchema = z.object({
   source: z.enum(CANDIDATE_SOURCES).optional(),
 });
 
-export function AddCandidateSheet({}: AddCandidateSheetProps) {
+export function AddCandidateSheet({ prefilledType }: AddCandidateSheetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
@@ -154,11 +155,17 @@ export function AddCandidateSheet({}: AddCandidateSheetProps) {
       
       const uploadResult = await uploadString(storageRef, data.resumeDataUri, 'data_url');
       const resumeUrl = await getDownloadURL(uploadResult.ref);
+      
+      let candidateType: CandidateType;
+      if (prefilledType) {
+          candidateType = prefilledType;
+      } else {
+          const positionLower = data.position.toLowerCase();
+          candidateType = positionLower.includes('internship') || positionLower.includes('intern')
+            ? 'internship'
+            : 'full-time';
+      }
 
-      const positionLower = data.position.toLowerCase();
-      const candidateType: CandidateType = positionLower.includes('internship') || positionLower.includes('intern')
-        ? 'internship'
-        : 'full-time';
 
       const newCandidate: Omit<Candidate, 'id' | 'status' | 'submittedAt' | 'avatar'> & { submittedAt: any } = {
         fullName: data.fullName,

@@ -414,7 +414,7 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
                   <Download className="mr-2 h-4 w-4" />
                   Export to CSV
                 </Button>
-                <AddCandidateSheet />
+                <AddCandidateSheet prefilledType={filterType} />
               </div>
             </div>
         </CardHeader>
