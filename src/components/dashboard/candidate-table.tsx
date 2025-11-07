@@ -1,3 +1,4 @@
+
 'use client';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Assessment, Candidate, CandidateStatus, CandidateType, AssessmentSubmission } from '@/lib/types';
@@ -37,7 +38,7 @@ const statusOrder = CANDIDATE_STATUSES.reduce((acc, status, index) => {
 
 const toTitleCase = (str: string) => {
   if (!str) return '';
-  return str.replace(/\\w\\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
+  return str.replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
 };
 
 export function CandidateTable({ title, description, filterType }: CandidateTableProps) {
@@ -419,7 +420,7 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
             </div>
         </CardHeader>
         <CardContent>
-          <DataTable columns={columns} data={data} onRowClick={handleRowClick} />
+          <DataTable columns={columns} data={data} onRowClick={handleRowClick} filterType={filterType} />
         </CardContent>
       </Card>
       <CandidateDetailsModal

@@ -30,7 +30,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { parseResumeAction } from '@/app/actions';
 import type { Candidate, CandidateType, CandidateSource } from '@/lib/types';
-import { CANDIDATE_SOURCES } from '@/lib/types';
+import { CANDIDATE_SOURCES, CANDIDATE_TYPES } from '@/lib/types';
 import { Loader2, PlusCircle } from 'lucide-react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db, storage } from '@/app/utils/firebase/firebaseConfig';
@@ -57,6 +57,7 @@ const candidateSchema = z.object({
   resumeDataUri: z.string().min(1, 'Resume is required'),
   introductionVideoIntern: z.string().url('Invalid URL').or(z.literal('')),
   source: z.enum(CANDIDATE_SOURCES).optional(),
+  type: z.enum(CANDIDATE_TYPES),
 });
 
 export function AddCandidateSheet({ prefilledType }: AddCandidateSheetProps) {
@@ -82,6 +83,7 @@ export function AddCandidateSheet({ prefilledType }: AddCandidateSheetProps) {
       resumeDataUri: '',
       introductionVideoIntern: '',
       source: 'Website',
+      type: prefilledType || 'full-time',
     },
   });
 
@@ -156,17 +158,6 @@ export function AddCandidateSheet({ prefilledType }: AddCandidateSheetProps) {
       const uploadResult = await uploadString(storageRef, data.resumeDataUri, 'data_url');
       const resumeUrl = await getDownloadURL(uploadResult.ref);
       
-      let candidateType: CandidateType;
-      if (prefilledType) {
-          candidateType = prefilledType;
-      } else {
-          const positionLower = data.position.toLowerCase();
-          candidateType = positionLower.includes('internship') || positionLower.includes('intern')
-            ? 'internship'
-            : 'full-time';
-      }
-
-
       const newCandidate: Omit<Candidate, 'id' | 'status' | 'submittedAt' | 'avatar'> & { submittedAt: any } = {
         fullName: data.fullName,
         email: data.email,
@@ -181,7 +172,7 @@ export function AddCandidateSheet({ prefilledType }: AddCandidateSheetProps) {
         position: data.position,
         portfolio: data.portfolio,
         resumeUrl: resumeUrl,
-        type: candidateType,
+        type: data.type,
         source: data.source,
         introductionVideoIntern: data.introductionVideoIntern,
         submittedAt: serverTimestamp(),
@@ -447,6 +438,31 @@ export function AddCandidateSheet({ prefilledType }: AddCandidateSheetProps) {
                     )}
                     />
                 </div>
+
+                <FormField
+                  control={form.control}
+                  name="type"
+                  render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Candidate Type</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a type" />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            {CANDIDATE_TYPES.map(type => (
+                                <SelectItem key={type} value={type} className="capitalize">
+                                {type}
+                                </SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <FormField
                   control={form.control}
