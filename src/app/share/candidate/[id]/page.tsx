@@ -74,21 +74,21 @@ export default async function SharedCandidatePage({ params }: { params: { id: st
             <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
                 <div className="flex-grow">
                     <CardTitle className="text-2xl sm:text-3xl font-bold">{candidate.fullName}</CardTitle>
-                    <CardDescription className="text-base sm:text-lg text-muted-foreground">{candidate.position}</CardDescription>
+                    <CardDescription className="text-md sm:text-lg text-muted-foreground">{candidate.position}</CardDescription>
                     <div className="mt-4 flex flex-wrap gap-2">
-                        <Badge variant="secondary" className="flex items-center gap-2 text-xs sm:text-sm">
+                        <Badge variant="secondary" className="flex items-center gap-2 text-sm">
                            {candidate.type === 'internship' ? <GraduationCap className="h-4 w-4" /> : <Briefcase className="h-4 w-4" />}
                            <span className="capitalize">{candidate.type}</span>
                         </Badge>
-                        <Badge variant="secondary" className="flex items-center gap-2 text-xs sm:text-sm">
+                        <Badge variant="secondary" className="flex items-center gap-2 text-sm">
                            <MapPin className="h-4 w-4" />
                            <span>{displayLocation}</span>
                         </Badge>
-                         <Badge variant="secondary" className="flex items-center gap-2 text-xs sm:text-sm">
+                         <Badge variant="secondary" className="flex items-center gap-2 text-sm">
                            <Calendar className="h-4 w-4" />
                            <span>Applied on {getFormattedDate(candidate.submittedAt)}</span>
                         </Badge>
-                        <Badge variant="default" className="flex items-center gap-2 text-xs sm:text-sm">
+                        <Badge variant="default" className="flex items-center gap-2 text-sm">
                            <Info className="h-4 w-4" />
                            <span>Status: {toTitleCase(candidate.status as string)}</span>
                         </Badge>
