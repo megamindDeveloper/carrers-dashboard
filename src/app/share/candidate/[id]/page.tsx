@@ -64,31 +64,31 @@ export default async function SharedCandidatePage({ params }: { params: { id: st
         <div className="mb-8 flex items-center justify-between">
             <Image height={30} width={150} src={mmLogo} alt="Megamind Careers Logo" />
             <div className="text-right">
-                <h1 className="text-2xl font-bold text-primary">Candidate Profile</h1>
-                <p className="text-muted-foreground">Shared via Megamind Careers</p>
+                <h1 className="text-xl sm:text-2xl font-bold text-primary">Candidate Profile</h1>
+                <p className="text-xs sm:text-sm text-muted-foreground">Shared via Megamind Careers</p>
             </div>
         </div>
 
         <Card className="overflow-hidden shadow-lg">
-          <CardHeader className="bg-background p-6">
+          <CardHeader className="bg-background p-4 sm:p-6">
             <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
                 <div className="flex-grow">
-                    <CardTitle className="text-3xl font-bold">{candidate.fullName}</CardTitle>
-                    <CardDescription className="text-lg text-muted-foreground">{candidate.position}</CardDescription>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                        <Badge variant="secondary" className="flex items-center gap-2">
+                    <CardTitle className="text-2xl sm:text-3xl font-bold">{candidate.fullName}</CardTitle>
+                    <CardDescription className="text-base sm:text-lg text-muted-foreground">{candidate.position}</CardDescription>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                        <Badge variant="secondary" className="flex items-center gap-2 text-xs sm:text-sm">
                            {candidate.type === 'internship' ? <GraduationCap className="h-4 w-4" /> : <Briefcase className="h-4 w-4" />}
                            <span className="capitalize">{candidate.type}</span>
                         </Badge>
-                        <Badge variant="secondary" className="flex items-center gap-2">
+                        <Badge variant="secondary" className="flex items-center gap-2 text-xs sm:text-sm">
                            <MapPin className="h-4 w-4" />
                            <span>{displayLocation}</span>
                         </Badge>
-                         <Badge variant="secondary" className="flex items-center gap-2">
+                         <Badge variant="secondary" className="flex items-center gap-2 text-xs sm:text-sm">
                            <Calendar className="h-4 w-4" />
                            <span>Applied on {getFormattedDate(candidate.submittedAt)}</span>
                         </Badge>
-                        <Badge variant="default" className="flex items-center gap-2">
+                        <Badge variant="default" className="flex items-center gap-2 text-xs sm:text-sm">
                            <Info className="h-4 w-4" />
                            <span>Status: {toTitleCase(candidate.status as string)}</span>
                         </Badge>
@@ -96,53 +96,53 @@ export default async function SharedCandidatePage({ params }: { params: { id: st
                 </div>
             </div>
           </CardHeader>
-          <CardContent className="p-6 space-y-6">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div className="flex items-center gap-3">
-                    <Mail className="h-5 w-5 text-muted-foreground" />
+          <CardContent className="p-4 sm:p-6 space-y-6">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 text-base">
+                <div className="flex items-start gap-3">
+                    <Mail className="h-5 w-5 text-muted-foreground mt-1 shrink-0" />
                     <div>
-                        <p className="text-sm font-medium">Email</p>
-                        <p className="text-sm text-muted-foreground">{candidate.email}</p>
+                        <p className="font-medium">Email</p>
+                        <p className="text-muted-foreground break-all">{candidate.email}</p>
                     </div>
                 </div>
-                 <div className="flex items-center gap-3">
-                    <Phone className="h-5 w-5 text-muted-foreground" />
+                 <div className="flex items-start gap-3">
+                    <Phone className="h-5 w-5 text-muted-foreground mt-1 shrink-0" />
                     <div>
-                        <p className="text-sm font-medium">Contact Number</p>
-                        <p className="text-sm text-muted-foreground">{candidate.contactNumber}</p>
+                        <p className="font-medium">Contact Number</p>
+                        <p className="text-muted-foreground">{candidate.contactNumber}</p>
                     </div>
                 </div>
-                 <div className="flex items-center gap-3">
-                    <MessageSquare className="h-5 w-5 text-muted-foreground" />
+                 <div className="flex items-start gap-3">
+                    <MessageSquare className="h-5 w-5 text-muted-foreground mt-1 shrink-0" />
                     <div>
-                        <p className="text-sm font-medium">WhatsApp</p>
-                        <p className="text-sm text-muted-foreground">{candidate.whatsappNumber}</p>
+                        <p className="font-medium">WhatsApp</p>
+                        <p className="text-muted-foreground">{candidate.whatsappNumber}</p>
                     </div>
                 </div>
-                <div className="flex items-center gap-3">
-                    <MapPin className="h-5 w-5 text-muted-foreground" />
+                <div className="flex items-start gap-3">
+                    <MapPin className="h-5 w-5 text-muted-foreground mt-1 shrink-0" />
                     <div>
-                        <p className="text-sm font-medium">Address</p>
-                        <p className="text-sm text-muted-foreground">{`${candidate.address}, ${candidate.city}, ${candidate.state} ${candidate.pincode}`}</p>
+                        <p className="font-medium">Address</p>
+                        <p className="text-muted-foreground">{`${candidate.address}, ${candidate.city}, ${candidate.state} ${candidate.pincode}`}</p>
                     </div>
                 </div>
             </div>
             <div className="border-t border-border pt-6">
               <h3 className="text-lg font-semibold text-primary mb-2 flex items-center gap-2"><Building className="h-5 w-5" /> Education</h3>
-              <p className="text-muted-foreground">{candidate.education || 'N/A'}</p>
+              <p className="text-muted-foreground text-base">{candidate.education || 'N/A'}</p>
             </div>
             <div>
               <h3 className="text-lg font-semibold text-primary mb-2 flex items-center gap-2"><Calendar className="h-5 w-5" /> Experience</h3>
-              <p className="text-muted-foreground whitespace-pre-wrap">{candidate.experience || candidate.workExperience || 'N/A'}</p>
+              <p className="text-muted-foreground whitespace-pre-wrap text-base">{candidate.experience || candidate.workExperience || 'N/A'}</p>
             </div>
             {candidate.comments && (
               <div>
                 <h3 className="text-lg font-semibold text-primary mb-2 flex items-center gap-2"><MessageSquare className="h-5 w-5" /> Internal Comments</h3>
-                <p className="text-muted-foreground whitespace-pre-wrap">{candidate.comments}</p>
+                <p className="text-muted-foreground whitespace-pre-wrap text-base">{candidate.comments}</p>
               </div>
             )}
           </CardContent>
-          <CardFooter className="bg-background p-6 flex flex-wrap items-center gap-4">
+          <CardFooter className="bg-background p-4 sm:p-6 flex flex-wrap items-center gap-4">
               {candidate.portfolio && (
                 <Button variant="outline" asChild>
                   <a href={candidate.portfolio} target="_blank" rel="noopener noreferrer">
