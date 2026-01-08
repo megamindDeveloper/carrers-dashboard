@@ -109,6 +109,32 @@ export const getColumns = ({
     },
   ];
 
+  const appliedDateColumn: ColumnDef<Candidate> = {
+    accessorKey: 'submittedAt',
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+      >
+        Applied Date
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+    ),
+    cell: ({ row }) => {
+      const { submittedAt } = row.original;
+      if (!submittedAt) return 'N/A';
+      try {
+        const date = submittedAt.toDate ? submittedAt.toDate() : new Date(submittedAt);
+        if (isNaN(date.getTime())) {
+          return 'Invalid Date';
+        }
+        return format(date, 'MMM d, yyyy');
+      } catch (e) {
+        return 'Invalid Date';
+      }
+    },
+  };
+
   const experienceColumn: ColumnDef<Candidate> = {
     accessorKey: 'experience',
     header: ({ column }) => (
@@ -181,31 +207,6 @@ export const getColumns = ({
         const source = row.original.source;
         return <Badge variant="outline">{source || 'N/A'}</Badge>
       }
-    },
-    {
-      accessorKey: 'submittedAt',
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        >
-          Applied Date
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      ),
-      cell: ({ row }) => {
-        const { submittedAt } = row.original;
-        if (!submittedAt) return 'N/A';
-        try {
-          const date = submittedAt.toDate ? submittedAt.toDate() : new Date(submittedAt);
-          if (isNaN(date.getTime())) {
-            return 'Invalid Date';
-          }
-          return format(date, 'MMM d, yyyy');
-        } catch (e) {
-          return 'Invalid Date';
-        }
-      },
     },
     {
       accessorKey: 'status',
@@ -360,11 +361,12 @@ export const getColumns = ({
   let columns: ColumnDef<Candidate>[] = [...baseColumns, statusColumn, assessmentStatusColumn];
 
   if (filterType === 'internship') {
-    columns = [...columns, ...otherCommonColumns, introVideoColumn, actionColumn];
+    columns = [...columns, appliedDateColumn, ...otherCommonColumns, introVideoColumn, actionColumn];
   } else if (filterType === 'full-time') {
-    columns = [...columns, experienceColumn, ...otherCommonColumns, actionColumn];
+    columns = [...columns, appliedDateColumn, experienceColumn, ...otherCommonColumns, actionColumn];
   } else {
-    columns = [...columns, experienceColumn, ...otherCommonColumns, introVideoColumn, actionColumn];
+    // For 'All' and 'Freelance', show both experience and video, and applied date
+    columns = [...columns, appliedDateColumn, experienceColumn, ...otherCommonColumns, introVideoColumn, actionColumn];
   }
 
   return columns;
