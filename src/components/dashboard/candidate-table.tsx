@@ -116,14 +116,8 @@ export function CandidateTable({ title, description, filterType }: CandidateTabl
         submissions: submissionsByEmail[candidate.email.toLowerCase()] || [],
     }));
     
+    // Sort by submission date in descending order (latest first)
     candidatesWithSubmissions.sort((a, b) => {
-      const statusA = toTitleCase(a.status as string) as CandidateStatus;
-      const statusB = toTitleCase(b.status as string) as CandidateStatus;
-      const orderA = statusOrder[statusA] ?? 99;
-      const orderB = statusOrder[statusB] ?? 99;
-      if (orderA !== orderB) return orderA - orderB;
-      const positionCompare = a.position.localeCompare(b.position);
-      if (positionCompare !== 0) return positionCompare;
       const dateA = a.submittedAt?.toDate ? a.submittedAt.toDate() : new Date(0);
       const dateB = b.submittedAt?.toDate ? b.submittedAt.toDate() : new Date(0);
       return dateB.getTime() - dateA.getTime();
