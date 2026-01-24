@@ -8,7 +8,9 @@ import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
   DropdownMenuSub,
   DropdownMenuSubTrigger,
@@ -16,13 +18,14 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from '@/components/ui/dropdown-menu';
-import { ArrowUpDown, MoreHorizontal } from 'lucide-react';
+import { ArrowUpDown, MoreHorizontal, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import * as Icons from 'lucide-react';
 
 type GetColumnsProps = {
   onStatusChange: (jobId: string, status: JobStatus) => void;
+  onDelete: (jobId: string, position: string) => void;
 };
 
 const toTitleCase = (str: string) => {
@@ -39,7 +42,7 @@ const Icon = ({ name, className }: { name: string; className?: string }) => {
 };
 
 
-export const getColumns = ({ onStatusChange }: GetColumnsProps): ColumnDef<Job>[] => {
+export const getColumns = ({ onStatusChange, onDelete }: GetColumnsProps): ColumnDef<Job>[] => {
   const columns: ColumnDef<Job>[] = [
     {
       id: 'slNo',
@@ -145,7 +148,7 @@ export const getColumns = ({ onStatusChange }: GetColumnsProps): ColumnDef<Job>[
     },
     {
     id: 'actions',
-    cell: ({ row }) => {
+    cell: ({ row, table }) => {
       const job = row.original;
       return (
         <DropdownMenu>
@@ -157,6 +160,14 @@ export const getColumns = ({ onStatusChange }: GetColumnsProps): ColumnDef<Job>[
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuItem onClick={() => {
+                const onRowClick = (table.options.meta as any)?.onRowClick;
+                 if (onRowClick) {
+                    onRowClick(row.original);
+                }
+            }}>
+                View/Edit Details
+            </DropdownMenuItem>
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
                 <span>Change Status</span>
@@ -176,6 +187,14 @@ export const getColumns = ({ onStatusChange }: GetColumnsProps): ColumnDef<Job>[
                 </DropdownMenuRadioGroup>
               </DropdownMenuSubContent>
             </DropdownMenuSub>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => onDelete(job.id, job.position)}
+              className="text-red-600 focus:text-red-600 focus:bg-red-50"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );

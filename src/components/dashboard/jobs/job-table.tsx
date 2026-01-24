@@ -5,12 +5,13 @@ import type { Job, JobStatus } from '@/lib/types';
 import { DataTable } from '@/components/dashboard/data-table';
 import { getColumns } from './columns';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
-import { collection, onSnapshot, updateDoc, doc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, onSnapshot, updateDoc, doc, addDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { db } from '@/app/utils/firebase/firebaseConfig';
 import { useToast } from '@/hooks/use-toast';
 import { AddEditJobSheet } from './add-edit-job-sheet';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
+import { ConfirmationDialog } from '../confirmation-dialog';
 
 export function JobTable() {
   const [data, setData] = useState<Job[]>([]);
@@ -18,6 +19,17 @@ export function JobTable() {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [isSheetOpen, setSheetOpen] = useState(false);
   const { toast } = useToast();
+  const [confirmation, setConfirmation] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    description: '',
+    onConfirm: () => {},
+  });
 
   useEffect(() => {
     const colRef = collection(db, 'jobs');
@@ -70,6 +82,32 @@ export function JobTable() {
     }
   };
 
+  const handleDeleteJob = (jobId: string, position: string) => {
+    setConfirmation({
+        isOpen: true,
+        title: `Delete "${position}"?`,
+        description: "Are you sure you want to delete this job posting? This action cannot be undone.",
+        onConfirm: async () => {
+            try {
+                await deleteDoc(doc(db, 'jobs', jobId));
+                toast({
+                    title: "Job Deleted",
+                    description: `The job "${position}" has been successfully deleted.`,
+                });
+            } catch (error) {
+                console.error("Error deleting job:", error);
+                toast({
+                    variant: 'destructive',
+                    title: 'Deletion Failed',
+                    description: 'Could not delete the job posting.',
+                });
+            } finally {
+                setConfirmation({ ...confirmation, isOpen: false });
+            }
+        },
+    });
+  }
+
   const handleSaveJob = async (jobData: Omit<Job, 'id' | 'createdAt'>) => {
     try {
       if (selectedJob) {
@@ -100,7 +138,7 @@ export function JobTable() {
     }
   };
 
-  const columns = useMemo(() => getColumns({ onStatusChange: handleStatusChange }), [handleStatusChange]);
+  const columns = useMemo(() => getColumns({ onStatusChange: handleStatusChange, onDelete: handleDeleteJob }), [handleStatusChange]);
 
   if (loading) return <p className="p-4">Loading jobs...</p>;
 
@@ -128,6 +166,14 @@ export function JobTable() {
         onClose={handleCloseSheet}
         job={selectedJob}
         onSave={handleSaveJob}
+      />
+       <ConfirmationDialog
+        isOpen={confirmation.isOpen}
+        onOpenChange={(isOpen) => setConfirmation({ ...confirmation, isOpen })}
+        title={confirmation.title}
+        description={confirmation.description}
+        onConfirm={confirmation.onConfirm}
+        onCancel={() => setConfirmation({ ...confirmation, isOpen: false })}
       />
     </>
   );
