@@ -92,6 +92,7 @@ export type Job = {
   status: JobStatus;
   createdAt: any;
   type: JobType;
+  priority: number;
   duration?: string;
   sections?: JobSection[];
   highlightPoints?: string[];

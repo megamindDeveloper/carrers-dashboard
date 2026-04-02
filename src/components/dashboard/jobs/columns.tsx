@@ -51,6 +51,28 @@ export const getColumns = ({ onStatusChange }: GetColumnsProps): ColumnDef<Job>[
       },
     },
     {
+      accessorKey: 'priority',
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+        >
+          Priority
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => {
+        const priority = row.original.priority;
+        return (
+          <div className="text-center">
+            <Badge variant="outline" className="font-mono">
+              {priority ?? '—'}
+            </Badge>
+          </div>
+        );
+      },
+    },
+    {
       accessorKey: 'position',
       header: ({ column }) => (
         <Button

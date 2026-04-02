@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -27,9 +27,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import type { Job } from '@/lib/types';
+import type { Job, JobType } from '@/lib/types';
 import { JOB_STATUSES, JOB_TYPES } from '@/lib/types';
-import { Loader2, PlusCircle, Trash2, X, Wand2 as MagicWand } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, X, Wand2 as MagicWand, ArrowUpDown } from 'lucide-react';
+import { getNextPriority } from '@/lib/job-priority';
 import {
   Select,
   SelectContent,
@@ -63,6 +64,7 @@ const jobSchema = z.object({
   location: z.string().min(1, 'Location is required'),
   status: z.enum(JOB_STATUSES),
   type: z.enum(JOB_TYPES),
+  priority: z.coerce.number().min(1, 'Priority must be at least 1'),
   duration: z.string().optional(),
   highlightPoints: z.array(pointSchema).optional(),
   sections: z.array(sectionSchema).min(1, 'At least one other section is required'),
@@ -73,6 +75,7 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
   const [isProcessing, setIsProcessing] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
   const [isSuggestingIcon, setIsSuggestingIcon] = useState(false);
+  const [isFetchingPriority, setIsFetchingPriority] = useState(false);
   const [rawDescription, setRawDescription] = useState('');
   const { toast } = useToast();
 
@@ -123,6 +126,7 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
           location: job.location || '',
           status: job.status || 'Open',
           type: job.type || 'full-time',
+          priority: job.priority || 1,
           duration: job.duration || '',
           highlightPoints: initialHighlights,
           sections: initialSections,
@@ -136,6 +140,7 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
           location: '',
           status: 'Open',
           type: 'full-time',
+          priority: 1,
           duration: '',
           highlightPoints: [{ value: '' }],
           sections: [
@@ -143,6 +148,8 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
             { title: 'Skills', points: [{ value: '' }] },
           ]
         });
+        // Auto-suggest priority for new jobs
+        handleAutoSuggestPriority('full-time');
       }
       setRawDescription('');
     }
@@ -225,6 +232,18 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
       setIsSuggestingIcon(false);
     }
   };
+  const handleAutoSuggestPriority = useCallback(async (type?: string) => {
+    const jobType = (type || form.getValues('type')) as JobType;
+    setIsFetchingPriority(true);
+    try {
+      const next = await getNextPriority(jobType);
+      form.setValue('priority', next);
+    } catch (error) {
+      console.error('Error fetching next priority:', error);
+    } finally {
+      setIsFetchingPriority(false);
+    }
+  }, [form]);
 
 
   const onSubmit = async (data: z.infer<typeof jobSchema>) => {
@@ -297,7 +316,11 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
                  <FormField control={form.control} name="type" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Job Type</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={(value) => {
+                        field.onChange(value);
+                        // Auto-suggest priority when type changes
+                        handleAutoSuggestPriority(value);
+                      }} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select a type" />
@@ -321,6 +344,30 @@ export function AddEditJobSheet({ isOpen, onClose, job, onSave }: AddEditJobShee
                     </FormItem>
                   )} />
                 </div>
+                {/* Priority Input with Auto-Suggest */}
+                <FormField control={form.control} name="priority" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Priority</FormLabel>
+                    <div className="flex items-center gap-2">
+                      <FormControl>
+                        <Input type="number" min={1} placeholder="e.g., 1" {...field} className="flex-grow" />
+                      </FormControl>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => handleAutoSuggestPriority()}
+                        disabled={isFetchingPriority}
+                      >
+                        {isFetchingPriority ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ArrowUpDown className="mr-2 h-4 w-4" />}
+                        Auto
+                      </Button>
+                    </div>
+                    <FormDescription>
+                      Lower number = higher priority. Click "Auto" to set the next available priority for the selected job type.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )} />
                 <FormItem>
                     <FormLabel>Lucide Icon Name</FormLabel>
                     <div className="flex items-center gap-2">
