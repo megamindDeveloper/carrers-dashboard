@@ -17,6 +17,7 @@ import {
   migrateExistingJobPriorities,
 } from '@/lib/job-priority';
 
+
 export function JobTable() {
   const [data, setData] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
